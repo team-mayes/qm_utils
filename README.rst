@@ -18,7 +18,7 @@ qm_utils
      :alt: Updates
 
 
-tools  for QM projects in Team Mayes & Blue
+Tools for QM projects in Team Mayes & Blue
 
 
 * Free software: BSD license
