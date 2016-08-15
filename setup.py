@@ -33,6 +33,7 @@ setup(
                  'qm_utils'},
     entry_points={
         'console_scripts': ['cp_params=qm_utils.cp_params:main',
+                            'read_pdb=qm_utils.read_pdb:main',
                             'read_sdf=qm_utils.read_sdf:main',
                             ]
     },

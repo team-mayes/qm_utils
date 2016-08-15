@@ -12,6 +12,7 @@ import sys
 import numpy as np
 from qm_common import GOOD_RET, INVALID_DATA, warning, find_files_by_dir, create_out_fname, list_to_file, process_cfg
 
+
 try:
     # noinspection PyCompatibility
     from ConfigParser import ConfigParser
@@ -41,6 +42,12 @@ PDB_LAST_ELEM_CHAR = 'pdb_last_element_char'
 RING_ATOMS = 'ring_atom_nums'
 RING_ATOM_TYPES = 'ring_atom_types'
 
+TOT_CHARGE = 'total_charge'
+TOT_MULT = 'multiplicity'
+GAUSS_KEYWORDS = 'gaussian_keywords'
+GAUSS_DESCRIP = 'description'
+GAUSS_FOOTER = 'gaussian_footer'
+
 # Config File Sections
 MAIN_SEC = 'main'
 
@@ -49,6 +56,11 @@ DEF_CFG_FILE = 'read_pdb.ini'
 DEF_ELEM_DICT_FILE = os.path.join(os.path.dirname(__file__), 'cfg', 'charmm36_atoms_elements.txt')
 DEF_CFG_VALS = {RING_ATOMS: [6, 1, 2, 3, 4, 5],
                 RING_ATOM_TYPES: ['O', 'C', 'C', 'C', 'C', 'C'],
+                GAUSS_KEYWORDS: '#Put Keywords Here, check Charge and Multiplicity\n',
+                GAUSS_DESCRIP: None,
+                TOT_CHARGE: 0,
+                TOT_MULT: 1,
+                GAUSS_FOOTER: '',
                 PDB_LINE_TYPE_LAST_CHAR: 6,
                 PDB_ATOM_NUM_LAST_CHAR: 11,
                 PDB_ATOM_TYPE_LAST_CHAR: 17,
@@ -126,11 +138,14 @@ def process_file(file_path, out_dir, cp_data, cfg):
     :return:
     """
 
-    gaussian_keywords = '#Put Keywords Here, check Charge and Multiplicity\n'
+    gaussian_keywords = cfg[GAUSS_KEYWORDS]
     file_name = os.path.basename(file_path)
-    descrip = "From '{}'\n".format(file_name)
-    charge = 0
-    mult = 1
+    if cfg[GAUSS_DESCRIP] is None:
+        descrip = "From '{}'\n".format(file_name)
+    else:
+        descrip = cfg[GAUSS_DESCRIP]
+    charge = cfg[TOT_CHARGE]
+    mult = cfg[TOT_MULT]
     com_data = [[gaussian_keywords], [descrip], ['{}  {}'.format(charge, mult)], ]
     raw_cp_data = file_name + ' '
 
@@ -175,7 +190,7 @@ def process_file(file_path, out_dir, cp_data, cfg):
     for ring_atom in ring_xyz:
         raw_cp_data += ' '.join(['{:6.3f} '.format(num) for num in ring_atom])
     # make sure to add empty line at end of com file
-    com_data.append([])
+    com_data.append([cfg[GAUSS_FOOTER]])
 
     cp_data.append(raw_cp_data)
     com_file = create_out_fname(file_path, base_dir=out_dir, ext='.com')
