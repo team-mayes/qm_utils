@@ -32,11 +32,12 @@ setup(
     package_dir={'qm_utils':
                  'qm_utils'},
     entry_points={
-        'console_scripts': [
-            'qm_utils=qm_utils.cli:main'
-        ]
+        'console_scripts': ['cp=qm_utils.cp:main',
+                            'read_sdf=qm_utils.read_sdf:main',
+                            ]
     },
     include_package_data=True,
+    package_data={'qm_utils': ['cfg/*.*', ], },
     install_requires=requirements,
     license="BSD license",
     zip_safe=False,

@@ -17,7 +17,7 @@ from qm_utils import qm_utils
 from qm_utils import cli
 
 
-class TestQm_utils(object):
+class TestQMUtils(object):
 
     @classmethod
     def setup_class(cls):
@@ -25,6 +25,7 @@ class TestQm_utils(object):
 
     def test_something(self):
         pass
+
     def test_command_line_interface(self):
         runner = CliRunner()
         result = runner.invoke(cli.main)

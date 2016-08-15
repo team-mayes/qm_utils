@@ -57,3 +57,17 @@ docs/_build/
 
 # PyBuilder
 target/
+
+#emacs files
+\#*\#
+*~
+
+#Mac Files
+*.DS_Store
+
+#json interp files
+*_interpreted.json
+
+# intellij (for pycharm)
+.idea/
+*.iml
