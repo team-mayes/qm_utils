@@ -47,6 +47,7 @@ def parse_cmdline(argv):
         args = parser.parse_args(argv)
     except SystemExit as e:
         warning(e)
+        parser.print_help()
         return [], INVALID_DATA
 
     return args, GOOD_RET
@@ -116,7 +117,7 @@ def main(argv=None):
     try:
         found_files = find_files_by_dir(args.base_dir, args.file_pattern)
         cp_data = []
-        print("Found {} files to process".format(len(found_files)))
+        print("Searching in {} directories for files to process".format(len(found_files)))
         for f_dir, files in found_files.iteritems():
             for file_path in ([os.path.join(f_dir, tgt) for tgt in files]):
                 process_file(file_path, args.out_dir, cp_data)

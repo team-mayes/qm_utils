@@ -41,6 +41,16 @@ TOL = 0.00000000001
 
 # Error checking including testing scripts
 
+# Exceptions #
+
+class QmError(Exception):
+    pass
+
+
+class InvalidDataError(QmError):
+    pass
+
+
 # From http://schinckel.net/2013/04/15/capture-and-test-sys.stdout-sys.stderr-in-unittest.testcase/
 @contextmanager
 def capture_stdout(command, *args, **kwargs):

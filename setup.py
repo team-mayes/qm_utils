@@ -32,7 +32,7 @@ setup(
     package_dir={'qm_utils':
                  'qm_utils'},
     entry_points={
-        'console_scripts': ['cp=qm_utils.cp:main',
+        'console_scripts': ['cp_params=qm_utils.cp_params:main',
                             'read_sdf=qm_utils.read_sdf:main',
                             ]
     },

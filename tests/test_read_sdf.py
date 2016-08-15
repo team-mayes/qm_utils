@@ -10,7 +10,7 @@ Tests for `read_sdf` module.
 
 import unittest
 import os
-from qm_utils.qm_common import silent_remove, diff_lines
+from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr
 from qm_utils.read_sdf import main
 import logging
 
@@ -33,8 +33,13 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'read_sdf')
 SDF_FILE = os.path.join(SUB_DATA_DIR, '14b.sdf')
 COM_FILE = os.path.join(SUB_DATA_DIR, '14b.com')
 COM_FILE_GOOD = os.path.join(SUB_DATA_DIR, '14b_good.com')
+COM_FILE2 = os.path.join(SUB_DATA_DIR, '1c4.com')
+COM_FILE3 = os.path.join(SUB_DATA_DIR, '3e.com')
 CP_FILE = os.path.join(TEST_DIR, 'cp.inp')
 CP_FILE_GOOD = os.path.join(SUB_DATA_DIR, 'cp_good.inp')
+
+SDF_WRONG_ORDER = os.path.join(SUB_DATA_DIR, '14b_wrong_order.txt')
+COM_FILE4 = os.path.join(SUB_DATA_DIR, '14b_wrong_order.com')
 
 
 class TestMain(unittest.TestCase):
@@ -44,5 +49,20 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(COM_FILE, COM_FILE_GOOD))
             self.assertFalse(diff_lines(CP_FILE, CP_FILE_GOOD))
         finally:
-            silent_remove(COM_FILE, disable=DISABLE_REMOVE)
-            silent_remove(CP_FILE, disable=DISABLE_REMOVE)
+            for o_file in [COM_FILE, COM_FILE2, COM_FILE3, CP_FILE]:
+                silent_remove(o_file, disable=DISABLE_REMOVE)
+
+
+class TestFailWell(unittest.TestCase):
+    def testWrongOrderAtoms(self):
+        try:
+            with capture_stderr(main, ['-f', '14b_wrong_order.txt']) as output:
+                self.assertTrue('Expected the first five atoms to be carbons' in output)
+                self.assertTrue('Expected the 6th atom to be an oxygen' in output)
+        finally:
+            for o_file in [COM_FILE4, CP_FILE]:
+                silent_remove(o_file, disable=DISABLE_REMOVE)
+
+    def testUnrecArg(self):
+        with capture_stderr(main, ['-@']) as output:
+            self.assertTrue('unrecognized arguments' in output)
