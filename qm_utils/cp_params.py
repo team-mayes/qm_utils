@@ -222,9 +222,15 @@ def process_file(input_file, pucker_dict):
                     theta = 360. - abs(math.degrees(math.atan(q2 / q3)))
             else:
                 if q2 > 0.:
-                    theta = 180. - abs(math.degrees(math.atan(q2 / q3)))
+                    if q3 == 0:
+                        theta = 90.
+                    else:
+                        theta = 180. - abs(math.degrees(math.atan(q2 / q3)))
                 else:
-                    theta = 180. + abs(math.degrees(math.atan(q2 / q3)))
+                    if q3 == 0:
+                        theta = 270.
+                    else:
+                        theta = 180. + abs(math.degrees(math.atan(q2 / q3)))
                     # bigQ2 = np.array([q1,q2,q3],dtype='float64')
             # bigQ2 = math.sqrt((bigQ2*bigQ2).sum())
             closest_pucker = find_closest_pucker(np.deg2rad(phi), np.deg2rad(theta), pucker_dict)
