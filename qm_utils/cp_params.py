@@ -209,7 +209,10 @@ def process_file(input_file, pucker_dict):
                 if q2sinphi > 0.:
                     phi = 180. - abs(math.degrees(math.atan(q2sinphi / q2cosphi)))
                 else:
-                    phi = 180. + abs(math.degrees(math.atan(q2sinphi / q2cosphi)))
+                    if q2cosphi == 0:
+                        phi = 270.
+                    else:
+                        phi = 180. + abs(math.degrees(math.atan(q2sinphi / q2cosphi)))
             # theta = math.degrees(math.atan(q2 / q3))
 
             if q3 > 0.:

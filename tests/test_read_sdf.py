@@ -35,6 +35,8 @@ COM_FILE = os.path.join(SUB_DATA_DIR, '14b.com')
 COM_FILE_GOOD = os.path.join(SUB_DATA_DIR, '14b_good.com')
 COM_FILE2 = os.path.join(SUB_DATA_DIR, '1c4.com')
 COM_FILE3 = os.path.join(SUB_DATA_DIR, '3e.com')
+COM_FILE5 = os.path.join(SUB_DATA_DIR, 'o3b.com')
+COM_FILE6 = os.path.join(SUB_DATA_DIR, '4c1.com')
 CP_FILE = os.path.join(TEST_DIR, 'cp.inp')
 CP_FILE_GOOD = os.path.join(SUB_DATA_DIR, 'cp_good.inp')
 
@@ -49,8 +51,9 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(COM_FILE, COM_FILE_GOOD))
             self.assertFalse(diff_lines(CP_FILE, CP_FILE_GOOD))
         finally:
-            for o_file in [COM_FILE, COM_FILE2, COM_FILE3, CP_FILE]:
+            for o_file in [COM_FILE, COM_FILE2, COM_FILE3, COM_FILE5, COM_FILE6]:
                 silent_remove(o_file, disable=DISABLE_REMOVE)
+            silent_remove(CP_FILE, disable=DISABLE_REMOVE)
 
 
 class TestFailWell(unittest.TestCase):
