@@ -1,0 +1,9 @@
+ HEADER 6-MEMBERED RING COORDINATES
+ TITLE GENERATED FOR CHIME VIEW
+HETATM 9999 C    FRA   999      -0.660  -1.143  -0.233  1.00 10.00           C
+HETATM 9999 C    FRA   999      -1.320  -0.000   0.233  1.00 10.00           C
+HETATM 9999 C    FRA   999      -0.660   1.143  -0.233  1.00 10.00           C
+HETATM 9999 C    FRA   999       0.660   1.143   0.233  1.00 10.00           C
+HETATM 9999 C    FRA   999       1.320  -0.000  -0.233  1.00 10.00           C
+HETATM 9999 O    FRA   999       0.660  -1.143   0.233  1.00 10.00           O
+ END

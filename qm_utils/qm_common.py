@@ -161,7 +161,80 @@ def silent_remove(filename, disable=False):
                 raise
 
 
-# Input and output scripts
+# Conversions #
+
+def to_int_list(raw_val):
+    return_vals = []
+    for val in raw_val.split(','):
+        return_vals.append(int(val.strip()))
+    return return_vals
+
+
+def to_list(raw_val):
+    return_vals = []
+    for val in raw_val.split(','):
+        return_vals.append(val.strip())
+    return return_vals
+
+
+def conv_raw_val(param, def_val, int_list=True):
+    """
+    Converts the given parameter into the given type (default returns the raw value).  Returns the default value
+    if the param is None.
+    @param param: The value to convert.
+    @param def_val: The value that determines the type to target.
+    @param int_list: flag to specify if lists should converted to a list of integers
+    @return: The converted parameter value.
+    """
+    if param is None:
+        return def_val
+    if isinstance(def_val, bool):
+        if param in ['T', 't', 'true', 'TRUE', 'True']:
+            return True
+        else:
+            return False
+    if isinstance(def_val, int):
+        return int(param)
+    if isinstance(def_val, float):
+        return float(param)
+    if isinstance(def_val, list):
+        if int_list:
+            return to_int_list(param)
+        else:
+            return to_list(param)
+    return param
+
+
+def process_cfg(raw_cfg, def_cfg_vals=None, req_keys=None, int_list=True):
+    """
+    Converts the given raw configuration, filling in defaults and converting the specified value (if any) to the
+    default value's type.
+    @param raw_cfg: The configuration map.
+    @param def_cfg_vals: dictionary of default values
+    @param req_keys: dictionary of required types
+    @param int_list: flag to specify if lists should converted to a list of integers
+    @return: The processed configuration.
+
+    """
+    proc_cfg = {}
+    for key in raw_cfg:
+        if not (key in def_cfg_vals or key in req_keys):
+            raise InvalidDataError("Unexpected key '{}' in configuration ('ini') file.".format(key))
+    key = None
+    try:
+        for key, def_val in def_cfg_vals.items():
+            proc_cfg[key] = conv_raw_val(raw_cfg.get(key), def_val, int_list)
+        for key, type_func in req_keys.items():
+            proc_cfg[key] = type_func(raw_cfg[key])
+    except KeyError as e:
+        raise KeyError('Missing config val for key {}'.format(key, e))
+    except Exception as e:
+        raise InvalidDataError('Problem with config vals on key {}: {}'.format(key, e))
+
+    return proc_cfg
+
+
+# Input and output
 
 def find_files_by_dir(tgt_dir, pat):
     """Recursively searches the target directory tree for files matching the given pattern.
