@@ -25,6 +25,7 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 # Directories #
 
 TEST_DIR = os.path.dirname(__file__)
+PAR_DIR = os.path.join(TEST_DIR, os.pardir)
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'read_sdf')
 
@@ -37,7 +38,7 @@ COM_FILE2 = os.path.join(SUB_DATA_DIR, '1c4.com')
 COM_FILE3 = os.path.join(SUB_DATA_DIR, '3e.com')
 COM_FILE5 = os.path.join(SUB_DATA_DIR, 'o3b.com')
 COM_FILE6 = os.path.join(SUB_DATA_DIR, '4c1.com')
-CP_FILE = os.path.join(TEST_DIR, 'cp.inp')
+CP_FILE = os.path.join(PAR_DIR, 'cp.inp')
 CP_FILE_GOOD = os.path.join(SUB_DATA_DIR, 'cp_good.inp')
 
 SDF_WRONG_ORDER = os.path.join(SUB_DATA_DIR, '14b_wrong_order.txt')
