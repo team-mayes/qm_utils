@@ -12,16 +12,11 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'six',
     'seaborn',
-    # 'matplotlib',
-    #  'numpy', # commented out because caused problemsn
-    # TODO: put package requirements here
 ]
 
 test_requirements = [
     'seaborn',
     'six',
-    # 'matplotlib',
-    # TODO: put package test requirements here
 ]
 
 setup(

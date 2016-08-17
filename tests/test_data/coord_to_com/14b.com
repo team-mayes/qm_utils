@@ -1,6 +1,6 @@
-#Put Keywords Here, check Charge and Multiplicity
+# Put Keywords Here, check Charge and Multiplicity
 
-From '14b.sdf': M0001
+From '14b.sdf'
 
 0  1
 C           1.27900         0.00000        -0.48200
@@ -19,4 +19,5 @@ H           1.13220         2.14780        -0.27590
 H           1.13220         1.25330         1.27430
 H          -1.13220         2.14780        -0.27590
 H          -1.13220         1.25330         1.27430
+
 

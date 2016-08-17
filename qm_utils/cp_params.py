@@ -66,13 +66,15 @@ def parse_cmdline(argv):
     parser = argparse.ArgumentParser(description='Reads in space-separated lists of atomic coordinates for 6-membered '
                                                  'rings and outputs Cremer-Pople puckering coordinates. The input '
                                                  'format is: \n'
-                                                 'name1 18x(float )\n'
-                                                 'name2 18x(float )\n'
-                                                 'name3 18x(float ) ....\n'
+                                                 'name1 18x(float)\n'
+                                                 'name2 18x(float)\n'
+                                                 'name3 18x(float)...\n'
                                                  'where each line contains a name and Cartesian coordinates for a '
                                                  'unique 6-member ring. The order for the atomic coordinates is: O5 '
                                                  '(or C6) C1 C2 C3 C4 C5 with x, y, and z coordinates specified for'
-                                                 'each atom in that order.')
+                                                 'each atom in that order.\n'
+                                                 'This script also returns the closest IUPAC puckering designation '
+                                                 'determined by arc length along the Cremer-Pople sphere.')
     parser.add_argument("file", help="The input file to process")
     parser.add_argument('-o', "--out_file", help="The output file name (defaults to input file name with the '.out' "
                                                  "extension)",
@@ -80,6 +82,9 @@ def parse_cmdline(argv):
     parser.add_argument('-d', "--out_dir", help="The output directory (defaults to the same directory as the "
                                                 "input file)",
                         default=None)
+    parser.add_argument('-s', "--to_stdout", help="Flag to display output to standard out (screen) in addition to "
+                                                  "saving the output to a file. The default is false.",
+                        action='store_true')
     parser.add_argument('-p', "--pucker_dict", help="A csv file specifying the Cremer-Pople puckering parameters (in "
                                                     "degrees) for each IUPAC specified puckering designation. The"
                                                     "default file is: {}".format(PUCKER_DICT_FILE),
@@ -96,10 +101,12 @@ def parse_cmdline(argv):
 
 
 def to_float_list(a):
-    b = []
-    for i in a:
-        b.append(float(i))
-    return b
+    """
+    Given an interable, returns a list of its contents converted to floats
+    :param a: interable
+    :return: list of floats
+    """
+    return [float(i) for i in a]
 
 
 def angles_to_xyz(phi, theta):
@@ -108,7 +115,7 @@ def angles_to_xyz(phi, theta):
     Note!!! CP uses theta for latitude!! this is opposite of much of math convention
     :param phi: longitude in radians
     :param theta: latitude in radians
-    :return: Cartesian coordinates along the unit sphere, as a numpy array
+    :return: a numpy array of Cartesian coordinates on the unit sphere
     """
     sin_theta = math.sin(theta)
     return np.array((sin_theta * math.cos(phi),
@@ -129,9 +136,9 @@ def find_closest_pucker(phi, theta, pucker_dict):
     :param phi: phi of the pucker to identify
     :param theta: second CP parameter of the pucker to identify
     :param pucker_dict: dictionary of names and CP params of IUPAC puckers
-    :return: closest IUPAC pucker
+    :return: closest_pucker: (string) closest IUPAC pucker name
     """
-    closest_pucker = 'nan'
+    closest_pucker = None
     closest_dist = np.inf
     xyz = angles_to_xyz(phi, theta)
 
@@ -142,14 +149,18 @@ def find_closest_pucker(phi, theta, pucker_dict):
             closest_dist = current_dist
             closest_pucker = pucker
 
+    if closest_pucker is None:
+        warning("Did not find a closest pucker. Check puckering dictionary.")
+
     return closest_pucker
 
 
-def process_file(input_file, pucker_dict):
+def process_file(input_file, pucker_dict, print_to_stdout):
     """
     :param input_file: path of file to be read
     :param pucker_dict: dictionary of pucker_ids
-    :return:
+    :param print_to_stdout: boolean to display output to screen as it is calculated
+    :return: pucker_results: a list of dicts containing the header, CP parameters, and closest pucker
     """
 
     pucker_results = []
@@ -187,17 +198,17 @@ def process_file(input_file, pucker_dict):
             sqrt_2 = math.sqrt(2.)
             inv_sqrt_6 = math.sqrt(1. / 6.)
             for j, i in enumerate(z):
-                q2cosphi += i * math.cos(2.*math.pi * 2.*j / 6.)
-                q2sinphi -= i * math.sin(2.*math.pi * 2.*j / 6.)
-                q1cosphi += i * math.cos(2.*math.pi * j / 6.)
-                q1sinphi -= i * math.sin(2.*math.pi * j / 6.)
+                common_term = 2.*math.pi * j / 6.
+                q2cosphi += i * math.cos(2.*common_term)
+                q2sinphi -= i * math.sin(2.*common_term)
+                q1cosphi += i * math.cos(common_term)
+                q1sinphi -= i * math.sin(common_term)
                 q3 += i * math.cos(j * math.pi)
                 big_q += i * i
             q2cosphi *= sqrt_2 * inv_sqrt_6
             q2sinphi *= sqrt_2 * inv_sqrt_6
             q3 *= inv_sqrt_6
             q2 = math.sqrt(q2cosphi * q2cosphi + q2sinphi * q2sinphi)
-            # q1 = math.sqrt(q1cosphi * q1cosphi + q1sinphi * q1sinphi)
             big_q = math.sqrt(big_q)
 
             if q2cosphi > 0.:
@@ -216,7 +227,6 @@ def process_file(input_file, pucker_dict):
                         phi = 270.
                     else:
                         phi = 180. + abs(math.degrees(math.atan(q2sinphi / q2cosphi)))
-            # theta = math.degrees(math.atan(q2 / q3))
 
             if q3 > 0.:
                 if q2 > 0.:
@@ -234,10 +244,10 @@ def process_file(input_file, pucker_dict):
                         theta = 270.
                     else:
                         theta = 180. + abs(math.degrees(math.atan(q2 / q3)))
-                    # bigQ2 = np.array([q1,q2,q3],dtype='float64')
-            # bigQ2 = math.sqrt((bigQ2*bigQ2).sum())
+
             closest_pucker = find_closest_pucker(np.deg2rad(phi), np.deg2rad(theta), pucker_dict)
-            print("{:12} {:8.3f} {:8.3f} {:8.3f} {}".format(header, phi, theta, big_q, closest_pucker))
+            if print_to_stdout:
+                print("{:12} {:8.3f} {:8.3f} {:8.3f} {}".format(header, phi, theta, big_q, closest_pucker))
             pucker_results.append({NAME_KEY: header, PHI_KEY: phi, THETA_KEY: theta, Q_KEY: big_q,
                                    PUCKER_KEY: closest_pucker})
 
@@ -249,7 +259,8 @@ def create_pucker_dict(pucker_dict_file):
     Reads in a list of pucker ids and their phi, theta in degrees and returns a dict of pucker id with [phi, theta]
     in radians
     :param pucker_dict_file: location of the csv with "pucker_id","phi,degrees","theta,degrees"
-    :return:
+    :return: rad_dict: a dictionary with IUPAC pucker names as the key mapping to a dictionary designating its
+        CP phi, CP theta, and Cartesian coordinates (XYZ key)
     """
     raw_dict = read_csv_to_dict(pucker_dict_file, quote_style=csv.QUOTE_NONNUMERIC)
 
@@ -276,7 +287,7 @@ def main(argv=None):
 
     try:
         pucker_dict = create_pucker_dict(args.pucker_dict)
-        result_dict = process_file(args.file, pucker_dict)
+        result_dict = process_file(args.file, pucker_dict, args.to_stdout)
         if args.out_file is None:
             args.out_file = create_out_fname(args.file, base_dir=args.out_dir, ext='.out')
         write_csv(result_dict, args.out_file, OUT_KEYS)

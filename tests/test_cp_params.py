@@ -5,7 +5,7 @@
 test_cp
 ----------------------------------
 
-Tests for `cp` module.
+Tests for `cp` module. (CP = Cremer-Pople)
 """
 
 import unittest
@@ -24,7 +24,7 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 # Directories #
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data')
-SUB_DATA_DIR = os.path.join(DATA_DIR, 'read_sdf')
+SUB_DATA_DIR = os.path.join(DATA_DIR, 'cp_params')
 
 # Input & corresponding output files #
 
@@ -32,7 +32,11 @@ IN_FILE = os.path.join(SUB_DATA_DIR, 'cp_good.inp')
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'cp.out')
 OUT_FILE_GOOD = os.path.join(SUB_DATA_DIR, 'cp_good.out')
 
+IN_FILE_SHORT = os.path.join(SUB_DATA_DIR, 'cp_short.inp')
+OUT_FILE_SHORT = os.path.join(SUB_DATA_DIR, 'cp_short.out')
+
 MISS_VALS_IN_FILE = os.path.join(SUB_DATA_DIR, 'cp_missing_vals.inp')
+EMPTY_PUCKER_DICT = os.path.join(SUB_DATA_DIR, 'pucker_dict_empty.csv')
 
 
 class TestMain(unittest.TestCase):
@@ -70,6 +74,18 @@ class TestMain(unittest.TestCase):
         finally:
             silent_remove(OUT_FILE, disable=DISABLE_REMOVE)
 
+    def testToStdOut(self):
+        test_input = [IN_FILE_SHORT, "-s"]
+        if logger.isEnabledFor(logging.DEBUG):
+            main(test_input)
+        try:
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue('14b.sdf       240.000   90.000    0.835 14b\n'
+                                '3e.sdf          0.517  125.167    0.477 3e\n'
+                                'Wrote file: ' in output)
+        finally:
+            silent_remove(OUT_FILE_SHORT, disable=DISABLE_REMOVE)
+
 
 class TestFailWell(unittest.TestCase):
     def testNoArgs(self):
@@ -81,3 +97,10 @@ class TestFailWell(unittest.TestCase):
             main([MISS_VALS_IN_FILE])
         with capture_stderr(main, [MISS_VALS_IN_FILE]) as output:
             self.assertTrue('Expected exactly' in output)
+
+    def testEmptyPuckerDict(self):
+        test_in = [IN_FILE, "-o", OUT_FILE, "-p", EMPTY_PUCKER_DICT]
+        if logger.isEnabledFor(logging.DEBUG):
+            main(test_in)
+        with capture_stderr(main, test_in) as output:
+            self.assertTrue('Did not find a closest pucker' in output)

@@ -18,16 +18,7 @@ import errno
 import six
 from contextlib import contextmanager
 
-# if sys.version_info[0] == 2:
-#     # noinspection PyCompatibility
-#     from ConfigParser import ConfigParser
-# else:
-#     # noinspection PyCompatibility
-#     from configparser import ConfigParser
-#
-# hello = six.PY2
-# print("hello")
-# # from six.moves import cStringIO
+ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 
 GOOD_RET = 0
 INPUT_ERROR = 1
@@ -163,59 +154,78 @@ def silent_remove(filename, disable=False):
 
 # Conversions #
 
-def to_int_list(raw_val):
-    return_vals = []
-    for val in raw_val.split(','):
-        return_vals.append(int(val.strip()))
-    return return_vals
+def dequote(s):
+    """
+    from: http://stackoverflow.com/questions/3085382/python-how-can-i-strip-first-and-last-double-quotes
+    If a string has single or double quotes around it, remove them.
+    Make sure the pair of quotes match.
+    If a matching pair of quotes is not found, return the string unchanged.
+    """
+    if (s[0] == s[-1]) and s.startswith(("'", '"')):
+        return s[1:-1]
+    return s
 
 
 def to_list(raw_val):
-    return_vals = []
-    for val in raw_val.split(','):
-        return_vals.append(val.strip())
-    return return_vals
+    """
+    converts a comma-separated string into a list of integers if possible.
+    Otherwise, a list of floats, or, if that fails, a list of strings.
+    :param raw_val: a comma-separated string
+    :return: a list of ints, floats, or strings (depending on what is possible)
+    """
+    try:
+        return [int(val.strip()) for val in raw_val.split(',')]
+    except ValueError:
+        try:
+            return [float(val.strip()) for val in raw_val.split(',')]
+        except ValueError:
+            return [val.strip() for val in raw_val.split(',')]
 
 
-def conv_raw_val(param, def_val, int_list=True):
+def conv_raw_val(param, def_val):
     """
     Converts the given parameter into the given type (default returns the raw value).  Returns the default value
     if the param is None.
     @param param: The value to convert.
     @param def_val: The value that determines the type to target.
-    @param int_list: flag to specify if lists should converted to a list of integers
     @return: The converted parameter value.
     """
     if param is None:
         return def_val
     if isinstance(def_val, bool):
-        if param in ['T', 't', 'true', 'TRUE', 'True']:
-            return True
-        else:
-            return False
+        return check_bool(param)
     if isinstance(def_val, int):
         return int(param)
     if isinstance(def_val, float):
         return float(param)
     if isinstance(def_val, list):
-        if int_list:
-            return to_int_list(param)
-        else:
-            return to_list(param)
+        return to_list(param)
     return param
 
 
-def process_cfg(raw_cfg, def_cfg_vals=None, req_keys=None, int_list=True):
+def check_bool(param):
+    if param in ACCEPT_AS_TRUE:
+        return True
+    else:
+        if param not in ['F', 'f', 'false', 'FALSE', 'False']:
+            warning("Read '{}' when expecting a boolean input. Since the input is not in {}, it will be "
+                    "interpreted as False.".format(param, ACCEPT_AS_TRUE))
+        return False
+
+
+def process_cfg(raw_cfg, def_cfg_vals=None, req_keys=None):
     """
     Converts the given raw configuration, filling in defaults and converting the specified value (if any) to the
     default value's type.
     @param raw_cfg: The configuration map.
     @param def_cfg_vals: dictionary of default values
     @param req_keys: dictionary of required types
-    @param int_list: flag to specify if lists should converted to a list of integers
     @return: The processed configuration.
-
     """
+    if req_keys is None:
+        req_keys = {}
+    if def_cfg_vals is None:
+        def_cfg_vals = {}
     proc_cfg = {}
     for key in raw_cfg:
         if not (key in def_cfg_vals or key in req_keys):
@@ -223,13 +233,16 @@ def process_cfg(raw_cfg, def_cfg_vals=None, req_keys=None, int_list=True):
     key = None
     try:
         for key, def_val in def_cfg_vals.items():
-            proc_cfg[key] = conv_raw_val(raw_cfg.get(key), def_val, int_list)
+            proc_cfg[key] = conv_raw_val(raw_cfg.get(key), def_val)
         for key, type_func in req_keys.items():
-            proc_cfg[key] = type_func(raw_cfg[key])
+            if type_func == bool:
+                proc_cfg[key] = check_bool(raw_cfg[key])
+            else:
+                proc_cfg[key] = type_func(raw_cfg[key])
     except KeyError as e:
-        raise KeyError('Missing config val for key {}'.format(key, e))
+        raise KeyError("Missing config val for key '{}'".format(key, e))
     except Exception as e:
-        raise InvalidDataError('Problem with config vals on key {}: {}'.format(key, e))
+        raise InvalidDataError("Problem with config vals on key '{}': {}".format(key, e))
 
     return proc_cfg
 
@@ -270,10 +283,9 @@ def create_out_fname(src_file, prefix='', suffix='', remove_prefix=None, base_di
         base_dir = os.path.dirname(src_file)
 
     file_name = os.path.basename(src_file)
+    base_name = os.path.splitext(file_name)[0]
     if remove_prefix is not None and file_name.startswith(remove_prefix):
-        base_name = file_name[len(remove_prefix):]
-    else:
-        base_name = os.path.splitext(file_name)[0]
+        base_name = base_name[len(remove_prefix):]
 
     if ext is None:
         ext = os.path.splitext(file_name)[1]
@@ -319,11 +331,6 @@ def read_csv_to_dict(src_file, quote_style=csv.QUOTE_MINIMAL):
     """
     result = []
     with open(src_file) as csv_file:
-        # try:
-        #     csv_reader = csv.DictReader(csv_file, quoting=csv.QUOTE_NONNUMERIC)
-        #     for line in csv_reader:
-        #         result.append(convert_dict_line(all_conv, data_conv, line))
-        # except ValueError:
         csv_reader = csv.DictReader(csv_file, quoting=quote_style)
         for line in csv_reader:
             result.append(convert_dict_line(line))
@@ -354,7 +361,7 @@ def write_csv(data, out_fname, fieldnames, extrasaction="raise", mode='w', quote
         if mode == 'w':
             writer.writeheader()
         writer.writerows(data)
-    if mode == 'a':
-        print("  Appended: {}".format(out_fname))
-    elif mode == 'w':
+    if mode == 'w':
         print("Wrote file: {}".format(out_fname))
+    elif mode == 'a':
+        print("  Appended: {}".format(out_fname))
