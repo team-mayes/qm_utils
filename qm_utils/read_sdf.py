@@ -78,7 +78,7 @@ def process_file(file_path, out_dir, cp_data):
     raw_cp_data = file_name + ' '
 
     num_atoms = int(sdf_line_3[0])
-    num_bonds = int(sdf_line_3[1])
+    # num_bonds = int(sdf_line_3[1])
 
     ring_xyz = []
     for row in range(4, 4+num_atoms):
@@ -118,10 +118,13 @@ def main(argv=None):
         found_files = find_files_by_dir(args.base_dir, args.file_pattern)
         cp_data = []
         print("Searching in {} directories for files to process".format(len(found_files)))
+        # noinspection PyCompatibility
         for f_dir, files in found_files.iteritems():
             for file_path in ([os.path.join(f_dir, tgt) for tgt in files]):
                 process_file(file_path, args.out_dir, cp_data)
         cp_file = create_out_fname('cp.inp', base_dir=args.out_dir)
+        # because the file search may find the files in different orders on different machines, sort for consistency
+        cp_data.sort()
         list_to_file(cp_data, cp_file)
     finally:
         pass

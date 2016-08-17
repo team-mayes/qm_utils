@@ -219,6 +219,8 @@ def main(argv=None):
             for file_path in ([os.path.join(f_dir, tgt) for tgt in files]):
                 process_file(file_path, args.out_dir, cp_data, cfg)
         cp_file = create_out_fname('cp.inp', base_dir=args.out_dir)
+        # because the file search may find the files in different orders on different machines, sort for consistency
+        cp_data.sort()
         list_to_file(cp_data, cp_file)
     finally:
         pass
