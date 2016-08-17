@@ -16,8 +16,8 @@ import logging
 
 __author__ = 'hmayes'
 
-logging.basicConfig(level=logging.DEBUG)
-# logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 
@@ -32,7 +32,7 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'coord_to_com')
 
 PDB_INI = os.path.join(SUB_DATA_DIR, 'read_pdb.ini')
 PDB_FILE = os.path.join(SUB_DATA_DIR, '1c4.pdb')
-COM_1C4_FILE = os.path.join(SUB_DATA_DIR, '1c4.com')
+COM_1C4 = os.path.join(SUB_DATA_DIR, '1c4.com')
 COM_1C4_FILE_GOOD = os.path.join(SUB_DATA_DIR, '1c4_good.com')
 COM_E3_FILE = os.path.join(SUB_DATA_DIR, 'e3.com')
 COM_4C1_FILE = os.path.join(SUB_DATA_DIR, '4c1.com')
@@ -40,7 +40,10 @@ CP_FILE = os.path.join(SUB_DATA_DIR, 'cp.inp')
 CP_FILE_GOOD = os.path.join(SUB_DATA_DIR, 'cp_good.inp')
 
 PDB_WRONG_ORDER = os.path.join(SUB_DATA_DIR, '1c4_wrong_order.txt')
-COM_WRONG_ORDER_FILE = os.path.join(SUB_DATA_DIR, '1c4_wrong_order.com')
+COM_WRONG_ORDER = os.path.join(SUB_DATA_DIR, '1c4_wrong_order.com')
+
+PDB_TOO_FEW = os.path.join(SUB_DATA_DIR, '1c4_too_few.txt')
+COM_TOO_FEW = os.path.join(SUB_DATA_DIR, '1c4_too_few.com')
 
 SDF_FILE = os.path.join(SUB_DATA_DIR, '14b.sdf')
 COM_14B_FILE = os.path.join(SUB_DATA_DIR, '14b.com')
@@ -48,6 +51,8 @@ COM_14B_FILE_GOOD = os.path.join(SUB_DATA_DIR, '14b_good.com')
 COM_3E_FILE = os.path.join(SUB_DATA_DIR, '3e.com')
 COM_O3B_FILE = os.path.join(SUB_DATA_DIR, 'o3b.com')
 CP_SDF_FILE_GOOD = os.path.join(SUB_DATA_DIR, 'cp_sdf_good.inp')
+
+PDB_TOO_FEW_RING_INI = os.path.join(SUB_DATA_DIR, 'read_pdb_too_few_ring_atoms.ini')
 
 
 class TestMain(unittest.TestCase):
@@ -58,10 +63,10 @@ class TestMain(unittest.TestCase):
                 main(test_input)
             with capture_stderr(main, test_input) as output:
                 self.assertTrue('Will use only default values' in output)
-            self.assertFalse(diff_lines(COM_1C4_FILE, COM_1C4_FILE_GOOD))
+            self.assertFalse(diff_lines(COM_1C4, COM_1C4_FILE_GOOD))
             self.assertFalse(diff_lines(CP_FILE, CP_FILE_GOOD))
         finally:
-            for o_file in [COM_1C4_FILE, COM_E3_FILE, COM_4C1_FILE]:
+            for o_file in [COM_1C4, COM_E3_FILE, COM_4C1_FILE]:
                 silent_remove(o_file, disable=DISABLE_REMOVE)
             silent_remove(CP_FILE, disable=DISABLE_REMOVE)
 
@@ -74,7 +79,7 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(COM_14B_FILE, COM_14B_FILE_GOOD))
             self.assertFalse(diff_lines(CP_FILE, CP_SDF_FILE_GOOD))
         finally:
-            for o_file in [COM_14B_FILE, COM_1C4_FILE, COM_3E_FILE, COM_4C1_FILE, COM_O3B_FILE]:
+            for o_file in [COM_14B_FILE, COM_1C4, COM_3E_FILE, COM_4C1_FILE, COM_O3B_FILE]:
                 silent_remove(o_file, disable=DISABLE_REMOVE)
             silent_remove(CP_FILE, disable=DISABLE_REMOVE)
 
@@ -89,7 +94,7 @@ class TestFailWell(unittest.TestCase):
                 self.assertTrue("Expected atom 1 to have type 'C'. Found 'O'" in output)
                 self.assertTrue("Expected atom 6 to have type 'O'. Found 'C'" in output)
         finally:
-            for o_file in [COM_WRONG_ORDER_FILE, CP_FILE]:
+            for o_file in [COM_WRONG_ORDER, CP_FILE]:
                 silent_remove(o_file, disable=DISABLE_REMOVE)
 
     def testWrongOrderSDF(self):
@@ -101,7 +106,30 @@ class TestFailWell(unittest.TestCase):
                 self.assertTrue("Expected atom 1 to have type 'C'. Found 'O'" in output)
                 self.assertTrue("Expected atom 6 to have type 'O'. Found 'C'" in output)
         finally:
-            for o_file in [COM_WRONG_ORDER_FILE, CP_FILE]:
+            for o_file in [COM_WRONG_ORDER, CP_FILE]:
+                silent_remove(o_file, disable=DISABLE_REMOVE)
+
+    def testTooFewAtomsFound(self):
+        try:
+            test_input = ['-f', '1c4_too_few.txt', "-o", SUB_DATA_DIR, "-t", "pdb"]
+            if logger.isEnabledFor(logging.DEBUG):
+                main(test_input)
+            with capture_stderr(main, test_input) as output:
+                self.assertTrue("Did not find the expected six ring atoms" in output)
+        finally:
+            for o_file in [COM_TOO_FEW, CP_FILE]:
+                silent_remove(o_file, disable=DISABLE_REMOVE)
+
+    def testTooFewRingAtomsListed(self):
+        try:
+            test_input = ['-f', '1c4.pdb', "-o", SUB_DATA_DIR, "-c", PDB_TOO_FEW_RING_INI]
+            if logger.isEnabledFor(logging.DEBUG):
+                main(test_input)
+            with capture_stderr(main, test_input) as output:
+                self.assertTrue("To print cp_params input, enter" in output)
+            #     self.assertTrue("Did not find any data for cp_params input" in output)
+        finally:
+            for o_file in [COM_1C4, CP_FILE]:
                 silent_remove(o_file, disable=DISABLE_REMOVE)
 
     def testUnrecArg(self):

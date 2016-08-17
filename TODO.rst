@@ -2,11 +2,7 @@
 qm_utils
 ===============================
 
+coord_to_com
+------------
 
-
-
-read_pdb
---------
-
-* Combine with read_sdf
-* test providing not exactly 6 atom numbers and types
+Allow template instead of ini file?

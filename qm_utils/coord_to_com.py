@@ -26,10 +26,6 @@ __author__ = 'hbmayes'
 
 # Constants #
 
-# Defaults
-
-DEF_FILE_PAT = '*pdb'
-
 # PDB file info
 PDB_LINE_TYPE_LAST_CHAR = 'pdb_line_type_last_char'
 PDB_ATOM_NUM_LAST_CHAR = 'pdb_atom_num_last_char'
@@ -54,6 +50,7 @@ GAUSS_FOOTER = 'gaussian_footer'
 MAIN_SEC = 'main'
 
 # Defaults
+DEF_FILE_PAT = '*pdb'
 DEF_CFG_FILE = 'read_pdb.ini'
 DEF_GAUSS_KEYWORDS = '# Put Keywords Here, check Charge and Multiplicity\n'
 DEF_ELEM_DICT_FILE = os.path.join(os.path.dirname(__file__), 'cfg', 'charmm36_atoms_elements.txt')
@@ -76,6 +73,10 @@ DEF_CFG_VALS = {RING_ATOMS: [6, 1, 2, 3, 4, 5],
                 PDB_LAST_ELEM_CHAR: 78,
                 }
 REQ_KEYS = {}
+
+OUT_DIR = 'out_dir'
+FILE_TYPE = 'file_type'
+PRINT_CP_INPUT = 'print_cp_input'
 
 
 def read_cfg(f_loc, cfg_proc=process_cfg):
@@ -118,11 +119,15 @@ def parse_cmdline(argv):
     parser.add_argument("-d", "--base_dir", help="The starting point for a summary file search "
                                                  "(defaults to the current directory)",
                         default=os.getcwd())
-    parser.add_argument('-o', "--out_dir", help="The output directory (defaults to the current directory)",
-                        default=os.getcwd())
     parser.add_argument('-f', "--file_pattern", help="The file pattern to search for to identify input files"
                                                      "(defaults to '{}')".format(DEF_FILE_PAT),
                         default=DEF_FILE_PAT)
+    parser.add_argument('-o', "--out_dir", help="The output directory (defaults to the current directory)",
+                        default=os.getcwd())
+    parser.add_argument('-s', "--skip_cp", help="Flag to skip creating an input file for cp_params. This action "
+                                                "will also be skipped if ring atoms are not found.",
+                        action='store_true')
+
     parser.add_argument('-t', "--file_type", help="The file type (pdb or sdf) of the input file. If not specified, "
                                                   "it is assumed based on the file extension.",
                         default=None)
@@ -133,6 +138,13 @@ def parse_cmdline(argv):
         warning(e)
         parser.print_help()
         return [], INVALID_DATA
+
+    if not args.skip_cp:
+        if len(args.config[RING_ATOMS]) != 6 or len(args.config[RING_ATOM_TYPES]) != 6:
+            warning('To print cp_params input, enter 6 atom numbers and 6 atom types (found {}, and {}, '
+                    'respectively).\nProgram will continue but skip creating cp_params input.'
+                    ''.format(args.config[RING_ATOMS], args.config[RING_ATOM_TYPES]))
+            args.skip_cp = True
 
     return args, GOOD_RET
 
@@ -149,20 +161,20 @@ def prep_string(raw_string):
         return '\n'.join(dequote(raw_string).split('\\n'))
 
 
-def process_file(file_path, out_dir, cp_data, cfg, file_type):
+def process_file(file_path, cp_data, cfg):
     """
     Read sdf (Spartan file) information and create alternate format
     :param file_path: path of file to be read
-    :param out_dir: output directory
     :param cp_data: data to be gathered to calculate Cremer-Pople Parameters
     :param cfg: configuration for this run
-    :param file_type: the type of file to be read (pdb or sdf). If None, chosen based on file extension
     :return: will create a com file for each file read and gather data for CP parameters
     """
 
     file_name = os.path.basename(file_path)
-    if file_type is None:
+    if cfg[FILE_TYPE] is None:
         file_type = file_name.split('.')[-1]
+    else:
+        file_type = cfg[FILE_TYPE]
 
     # begin building up com file output
     if cfg[GAUSS_KEYWORDS] is None:
@@ -192,14 +204,19 @@ def process_file(file_path, out_dir, cp_data, cfg, file_type):
 
     # make sure to add empty line before footer
     com_data.append(['\n' + prep_string(cfg[GAUSS_FOOTER])])
-    com_file = create_out_fname(file_path, base_dir=out_dir, ext='.com')
+    com_file = create_out_fname(file_path, base_dir=cfg[OUT_DIR], ext='.com')
     list_to_file(com_data, com_file)
 
-    # gather header + 18 floats (6*xyz) for each row of cp input
-    raw_cp_data = file_name + ' '
-    for ring_atom in ring_xyz:
-        raw_cp_data += ' '.join(['{:6.3f} '.format(num) for num in ring_atom])
-    cp_data.append(raw_cp_data)
+    if cfg[PRINT_CP_INPUT]:
+        # gather header + 18 floats (6*xyz) for each row of cp input
+        raw_cp_data = file_name + ' '
+        for ring_atom in ring_xyz:
+            raw_cp_data += ' '.join(['{:6.3f} '.format(num) for num in ring_atom])
+        if 'nan' in raw_cp_data:
+            warning('Did not find the expected six ring atoms. '
+                    'For cp_params input, skipping file: {}'.format(file_path))
+        else:
+            cp_data.append(raw_cp_data)
 
 
 def process_sdf(cfg, com_data, ring_xyz, file_path):
@@ -223,16 +240,16 @@ def process_sdf(cfg, com_data, ring_xyz, file_path):
         atom_row = sdf_data[row].strip().split()
         xyz = [float(num) for num in atom_row[0:3]]
         element = atom_row[3]
-
-        if atom_count in cfg[RING_ATOMS]:
-            ring_index = cfg[RING_ATOMS].index(atom_count)
-            ring_xyz[ring_index] = xyz
-            expected_atom_type = cfg[RING_ATOM_TYPES][ring_index]
-            if element.strip() != expected_atom_type:
-                warning("Expected atom {} to have type '{}'. Found '{}'".format(atom_count,
-                                                                                expected_atom_type,
-                                                                                element.strip()))
         com_data.append(['{:3}'.format(element)] + ['{:15.5f}'.format(num) for num in xyz])
+        if cfg[PRINT_CP_INPUT]:
+            if atom_count in cfg[RING_ATOMS]:
+                ring_index = cfg[RING_ATOMS].index(atom_count)
+                ring_xyz[ring_index] = xyz
+                expected_atom_type = cfg[RING_ATOM_TYPES][ring_index]
+                if element.strip() != expected_atom_type:
+                    warning("Expected atom {} to have type '{}'. Found '{}'".format(atom_count,
+                                                                                    expected_atom_type,
+                                                                                    element.strip()))
 
 
 def process_pdb(cfg, com_data, ring_xyz, file_path):
@@ -252,7 +269,6 @@ def process_pdb(cfg, com_data, ring_xyz, file_path):
             if line_len == 0:
                 continue
             line_head = line[:cfg[PDB_LINE_TYPE_LAST_CHAR]]
-
             # Only need atom information, so can ignore lines with remark, title, etc.
             if line_head == 'ATOM  ' or line_head == 'HETATM':
                 # PDB may have ***** after atom_count 99999, or not numbered. Thus, I'm renumbering
@@ -263,16 +279,17 @@ def process_pdb(cfg, com_data, ring_xyz, file_path):
                                               line[cfg[PDB_Y_LAST_CHAR]:cfg[PDB_Z_LAST_CHAR]])]
 
                 element = line[cfg[PDB_LAST_T_CHAR]:cfg[PDB_LAST_ELEM_CHAR]]
-
-                if atom_count in cfg[RING_ATOMS]:
-                    ring_index = cfg[RING_ATOMS].index(atom_count)
-                    ring_xyz[ring_index] = xyz
-                    expected_atom_type = cfg[RING_ATOM_TYPES][ring_index]
-                    if element.strip() != expected_atom_type:
-                        warning("Expected atom {} to have type '{}'. Found '{}'".format(atom_count,
-                                                                                        expected_atom_type,
-                                                                                        element.strip()))
                 com_data.append(['{:3}'.format(element)] + ['{:15.5f}'.format(num) for num in xyz])
+
+                if cfg[PRINT_CP_INPUT]:
+                    if atom_count in cfg[RING_ATOMS]:
+                        ring_index = cfg[RING_ATOMS].index(atom_count)
+                        ring_xyz[ring_index] = xyz
+                        expected_atom_type = cfg[RING_ATOM_TYPES][ring_index]
+                        if element.strip() != expected_atom_type:
+                            warning("Expected atom {} to have type '{}'. Found '{}'".format(atom_count,
+                                                                                            expected_atom_type,
+                                                                                            element.strip()))
 
 
 def main(argv=None):
@@ -285,21 +302,27 @@ def main(argv=None):
     if ret != GOOD_RET:
         return ret
 
-    # Read template and dump files
     cfg = args.config
+    cfg[FILE_TYPE] = args.file_type
+    cfg[OUT_DIR] = args.out_dir
+    cfg[PRINT_CP_INPUT] = not args.skip_cp
 
     try:
-        print(args.base_dir, args.out_dir)
         found_files = find_files_by_dir(args.base_dir, args.file_pattern)
         cp_data = []
         for f_dir, files in six.iteritems(found_files):
             for file_path in ([os.path.join(f_dir, tgt) for tgt in files]):
-                process_file(file_path, args.out_dir, cp_data, cfg, args.file_type)
-        cp_file = create_out_fname('cp.inp', base_dir=args.out_dir)
-        # because the file search may find the files in different orders on different machines, sort for consistency
-        cp_data.sort()
-        list_to_file(cp_data, cp_file)
+                process_file(file_path, cp_data, cfg)
+        if cfg[PRINT_CP_INPUT]:
+            if len(cp_data) == 0:
+                warning('Did not find any data for cp_params input; a cp_param input file will not be created')
+            else:
+                cp_file = create_out_fname('cp.inp', base_dir=args.out_dir)
+                # because the file search provide a different orders on different machines, sort for consistency
+                cp_data.sort()
+                list_to_file(cp_data, cp_file)
     except IOError as e:
+        warning(e)
         return IO_ERROR
     except InvalidDataError as e:
         warning(e)
