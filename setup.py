@@ -10,12 +10,13 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'Click>=6.0',
-    # TODO: put package requirements here
+    'six',
+    'seaborn',
 ]
 
 test_requirements = [
-    # TODO: put package test requirements here
+    'seaborn',
+    'six',
 ]
 
 setup(
@@ -32,11 +33,13 @@ setup(
     package_dir={'qm_utils':
                  'qm_utils'},
     entry_points={
-        'console_scripts': [
-            'qm_utils=qm_utils.cli:main'
-        ]
+        'console_scripts': ['cp_params=qm_utils.cp_params:main',
+                            'read_pdb=qm_utils.read_pdb:main',
+                            'read_sdf=qm_utils.read_sdf:main',
+                            ]
     },
     include_package_data=True,
+    package_data={'qm_utils': ['cfg/*.*', ], },
     install_requires=requirements,
     license="BSD license",
     zip_safe=False,
