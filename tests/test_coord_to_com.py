@@ -33,7 +33,8 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'coord_to_com')
 PDB_INI = os.path.join(SUB_DATA_DIR, 'read_pdb.ini')
 PDB_FILE = os.path.join(SUB_DATA_DIR, '1c4.pdb')
 COM_1C4 = os.path.join(SUB_DATA_DIR, '1c4.com')
-COM_1C4_FILE_GOOD = os.path.join(SUB_DATA_DIR, '1c4_good.com')
+COM_1C4_GOOD = os.path.join(SUB_DATA_DIR, '1c4_good.com')
+COM_1C4_FREEZE = os.path.join(SUB_DATA_DIR, '1c4_freeze.com')
 COM_E3_FILE = os.path.join(SUB_DATA_DIR, 'e3.com')
 COM_4C1_FILE = os.path.join(SUB_DATA_DIR, '4c1.com')
 CP_FILE = os.path.join(SUB_DATA_DIR, 'cp.inp')
@@ -63,7 +64,7 @@ class TestMain(unittest.TestCase):
                 main(test_input)
             with capture_stderr(main, test_input) as output:
                 self.assertTrue('Will use only default values' in output)
-            self.assertFalse(diff_lines(COM_1C4, COM_1C4_FILE_GOOD))
+            self.assertFalse(diff_lines(COM_1C4, COM_1C4_GOOD))
             self.assertFalse(diff_lines(CP_FILE, CP_FILE_GOOD))
         finally:
             for o_file in [COM_1C4, COM_E3_FILE, COM_4C1_FILE]:
@@ -72,6 +73,10 @@ class TestMain(unittest.TestCase):
 
     def testAsTemplate(self):
         main(["-c", PDB_INI, "-o", SUB_DATA_DIR])
+        self.assertFalse(diff_lines(COM_1C4, COM_1C4_FREEZE))
+        for o_file in [COM_1C4, COM_E3_FILE, COM_4C1_FILE]:
+            silent_remove(o_file, disable=DISABLE_REMOVE)
+        silent_remove(CP_FILE, disable=DISABLE_REMOVE)
 
     def testSDF(self):
         try:
