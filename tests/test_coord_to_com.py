@@ -10,7 +10,7 @@ Tests for `read_pdb` module.
 
 import unittest
 import os
-from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr
+from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout
 from qm_utils.coord_to_com import main
 import logging
 
@@ -90,6 +90,15 @@ class TestMain(unittest.TestCase):
 
 
 class TestFailWell(unittest.TestCase):
+    def testHelp(self):
+        test_input = ['-h']
+        if logger.isEnabledFor(logging.DEBUG):
+            main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertFalse(output)
+        with capture_stdout(main, test_input) as output:
+            self.assertTrue("optional arguments" in output)
+
     def testWrongOrderAtoms(self):
         try:
             test_input = ['-f', '1c4_wrong_order.txt', "-o", SUB_DATA_DIR, "-t", "pdb"]

@@ -32,7 +32,8 @@ import numpy as np
 import argparse
 import sys
 import math
-from qm_common import GOOD_RET, INVALID_DATA, warning, read_csv_to_dict, create_out_fname, write_csv, InvalidDataError
+from qm_common import (GOOD_RET, INVALID_DATA, warning, read_csv_to_dict, create_out_fname, write_csv, InvalidDataError,
+                       INPUT_ERROR)
 
 __author__ = 'hbmayes'
 
@@ -64,17 +65,18 @@ def parse_cmdline(argv):
 
     # initialize the parser object:
     parser = argparse.ArgumentParser(description='Reads in space-separated lists of atomic coordinates for 6-membered '
-                                                 'rings and outputs Cremer-Pople puckering coordinates. The input '
-                                                 'format is: \n'
-                                                 'name1 18x(float)\n'
-                                                 'name2 18x(float)\n'
-                                                 'name3 18x(float)...\n'
+                                                 'rings and \noutputs Cremer-Pople puckering coordinates. The input '
+                                                 'format is: \n' +
+                                                 '   name1 18x(float)\n'
+                                                 '   name2 18x(float)\n'
+                                                 '   name3 18x(float)...\n'
                                                  'where each line contains a name and Cartesian coordinates for a '
-                                                 'unique 6-member ring. The order for the atomic coordinates is: O5 '
-                                                 '(or C6) C1 C2 C3 C4 C5 with x, y, and z coordinates specified for'
-                                                 'each atom in that order.\n'
+                                                 'unique \n6-membered ring. The order for the atomic coordinates is '
+                                                 'the x,y,z coordinates \nfor O5 (or C6) followed by those for C1, C2,'
+                                                 ' C3, C4, and then C5.\n\n'
                                                  'This script also returns the closest IUPAC puckering designation '
-                                                 'determined by arc length along the Cremer-Pople sphere.')
+                                                 'determined by \nthe arc length along the Cremer-Pople sphere.',
+                                     formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("file", help="The input file to process")
     parser.add_argument('-o', "--out_file", help="The output file name (defaults to input file name with the '.out' "
                                                  "extension)",
@@ -82,20 +84,23 @@ def parse_cmdline(argv):
     parser.add_argument('-d', "--out_dir", help="The output directory (defaults to the same directory as the "
                                                 "input file)",
                         default=None)
-    parser.add_argument('-s', "--to_stdout", help="Flag to display output to standard out (screen) in addition to "
-                                                  "saving the output to a file. The default is false.",
-                        action='store_true')
     parser.add_argument('-p', "--pucker_dict", help="A csv file specifying the Cremer-Pople puckering parameters (in "
-                                                    "degrees) for each IUPAC specified puckering designation. The"
-                                                    "default file is: {}".format(PUCKER_DICT_FILE),
+                                                    "degrees) \nfor each IUPAC specified puckering designation. The "
+                                                    "default dictionary is \nlocated at: {}".format(PUCKER_DICT_FILE),
                         default=PUCKER_DICT_FILE)
+    parser.add_argument('-s', "--to_stdout", help="Flag to display output to standard out (screen) in addition to "
+                                                  "saving \nthe output to a file. The default is false.",
+                        action='store_true')
 
+    args = None
     try:
         args = parser.parse_args(argv)
     except SystemExit as e:
+        if e.message == 0:
+            return args, GOOD_RET
         warning(e)
         parser.print_help()
-        return [], INVALID_DATA
+        return [], INPUT_ERROR
 
     return args, GOOD_RET
 
@@ -282,7 +287,7 @@ def main(argv=None):
     :return: The return code for the program's termination.
     """
     args, ret = parse_cmdline(argv)
-    if ret != GOOD_RET:
+    if ret != GOOD_RET or args is None:
         return ret
 
     try:
