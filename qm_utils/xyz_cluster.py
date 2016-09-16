@@ -4,6 +4,9 @@
 """
 (insert a description about the code here)
 
+The purpose of this python script to align xyz coordinate files so that the structures
+can be clustered.
+
 """
 
 from __future__ import print_function
@@ -20,3 +23,15 @@ from qm_common import GOOD_RET, INVALID_DATA, warning, read_csv_to_dict, create_
 
 __author__ = 'SPVicchio'
 
+# Constants #
+
+
+# Defaults #
+
+
+# Functions #
+
+def read_xyz()
+    """
+
+    """
