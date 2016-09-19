@@ -9,19 +9,10 @@ can be clustered.
 
 """
 
-from __future__ import print_function
-
-import csv
-import csv
-import os
-
-import numpy as np
-import argparse
-import sys
-import math
-from qm_common import GOOD_RET, INVALID_DATA, warning, read_csv_to_dict, create_out_fname, write_csv, InvalidDataError
+from sys import argv
 
 __author__ = 'SPVicchio'
+
 
 # Constants #
 
@@ -31,7 +22,34 @@ __author__ = 'SPVicchio'
 
 # Functions #
 
-def read_xyz()
-    """
+def print_a_line(line_count, f):
+    print line_count, f.readline()
 
-    """
+
+def get_coordinates_xyz(filename):
+    print "Currently looking at %r." % filename
+
+
+
+
+
+    xyz_raw_file = open(filename)
+    xyz_raw_data = xyz_raw_file.read()
+
+    print "The input file is %d bytes long" % len(xyz_raw_data)
+
+    #    print "%r" % xyz_raw_data
+
+    line_count = 1
+
+
+#    print line_count, xyz_raw_data.readline()
+#    print_a_line(4,xyz_raw_data)
+
+
+
+from sys import argv
+
+script, input_file = argv
+
+get_coordinates_xyz(input_file)
