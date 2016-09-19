@@ -13,6 +13,10 @@ from sys import argv
 
 __author__ = 'SPVicchio'
 
+# Libraries
+
+import numpy as np
+import re
 
 # Constants #
 
@@ -22,30 +26,43 @@ __author__ = 'SPVicchio'
 
 # Functions #
 
-def print_a_line(line_count, f):
-    print line_count, f.readline()
-
-
 def get_coordinates_xyz(filename):
-    print "Currently looking at %r." % filename
 
+    f = open(filename, 'r')
+    V = []
+    atoms = []
+    n_atoms = 0
+    lines_read = 0
 
+    # Read the first line to obtain the number of atoms read
+    try:
+        n_atoms = int(f.next())
+    except ValueError:
+        exit("Could not obtain the number of atoms in the .xyz file.")
 
+        # Skip the title line
+        f.next()
 
+        # Use the number of atoms to not read beyond the end of the file
+        for line in f:
 
-    xyz_raw_file = open(filename)
-    xyz_raw_data = xyz_raw_file.read()
+            if lines_read == n_atoms:
+                break
 
-    print "The input file is %d bytes long" % len(xyz_raw_data)
+            print f.readline()
 
-    #    print "%r" % xyz_raw_data
+            #if len(numbers) == 4:
 
-    line_count = 1
+            #    V.append(np.array(numbers))
+            #    atoms.append(atom)
 
+            lines_read += 1
 
-#    print line_count, xyz_raw_data.readline()
-#    print_a_line(4,xyz_raw_data)
+            print lines_read
 
+    f.close()
+    V = np.array(V)
+    return atoms, V
 
 
 from sys import argv
@@ -53,3 +70,5 @@ from sys import argv
 script, input_file = argv
 
 get_coordinates_xyz(input_file)
+
+
