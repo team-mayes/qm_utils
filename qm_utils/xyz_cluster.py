@@ -33,7 +33,7 @@ def get_coordinates_xyz(filename):
 
     atom number         x coordinate        y coordinate        z coordinate
 
-    This function stores the the xyz information
+    This function stores the the xyz coordinates along with the atom numbers.
 
     :param filename:
     :return:
@@ -51,15 +51,20 @@ def get_coordinates_xyz(filename):
     except ValueError:
         exit("Could not obtain the number of atoms in the .xyz file.")
 
-        # Skip the title line
+    # Skip the title line
     f.next()
+
+    # creates an array that will be populated later with information from
     xyz_coords = np.full((num_atoms, 3), np.nan)
+
     for line in f:
 
         if lines_read == num_atoms:
             break
 
         atom, coor_x, coor_y, coor_z = line.split()
+
+        # map to take all of the coordinates and turn them into numbers using float option
         numbers = map(float, [coor_x, coor_y, coor_z])
 
         if len(numbers) == 3:
@@ -70,8 +75,12 @@ def get_coordinates_xyz(filename):
 
 
     f.close()
+
     xyz_atoms = np.array(xyz_atoms)
+
     return num_atoms, xyz_atoms, xyz_coords
+
+
 
 
 script, input_file = argv
