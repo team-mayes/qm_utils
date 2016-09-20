@@ -41,34 +41,29 @@ def get_coordinates_xyz(filename):
         exit("Could not obtain the number of atoms in the .xyz file.")
 
         # Skip the title line
-        f.next()
+    f.next()
 
-        # Use the number of atoms to not read beyond the end of the file
-        for line in f:
+    for line in f:
 
-            if lines_read == n_atoms:
-                break
+        atom, coor_x, coor_y, coor_z = line.split()
 
-            print f.readline()
+        numbers = coor_x, coor_y, coor_z
 
-            #if len(numbers) == 4:
+        if len(numbers) == 3:
 
-            #    V.append(np.array(numbers))
-            #    atoms.append(atom)
-
-            lines_read += 1
-
-            print lines_read
+            V.append(numbers)
+            atoms.append(atom)
 
     f.close()
-    V = np.array(V)
-    return atoms, V
+    return n_atoms, atoms, V
 
 
 from sys import argv
 
 script, input_file = argv
 
-get_coordinates_xyz(input_file)
+n_atoms, atoms, V = get_coordinates_xyz(input_file)
 
-
+print "Your molecule currently has %d." % n_atoms
+print "\nThe atom ordering is:\n %r" % atoms
+print "\nThe XYZ coordinates are:\n %r" % V
