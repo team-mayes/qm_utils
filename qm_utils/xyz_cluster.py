@@ -14,7 +14,7 @@ from sys import argv
 __author__ = 'SPVicchio'
 
 # Libraries
-
+from sys import argv
 import numpy as np
 import re
 
@@ -27,38 +27,44 @@ import re
 # Functions #
 
 def get_coordinates_xyz(filename):
+    """
+
+    :param filename:
+    :return:
+    """
 
     f = open(filename, 'r')
-    V = []
-    atoms = []
-    n_atoms = 0
+
+    xyz_atoms = []
+    num_atoms = 0
     lines_read = 0
 
     # Read the first line to obtain the number of atoms read
     try:
-        n_atoms = int(f.next())
+        num_atoms = int(f.next())
     except ValueError:
         exit("Could not obtain the number of atoms in the .xyz file.")
 
         # Skip the title line
     f.next()
-
+    V = np.full((num_atoms, 3), np.nan)
     for line in f:
 
         atom, coor_x, coor_y, coor_z = line.split()
 
-        numbers = coor_x, coor_y, coor_z
+        numbers = map(float, [coor_x, coor_y, coor_z])
 
         if len(numbers) == 3:
 
-            V.append(numbers)
-            atoms.append(atom)
+            V[lines_read] = numbers
+            xyz_atoms.append(atom)
+        lines_read += 1
 
+    print(-1.167025 - V[7][1])
     f.close()
-    return n_atoms, atoms, V
+    xyz_atoms = np.array(xyz_atoms)
+    return num_atoms, xyz_atoms, V
 
-
-from sys import argv
 
 script, input_file = argv
 
