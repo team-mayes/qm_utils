@@ -27,7 +27,13 @@ import re
 # Functions #
 
 def get_coordinates_xyz(filename):
-    """
+    """This function is designed to upload xyz coordinates from .xyz files. The .xyz file format should contain the
+    number of atoms on the first line followed by the filename on the second line. After the second line, the lines
+    should be organized as followed:
+
+    atom number         x coordinate        y coordinate        z coordinate
+
+    This function stores the the xyz information
 
     :param filename:
     :return:
@@ -47,23 +53,25 @@ def get_coordinates_xyz(filename):
 
         # Skip the title line
     f.next()
-    V = np.full((num_atoms, 3), np.nan)
+    xyz_coords = np.full((num_atoms, 3), np.nan)
     for line in f:
 
-        atom, coor_x, coor_y, coor_z = line.split()
+        if lines_read == num_atoms:
+            break
 
+        atom, coor_x, coor_y, coor_z = line.split()
         numbers = map(float, [coor_x, coor_y, coor_z])
 
         if len(numbers) == 3:
-
-            V[lines_read] = numbers
+            xyz_coords[lines_read] = numbers
             xyz_atoms.append(atom)
+
         lines_read += 1
 
-    print(-1.167025 - V[7][1])
+
     f.close()
     xyz_atoms = np.array(xyz_atoms)
-    return num_atoms, xyz_atoms, V
+    return num_atoms, xyz_atoms, xyz_coords
 
 
 script, input_file = argv
