@@ -21,6 +21,7 @@ __author__ = 'SPVicchio'
 # Constants #
 
 TOL_centroid = [0.001, 0.001, 0.001]
+num_atoms_ring = 6
 
 # Defaults #
 
@@ -72,7 +73,6 @@ def get_coordinates_xyz(filename):
 
     return num_atoms, xyz_atoms, xyz_coords
 
-
 def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
     """ Prints the information from the get_coordinates_xyz
     :param num_atoms: the number of atoms in the molecule
@@ -84,7 +84,6 @@ def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
     print("\nThe atom ordering is:\n {}".format(xyz_atoms))
     print("\nThe XYZ coordinates are:\n {}".format(xyz_coords))
 
-
 def centroid(X):
     """ Calculates the centroid (geometric center) of the structure. The centroid
     is defined as the mean position of all the points in all of the coordinate directions.
@@ -95,14 +94,39 @@ def centroid(X):
     centroid_xyz = sum(X) / len(X)
     return centroid_xyz
 
-
 def translate_centroid_all(xyz_coords):
-    """ Calculates the centroid of the XYZ coordinates based on all the atoms. Once the cetroid is found, then the
+    """ Calculates the centroid of the xyz coordinates based on all the atoms. Once the cetroid is found, then the
     xyz corodinates are translated so that the centroid is at the origin.
 
     :param xyz_coords: the xyz coordinates for the molecular structure (centroid not aligned)
-    :return: outputs the xyz coordiantes for the molecular structure with the centroid at zero
+    :return: outputs the xyz coordiantes for the molecular structure with the centroid located at the origin.
     """
+
+    centroid_xyz = sum(xyz_coords) / len(xyz_coords)
+
+    xyz_coords_translate = np.array([xyz_coords - centroid_xyz])
+
+    centroid_xyz_check = sum(xyz_coords_translate) / len(xyz_coords_translate)
+
+    if centroid_xyz_check.all > TOL_centroid:
+        exit("\nCould not properly align the centroid to the origin\n.")
+
+    xyz_coords_translate = np.array(xyz_coords_translate)
+    return xyz_coords_translate
+
+def translate_centroid_ring(xyz_coords,xyz_atoms):
+    """This script is designed to calculate the centroid of the xyz coordinates based on only the atoms in the ring.
+    Once the centroid of the ring is found, then the all xyz coordinates are translated so that the centroid of the ring
+    is at the origin.
+
+    :param xyz_coords: the xyz coordinates for the molecular structure (centroid not aligned)
+    :param xyz_atoms: the atoms of the ring
+    :return: outputs the xyz coordinates for the molecular structure with the ring centroid located at the origin.
+    """
+
+    #for
+
+    # for len(xyz_coords)
 
     centroid_xyz = sum(xyz_coords) / len(xyz_coords)
 
@@ -115,14 +139,70 @@ def translate_centroid_all(xyz_coords):
 
     return xyz_coords_translate
 
+def rmsd(xyz_1, xyz_2):
+    """Calculates the root-mean-square deviation from two sets of vectors xyz_1 and xyz_2 (both of which are xyz
+    coordintes for different molecules)
 
+    :param xyz_1:
+    :param xyz2:
+    :return:
+    """
+
+    D = len(xyz_1[0])
+    N = len(xyz_1)
+    rmsd = 0.0
+    for v, w in zip(xyz_1, xyz_2):
+        rmsd += sum([(v[i]-w[i])**2.0 for i in range(D)])
+
+    rmsd_value = rmsd
+
+    return rmsd_value
+
+def kabsch_algorithm(xyz_coords1, xyz_coords2):
+
+    # calculate the covariance matrix between the two sets of xyz coordinates
+    covariance_matrix = np.dot(np.transpose(xyz_coords1),xyz_coords2)
+
+    # calculate the singular value decomposition (svd) of the covariance matrix using numpy
+    V, S, W = np.linalg.svd(covariance_matrix)
+
+    # check if the systems needs to be rotated to ensure a right-handed coordinate system
+    direction = (np.linalg.det(V)*np.linalg.det(W))
+
+    if direction < 0.0:
+        S[-1] = -S[-1]
+        V[:,-1] = - V[:,-1]
+
+    rotation_matrix = np.dot(V,W)
+
+    rotated_xyz_coords1 = np.dot(xyz_coords1,rotation_matrix)
+
+    kabsch_rsmd = 1.0
+
+    return kabsch_rsmd
+
+
+##### Loading Files
 script, input_file1, input_file2 = argv
 
 n_atoms1, atoms1, xyz_coords1 = get_coordinates_xyz(input_file1)
 n_atoms2, atoms2, xyz_coords2 = get_coordinates_xyz(input_file2)
 
 if n_atoms1 != n_atoms2:
-    print("Error in the number of atoms")
+    exit("Error in the number of atoms! The number of atoms doesn't match!")
+#####
+
+center_xyz1 = translate_centroid_all(xyz_coords1)
+center_xyz2 = translate_centroid_all(xyz_coords2)
+
+print("{}".format(rmsd(xyz_coords1,xyz_coords2)))
+
+#print("{},\n\n{}".format(center_xyz1,center_xyz2))
+
+#print("{}".format(kabsch_algorithm(center_xyz1,center_xyz2)))
+
+#print("{}".format(xyz_coords1[2,:]))
+
 
 # c1 = centroid(xyz_coords1)
 # c2 = centroid(xyz_coords2)
@@ -134,7 +214,6 @@ if n_atoms1 != n_atoms2:
 
 # print("{}".format(centroid(xyz_coords1 - c1)))
 
+#A = translate_centroid_all(xyz_coords1)
 
-A = translate_centroid_all(xyz_coords1)
-
-print("{}".format(translate_centroid_all(xyz_coords1)))
+#print("{}".format(translate_centroid_all(xyz_coords1)))
