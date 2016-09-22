@@ -111,7 +111,7 @@ def translate_centroid_all(xyz_coords):
     if centroid_xyz_check.all > TOL_centroid:
         exit("\nCould not properly align the centroid to the origin\n.")
 
-    xyz_coords_translate = np.array(xyz_coords_translate)
+    xyz_coords_translate = np.array(np.mat(xyz_coords_translate))
     return xyz_coords_translate
 
 def translate_centroid_ring(xyz_coords,xyz_atoms):
@@ -143,27 +143,28 @@ def rmsd(xyz_1, xyz_2):
     """Calculates the root-mean-square deviation from two sets of vectors xyz_1 and xyz_2 (both of which are xyz
     coordintes for different molecules)
 
-    :param xyz_1:
-    :param xyz2:
-    :return:
+    :param xyz_1: input xyz coordinates of a molecule
+    :param xyz_2: input xyz coordinates of a molecule
+    :return: the root-mean-square deviation for the two molecules
     """
 
-    D = len(xyz_1[0])
-    N = len(xyz_1)
-    rmsd = 0.0
+    D = len(xyz_1[0]) # number of dimensions in system
+    N = len(xyz_1) # number of atoms in system
+    rmsd = 0.0 # initial value of the rmsd
+
     for v, w in zip(xyz_1, xyz_2):
         rmsd += sum([(v[i]-w[i])**2.0 for i in range(D)])
 
     rmsd_value = rmsd
 
-    return rmsd_value
+    return rmsd_value, D, N
 
 def kabsch_algorithm(xyz_coords1, xyz_coords2):
 
     # calculate the covariance matrix between the two sets of xyz coordinates
     covariance_matrix = np.dot(np.transpose(xyz_coords1),xyz_coords2)
 
-    # calculate the singular value decomposition (svd) of the covariance matrix using numpy
+    # calculate the singular value decomposition (svd) of the covariance matrix using numpy linear algebra
     V, S, W = np.linalg.svd(covariance_matrix)
 
     # check if the systems needs to be rotated to ensure a right-handed coordinate system
@@ -177,10 +178,9 @@ def kabsch_algorithm(xyz_coords1, xyz_coords2):
 
     rotated_xyz_coords1 = np.dot(xyz_coords1,rotation_matrix)
 
-    kabsch_rsmd = 1.0
+    kabsch_rsmd = rmsd(rotated_xyz_coords1,xyz_coords2)
 
     return kabsch_rsmd
-
 
 ##### Loading Files
 script, input_file1, input_file2 = argv
@@ -195,7 +195,11 @@ if n_atoms1 != n_atoms2:
 center_xyz1 = translate_centroid_all(xyz_coords1)
 center_xyz2 = translate_centroid_all(xyz_coords2)
 
-print("{}".format(rmsd(xyz_coords1,xyz_coords2)))
+
+
+print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1,center_xyz2)))
+
+print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1,xyz_coords2)))
 
 #print("{},\n\n{}".format(center_xyz1,center_xyz2))
 
