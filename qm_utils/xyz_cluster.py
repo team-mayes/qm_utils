@@ -11,7 +11,7 @@ can be clustered.
 # Libraries
 from __future__ import print_function
 from sys import argv
-from qm_common import find_files_by_dir
+from qm_common import find_files_by_dir, list_to_file
 import numpy as np
 import re
 
@@ -47,7 +47,7 @@ def get_coordinates_xyz(filename):
     xyz_atoms = []
     num_atoms = 0
     lines_read = 0
-
+    lines_read_ring = 0
     # Read the first line to obtain the number of atoms read
     try:
         num_atoms = int(f.next())
@@ -56,6 +56,7 @@ def get_coordinates_xyz(filename):
     # Skip the title line
     f.next()
 
+    xyz_coords_ring = np.full((num_atoms_ring, 3), np.nan)
     xyz_coords = np.full((num_atoms, 3), np.nan)  # creates an array that will be populated later with xyz coordinates
     for line in f:
         if lines_read == num_atoms:
@@ -66,12 +67,17 @@ def get_coordinates_xyz(filename):
         if len(numbers) == 3:
             xyz_coords[lines_read] = numbers
             xyz_atoms.append(atom)
+
+        if atom != '1':
+            xyz_coords_ring[lines_read_ring] = numbers
+            lines_read_ring += 1
+
         lines_read += 1
     f.close()
 
     xyz_atoms = np.array(xyz_atoms)
 
-    return num_atoms, xyz_atoms, xyz_coords
+    return num_atoms, xyz_atoms, xyz_coords, xyz_coords_ring
 
 def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
     """ Prints the information from the get_coordinates_xyz
@@ -139,23 +145,23 @@ def translate_centroid_ring(xyz_coords,xyz_atoms):
 
     return xyz_coords_translate
 
-def rmsd(xyz_1, xyz_2):
+def rmsd(V, W):
     """Calculates the root-mean-square deviation from two sets of vectors xyz_1 and xyz_2 (both of which are xyz
     coordintes for different molecules)
 
-    :param xyz_1: input xyz coordinates of a molecule
-    :param xyz_2: input xyz coordinates of a molecule
+    :param V: input xyz coordinates of a molecule
+    :param W: input xyz coordinates of a molecule
     :return: the root-mean-square deviation for the two molecules
     """
 
-    D = len(xyz_1[0]) # number of dimensions in system
-    N = len(xyz_1) # number of atoms in system
+    D = len(V[0]) # number of dimensions in system
+    N = len(W) # number of atoms in system
     rmsd = 0.0 # initial value of the rmsd
 
-    for v, w in zip(xyz_1, xyz_2):
+    for v, w in zip(V, W):
         rmsd += sum([(v[i]-w[i])**2.0 for i in range(D)])
 
-    rmsd_value = rmsd
+    rmsd_value = np.sqrt(rmsd/N)
 
     return rmsd_value, D, N
 
@@ -180,13 +186,33 @@ def kabsch_algorithm(xyz_coords1, xyz_coords2):
 
     kabsch_rsmd = rmsd(rotated_xyz_coords1,xyz_coords2)
 
+    list_to_file(['18'], 'test_me.txt')
+    list_to_file(['testing'], 'test_me.txt', mode='a')
+    list_to_file(rotated_xyz_coords1, 'test_me.txt', mode='a')
+
+
     return kabsch_rsmd
+
+
 
 ##### Loading Files
 script, input_file1, input_file2 = argv
 
-n_atoms1, atoms1, xyz_coords1 = get_coordinates_xyz(input_file1)
-n_atoms2, atoms2, xyz_coords2 = get_coordinates_xyz(input_file2)
+n_atoms1, atoms1, xyz_coords1, xyz_coords_ring1 = get_coordinates_xyz(input_file1)
+n_atoms2, atoms2, xyz_coords2, xyz_coords_ring2 = get_coordinates_xyz(input_file2)
+
+to_print = ['18', 'testing']
+to_print2 = list(to_print)
+
+for line_id in range(len(atoms1)):
+    print("line_id", line_id)
+    to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
+
+
+for atom_type, atom_xyz in zip(atoms1, xyz_coords1):
+    to_print2.append([atom_type] + atom_xyz.tolist())
+
+list_to_file(to_print2, 'test3.txt')
 
 if n_atoms1 != n_atoms2:
     exit("Error in the number of atoms! The number of atoms doesn't match!")
@@ -194,8 +220,6 @@ if n_atoms1 != n_atoms2:
 
 center_xyz1 = translate_centroid_all(xyz_coords1)
 center_xyz2 = translate_centroid_all(xyz_coords2)
-
-
 
 print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1,center_xyz2)))
 
