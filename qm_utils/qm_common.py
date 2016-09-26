@@ -6,8 +6,6 @@ Common methods for this project.
 """
 
 from __future__ import print_function
-
-# Return codes
 import collections
 import csv
 import difflib
@@ -28,6 +26,8 @@ INVALID_DATA = 3
 # Tolerance initially based on double standard machine precision of 5 × 10−16 for float64 (decimal64)
 # found to be too stringent
 TOL = 0.00000000001
+
+NA = 'N/A'
 
 
 # Error checking including testing scripts
@@ -365,3 +365,57 @@ def write_csv(data, out_fname, fieldnames, extrasaction="raise", mode='w', quote
         print("Wrote file: {}".format(out_fname))
     elif mode == 'a':
         print("  Appended: {}".format(out_fname))
+
+
+def write_csv_old(tgt, write_list, cols):
+    try:
+        writer = csv.writer(tgt)
+        writer.writerow(cols)
+        for write_row in write_list:
+            writer.writerow([write_row[col] for col in cols])
+    finally:
+        tgt.close()
+
+
+def conv_map_old(conv_dict, raw_vals):
+    """
+    Takes a dictionary mapping column name to conversion function
+    and a list of dictionaries containing unconverted data.
+    >>> funcmap = {'A' : int, 'B' : float, 'C': str}
+    >>> rawstr = [{'A': '1', 'B': '1.2', 'C': 'hi'}, {'A': '33', 'B': '1.8', 'C': 'hi2'}]
+    >>> conv_map(funcmap, rawstr)
+    [{'A': 1, 'B': 1.2, 'C': 'hi'}, {'A': 33, 'B': 1.8, 'C': 'hi2'}]
+    """
+    conv_vals = list()
+    for raw_row in raw_vals:
+        conv_row = dict()
+        for (col, cfunc) in conv_dict.items():
+            if (col in raw_row and (raw_row[col] != NA)):
+                conv_row[col] = cfunc(raw_row[col])
+            else:
+                conv_row[col] = ''
+
+        conv_vals.append(conv_row)
+    return conv_vals
+
+
+def read_csv_old(file_loc):
+    """
+    Reads the given file, mapping data rows to their respective
+    header row.
+    >>> read_csv('test.csv')
+    [[('one', 'a'), ('two', 'b'), ('three', 'c')]]
+    """
+    reader = csv.reader(open(file_loc, 'r'))
+    is_first = True
+    rows = list()
+    for row in reader:
+        if is_first:
+            header = row
+            is_first = False
+            continue
+        rows.append(dict(zip(header,row)))
+    return rows
+
+
+
