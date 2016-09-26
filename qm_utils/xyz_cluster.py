@@ -58,6 +58,7 @@ def get_coordinates_xyz(filename):
 
     xyz_coords_ring = np.full((num_atoms_ring, 3), np.nan)
     xyz_coords = np.full((num_atoms, 3), np.nan)  # creates an array that will be populated later with xyz coordinates
+
     for line in f:
         if lines_read == num_atoms:
             break
@@ -186,9 +187,7 @@ def kabsch_algorithm(xyz_coords1, xyz_coords2):
 
     kabsch_rsmd = rmsd(rotated_xyz_coords1,xyz_coords2)
 
-    list_to_file(['18'], 'test_me.txt')
-    list_to_file(['testing'], 'test_me.txt', mode='a')
-    list_to_file(rotated_xyz_coords1, 'test_me.txt', mode='a')
+
 
 
     return kabsch_rsmd
@@ -204,6 +203,9 @@ n_atoms2, atoms2, xyz_coords2, xyz_coords_ring2 = get_coordinates_xyz(input_file
 to_print = ['18', 'testing']
 to_print2 = list(to_print)
 
+
+
+
 for line_id in range(len(atoms1)):
     print("line_id", line_id)
     to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
@@ -218,12 +220,23 @@ if n_atoms1 != n_atoms2:
     exit("Error in the number of atoms! The number of atoms doesn't match!")
 #####
 
+
 center_xyz1 = translate_centroid_all(xyz_coords1)
 center_xyz2 = translate_centroid_all(xyz_coords2)
+
+
+
 
 print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1,center_xyz2)))
 
 print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1,xyz_coords2)))
+
+
+
+list_to_file(['18'], 'test_me.txt')
+list_to_file(['testing'], 'test_me.txt', mode='a')
+list_to_file(rotated_xyz_coords1, 'test_me.txt', mode='a')
+
 
 #print("{},\n\n{}".format(center_xyz1,center_xyz2))
 
