@@ -1,0 +1,7 @@
+oxane-1c4-freeze_B3LYP-relax_B3LYP.xyz oxane-1e-freeze_B3LYP-relax_B3LYP.xyz oxane-1h2-freeze_B3LYP-relax_B3LYP.xyz oxane-1ho-freeze_B3LYP-relax_B3LYP.xyz oxane-3e-freeze_B3LYP-relax_B3LYP.xyz oxane-3h2-freeze_B3LYP-relax_B3LYP.xyz oxane-3h4-freeze_B3LYP-relax_B3LYP.xyz oxane-5h4-freeze_B3LYP-relax_B3LYP.xyz oxane-5e-freeze_B3LYP-relax_B3LYP.xyz oxane-5ho-freeze_B3LYP-relax_B3LYP.xyz oxane-e2-freeze_B3LYP-relax_B3LYP.xyz oxane-e4-freeze_B3LYP-relax_B3LYP.xyz oxane-eo-freeze_B3LYP-relax_B3LYP.xyz
+oxane-2e-freeze_B3LYP-relax_B3LYP.xyz oxane-2h1-freeze_B3LYP-relax_B3LYP.xyz oxane-2h3-freeze_B3LYP-relax_B3LYP.xyz oxane-4c1-freeze_B3LYP-relax_B3LYP.xyz oxane-4e-freeze_B3LYP-relax_B3LYP.xyz oxane-4h3-freeze_B3LYP-relax_B3LYP.xyz oxane-4h5-freeze_B3LYP-relax_B3LYP.xyz oxane-e1-freeze_B3LYP-relax_B3LYP.xyz oxane-e3-freeze_B3LYP-relax_B3LYP.xyz oxane-e5-freeze_B3LYP-relax_B3LYP.xyz oxane-oe-freeze_B3LYP-relax_B3LYP.xyz oxane-oh1-freeze_B3LYP-relax_B3LYP.xyz oxane-oh5-freeze_B3LYP-relax_B3LYP.xyz
+oxane-25b-freeze_B3LYP-relax_B3LYP.xyz oxane-2so-freeze_B3LYP-relax_B3LYP.xyz oxane-bo3-freeze_B3LYP-relax_B3LYP.xyz
+oxane-b25-freeze_B3LYP-relax_B3LYP.xyz oxane-o3b-freeze_B3LYP-relax_B3LYP.xyz oxane-os2-freeze_B3LYP-relax_B3LYP.xyz
+oxane-14b-freeze_B3LYP-relax_B3LYP.xyz oxane-1s3-freeze_B3LYP-relax_B3LYP.xyz
+oxane-1s5-freeze_B3LYP-relax_B3LYP.xyz
+oxane-5s1-freeze_B3LYP-relax_B3LYP.xyz
