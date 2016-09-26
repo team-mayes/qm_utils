@@ -1,32 +1,36 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
-(insert a description about the code here)
-
 The purpose of this python script to align xyz coordinate files so that the structures
 can be clustered.
-
 """
 
-# Libraries
 from __future__ import print_function
-from sys import argv
-from qm_common import find_files_by_dir, list_to_file
+
+import argparse
+import os
+import sys
+
 import numpy as np
-import re
+
+from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR,
+                       list_to_file)
+
+try:
+    # noinspection PyCompatibility
+    from ConfigParser import ConfigParser
+except ImportError:
+    # noinspection PyCompatibility
+    from configparser import ConfigParser
 
 __author__ = 'SPVicchio'
-
 
 # Constants #
 
 TOL_centroid = [0.001, 0.001, 0.001]
 num_atoms_ring = 6
 
-# Defaults #
-
-
-# Functions #
 
 def get_coordinates_xyz(filename):
     """This function is designed to upload xyz coordinates from .xyz files. The .xyz file format should contain the
@@ -82,6 +86,7 @@ def get_coordinates_xyz(filename):
 
     return num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring
 
+
 def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
     """ Prints the information from the get_coordinates_xyz
     :param num_atoms: the number of atoms in the molecule
@@ -93,6 +98,7 @@ def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
     print("\nThe atom ordering is:\n {}".format(xyz_atoms))
     print("\nThe XYZ coordinates are:\n {}".format(xyz_coords))
 
+
 def centroid(X):
     """ Calculates the centroid (geometric center) of the structure. The centroid
     is defined as the mean position of all the points in all of the coordinate directions.
@@ -102,6 +108,7 @@ def centroid(X):
     """
     centroid_xyz = sum(X) / len(X)
     return centroid_xyz
+
 
 def translate_centroid_all(xyz_coords):
     """ Calculates the centroid of the xyz coordinates based on all the atoms. Once the cetroid is found, then the
@@ -123,7 +130,8 @@ def translate_centroid_all(xyz_coords):
     xyz_coords_translate = np.array(np.mat(xyz_coords_translate))
     return xyz_coords_translate
 
-def translate_centroid_ring(xyz_coords,xyz_coords_ring):
+
+def translate_centroid_ring(xyz_coords, xyz_coords_ring):
     """This script is designed to calculate the centroid of the xyz coordinates based on only the atoms in the ring.
     Once the centroid of the ring is found, then the all xyz coordinates are translated so that the centroid of the ring
     is at the origin.
@@ -138,54 +146,55 @@ def translate_centroid_ring(xyz_coords,xyz_coords_ring):
     xyz_coords_all_translate = np.array([xyz_coords - centroid_ring_xyz])
     xyz_coords_ring_translate = np.array([xyz_coords_ring - centroid_ring_xyz])
 
-
     xyz_coords_all_translate = np.array(np.mat(xyz_coords_all_translate))
     xyz_coords_ring_translate = np.array(np.mat(xyz_coords_ring_translate))
 
     return xyz_coords_all_translate, xyz_coords_ring_translate
 
-def rmsd(V, W):
+
+def rmsd(coords1, coords2):
     """Calculates the root-mean-square deviation from two sets of vectors xyz_1 and xyz_2 (both of which are xyz
     coordintes for different molecules)
 
-    :param V: input xyz coordinates of a molecule
-    :param W: input xyz coordinates of a molecule
+    :param coords1: input xyz coordinates of a molecule
+    :param coords2: input xyz coordinates of a molecule
     :return: the root-mean-square deviation for the two molecules
     """
 
-    D = len(V[0]) # number of dimensions in system
-    N = len(W) # number of atoms in system
-    rmsd = 0.0 # initial value of the rmsd
+    num_dim = len(coords1[0])  # number of dimensions in system
+    num_atoms = len(coords2)  # number of atoms in system
+    rmsd_val = 0.0  # initial value of the rmsd
 
-    for v, w in zip(V, W):
-        rmsd += sum([(v[i]-w[i])**2.0 for i in range(D)])
+    for v, w in zip(coords1, coords2):
+        rmsd_val += sum([(v[i] - w[i]) ** 2.0 for i in range(num_dim)])
 
-    rmsd_value = np.sqrt(rmsd/N)
+    rmsd_value = np.sqrt(rmsd_val / num_atoms)
 
-    return rmsd_value, D, N
+    return rmsd_value, num_dim, num_atoms
+
 
 def kabsch_algorithm(xyz_coords1, xyz_coords2):
-
     # calculate the covariance matrix between the two sets of xyz coordinates
-    covariance_matrix = np.dot(np.transpose(xyz_coords1),xyz_coords2)
+    covariance_matrix = np.dot(np.transpose(xyz_coords1), xyz_coords2)
 
     # calculate the singular value decomposition (svd) of the covariance matrix using numpy linear algebra
     V, S, W = np.linalg.svd(covariance_matrix)
 
     # check if the systems needs to be rotated to ensure a right-handed coordinate system
-    direction = (np.linalg.det(V)*np.linalg.det(W))
+    direction = (np.linalg.det(V) * np.linalg.det(W))
 
     if direction < 0.0:
         S[-1] = -S[-1]
-        V[:,-1] = - V[:,-1]
+        V[:, -1] = - V[:, -1]
 
-    rotation_matrix = np.dot(V,W)
+    rotation_matrix = np.dot(V, W)
 
-    rotated_xyz_coords1 = np.dot(xyz_coords1,rotation_matrix)
+    rotated_xyz_coords1 = np.dot(xyz_coords1, rotation_matrix)
 
-    kabsch_rsmd = rmsd(rotated_xyz_coords1,xyz_coords2)
+    kabsch_rsmd = rmsd(rotated_xyz_coords1, xyz_coords2)
 
     return kabsch_rsmd
+
 
 def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
     """ This script ensure that the atom arrangement is the same. Arranging the atoms differently between two xyz files
@@ -203,6 +212,7 @@ def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
         print("The atoms are aligned properly!")
     return
 
+
 def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     """
 
@@ -217,8 +227,8 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     to_print = [num_atoms, file_sum]
     to_print2 = list(to_print)
 
-#    for line_id in range(len(atoms1)):
-#        to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
+    #    for line_id in range(len(atoms1)):
+    #        to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
 
     for atom_type, atom_xyz in zip(atoms1, xyz_coords1):
         to_print2.append([atom_type] + atom_xyz.tolist())
@@ -228,19 +238,16 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     return
 
 
-
-
 ##### Loading Files
-script, input_file1, input_file2 = argv
+script, input_file1, input_file2 = sys.argv
 
 n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1)
 n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2)
 
-
 if n_atoms1 != n_atoms2:
     exit("Error in the number of atoms! The number of atoms doesn't match!")
 
-check_ring_ordering(atoms_ring_order1,atoms_ring_order2)
+check_ring_ordering(atoms_ring_order1, atoms_ring_order2)
 
 #####
 
@@ -248,8 +255,8 @@ check_ring_ordering(atoms_ring_order1,atoms_ring_order2)
 center_xyz1 = translate_centroid_all(xyz_coords1)
 center_xyz2 = translate_centroid_all(xyz_coords2)
 
-[center_ring_all_xyz1, center_ring_ring_xyz1] = translate_centroid_ring(xyz_coords1,xyz_coords_ring1)
-[center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2,xyz_coords_ring2)
+[center_ring_all_xyz1, center_ring_ring_xyz1] = translate_centroid_ring(xyz_coords1, xyz_coords_ring1)
+[center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
 
 print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
 print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
@@ -257,10 +264,9 @@ print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
 print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
 print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
 
+print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1, center_xyz2)))
 
-print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1,center_xyz2)))
-
-print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1,xyz_coords2)))
+print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1, xyz_coords2)))
 
 print("\n\n\n")
 
@@ -269,34 +275,35 @@ print("""Now print the different cases:
     Rmsd (ring align, standard): {}
     Rmsd (all align, kabsch): {}
     Rmsd (ring align, kabsch): {}
-    """.format(rmsd(center_xyz1,center_xyz2),rmsd(center_ring_ring_xyz1,center_ring_ring_xyz2),kabsch_algorithm(center_xyz1,center_xyz2),kabsch_algorithm(center_ring_ring_xyz1,center_ring_ring_xyz2)))
+    """.format(rmsd(center_xyz1, center_xyz2), rmsd(center_ring_ring_xyz1, center_ring_ring_xyz2),
+               kabsch_algorithm(center_xyz1, center_xyz2),
+               kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
 
 
+# to_print = ['18', 'testing']
+# to_print2 = list(to_print)
 
-#to_print = ['18', 'testing']
-#to_print2 = list(to_print)
-
-#for line_id in range(len(atoms1)):
+# for line_id in range(len(atoms1)):
 #    print("line_id", line_id)
 #    to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
 
 
-#for atom_type, atom_xyz in zip(atoms1, xyz_coords1):
+# for atom_type, atom_xyz in zip(atoms1, xyz_coords1):
 #    to_print2.append([atom_type] + atom_xyz.tolist())
 
-#list_to_file(to_print2, 'test3.txt')
+# list_to_file(to_print2, 'test3.txt')
 
 
-#list_to_file(['18'], 'test_me.txt')
-#list_to_file(['testing'], 'test_me.txt', mode='a')
-#list_to_file(rotated_xyz_coords1, 'test_me.txt', mode='a')
+# list_to_file(['18'], 'test_me.txt')
+# list_to_file(['testing'], 'test_me.txt', mode='a')
+# list_to_file(rotated_xyz_coords1, 'test_me.txt', mode='a')
 
 
-#print("{},\n\n{}".format(center_xyz1,center_xyz2))
+# print("{},\n\n{}".format(center_xyz1,center_xyz2))
 
-#print("{}".format(kabsch_algorithm(center_xyz1,center_xyz2)))
+# print("{}".format(kabsch_algorithm(center_xyz1,center_xyz2)))
 
-#print("{}".format(xyz_coords1[2,:]))
+# print("{}".format(xyz_coords1[2,:]))
 
 
 # c1 = centroid(xyz_coords1)
@@ -309,6 +316,77 @@ print("""Now print the different cases:
 
 # print("{}".format(centroid(xyz_coords1 - c1)))
 
-#A = translate_centroid_all(xyz_coords1)
+# A = translate_centroid_all(xyz_coords1)
 
-#print("{}".format(translate_centroid_all(xyz_coords1)))
+# print("{}".format(translate_centroid_all(xyz_coords1)))
+
+
+def parse_cmdline(argv):
+    """
+    Returns the parsed argument list and return code.
+    `argv` is a list of arguments, or `None` for ``sys.argv[1:]``.
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # initialize the parser object:
+    parser = argparse.ArgumentParser(description="Aligns xyz coordinates.")
+    parser.add_argument('-s', "--sum_file", help="The summary file from hartree.",
+                        default=None)
+
+    args = None
+    try:
+        args = parser.parse_args(argv)
+        if args.sum_file is None:
+            raise InvalidDataError("Summary file from hartree is required.")
+        elif not os.path.isfile(args.sum_file):
+            raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
+    except (KeyError, InvalidDataError) as e:
+        warning(e)
+        parser.print_help()
+        return args, INPUT_ERROR
+    except IOError as e:
+        warning(e)
+        parser.print_help()
+        return args, IO_ERROR
+    except SystemExit as e:
+        if e.message == 0:
+            return args, GOOD_RET
+        warning(e)
+        parser.print_help()
+        return args, INPUT_ERROR
+
+    return args, GOOD_RET
+
+
+def process_hartree_sum(sum_file):
+    pass
+
+
+def main(argv=None):
+    """
+    Runs the main program
+    :param argv: The command line arguments.
+    :return: The return code for the program's termination.
+    """
+    args, ret = parse_cmdline(argv)
+    if ret != GOOD_RET or args is None:
+        return ret
+
+    try:
+        print("Stephen will add a function call here!")
+        print("We found this file! {}".format(args.sum_file))
+        process_hartree_sum(args.sum_file)
+    except IOError as e:
+        warning(e)
+        return IO_ERROR
+    except InvalidDataError as e:
+        warning(e)
+        return INVALID_DATA
+
+    return GOOD_RET  # success
+
+
+if __name__ == '__main__':
+    status = main()
+    sys.exit(status)
