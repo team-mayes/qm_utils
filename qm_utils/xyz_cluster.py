@@ -7,15 +7,21 @@ can be clustered.
 """
 
 from __future__ import print_function
-
 import argparse
 import os
 import sys
-
 import numpy as np
+import csv
 
 from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR,
                        list_to_file)
+
+ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
+
+GOOD_RET = 0
+INPUT_ERROR = 1
+IO_ERROR = 2
+INVALID_DATA = 3
 
 try:
     # noinspection PyCompatibility
@@ -210,7 +216,8 @@ def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
         exit("The atoms in the ring are not aligned the same!")
     else:
         print("The atoms are aligned properly!")
-    return
+        check_value = 0
+    return check_value
 
 
 def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
@@ -230,7 +237,7 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     #    for line_id in range(len(atoms1)):
     #        to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
 
-    for atom_type, atom_xyz in zip(atoms1, xyz_coords1):
+    for atom_type, atom_xyz in zip(to_print_atoms, to_print_xyz_coords):
         to_print2.append([atom_type] + atom_xyz.tolist())
 
     list_to_file(to_print2, file_sum)
@@ -238,39 +245,25 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     return
 
 
-##### Loading Files
-script, input_file1, input_file2 = sys.argv
+def compare_rmsd_xyz(input_file1, input_file2):
+    n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1)
+    n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2)
 
-n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1)
-n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2)
+    if n_atoms1 != n_atoms2:
+        exit("Error in the number of atoms! The number of atoms doesn't match!")
 
-if n_atoms1 != n_atoms2:
-    exit("Error in the number of atoms! The number of atoms doesn't match!")
+    check_value = check_ring_ordering(atoms_ring_order1, atoms_ring_order2)
 
-check_ring_ordering(atoms_ring_order1, atoms_ring_order2)
+    if check_value != 0:
+        exit("The atoms alignment isn't the same!")
 
-#####
+    center_xyz1 = translate_centroid_all(xyz_coords1)
+    center_xyz2 = translate_centroid_all(xyz_coords2)
 
+    [center_ring_all_xyz1, center_ring_ring_xyz1] = translate_centroid_ring(xyz_coords1, xyz_coords_ring1)
+    [center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
 
-center_xyz1 = translate_centroid_all(xyz_coords1)
-center_xyz2 = translate_centroid_all(xyz_coords2)
-
-[center_ring_all_xyz1, center_ring_ring_xyz1] = translate_centroid_ring(xyz_coords1, xyz_coords_ring1)
-[center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
-
-print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
-print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
-
-print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
-print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
-
-print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1, center_xyz2)))
-
-print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1, xyz_coords2)))
-
-print("\n\n\n")
-
-print("""Now print the different cases:
+    print("""Now print the different cases:
     Rmsd (all align, standard): {}
     Rmsd (ring align, standard): {}
     Rmsd (all align, kabsch): {}
@@ -279,47 +272,30 @@ print("""Now print the different cases:
                kabsch_algorithm(center_xyz1, center_xyz2),
                kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
 
-
-# to_print = ['18', 'testing']
-# to_print2 = list(to_print)
-
-# for line_id in range(len(atoms1)):
-#    print("line_id", line_id)
-#    to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
+    return
 
 
-# for atom_type, atom_xyz in zip(atoms1, xyz_coords1):
-#    to_print2.append([atom_type] + atom_xyz.tolist())
+def process_hartree_sum(sum_file):
+    """
 
-# list_to_file(to_print2, 'test3.txt')
+    :param sum_file:
+    :return:
+    """
 
-
-# list_to_file(['18'], 'test_me.txt')
-# list_to_file(['testing'], 'test_me.txt', mode='a')
-# list_to_file(rotated_xyz_coords1, 'test_me.txt', mode='a')
-
-
-# print("{},\n\n{}".format(center_xyz1,center_xyz2))
-
-# print("{}".format(kabsch_algorithm(center_xyz1,center_xyz2)))
-
-# print("{}".format(xyz_coords1[2,:]))
+    #    with open(sum_file) as readfile:
+    #        reader = csv.reader(readfile, delimiter=' ')
+    #        for row in reader:
+    #            print("{}".format(row))
+    pass
 
 
-# c1 = centroid(xyz_coords1)
-# c2 = centroid(xyz_coords2)
+# script, file1, file2 = sys.argv
 
-# print("{},{}".format(c1, c2))
+# compare_rmsd_xyz(file1, file2)
 
-# print("This is the translated verison\n {}".format([xyz_coords1 - c1]))
-# print("\n This is the untranslated verison\n {}".format(xyz_coords1))
+# script, file1 = sys.argv
 
-# print("{}".format(centroid(xyz_coords1 - c1)))
-
-# A = translate_centroid_all(xyz_coords1)
-
-# print("{}".format(translate_centroid_all(xyz_coords1)))
-
+# process_hartree_sum(file1)
 
 def parse_cmdline(argv):
     """
@@ -333,12 +309,17 @@ def parse_cmdline(argv):
     parser = argparse.ArgumentParser(description="Aligns xyz coordinates.")
     parser.add_argument('-s', "--sum_file", help="The summary file from hartree.",
                         default=None)
+    parser.add_argument('-f1', "--file_1", help="First XYZ file to be used in data analysis.")
+    parser.add_argument('-f2', "--file_2", help="Second XYZ file to be used in data analysis")
 
     args = None
     try:
         args = parser.parse_args(argv)
         if args.sum_file is None:
-            raise InvalidDataError("Summary file from hartree is required.")
+            if args.file_1 and args.file_2 is True:
+                print("No hartree input, but two single xyz coord inputs")
+            elif args.file_1 and args.file_2 is None:
+                raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
         elif not os.path.isfile(args.sum_file):
             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
     except (KeyError, InvalidDataError) as e:
@@ -359,11 +340,8 @@ def parse_cmdline(argv):
     return args, GOOD_RET
 
 
-def process_hartree_sum(sum_file):
-    pass
-
-
 def main(argv=None):
+    # type: (object) -> object
     """
     Runs the main program
     :param argv: The command line arguments.
@@ -375,6 +353,7 @@ def main(argv=None):
 
     try:
         print("Stephen will add a function call here!")
+        compare_rmsd_xyz(args.file_1, args.file_2)
         print("We found this file! {}".format(args.sum_file))
         process_hartree_sum(args.sum_file)
     except IOError as e:
@@ -390,3 +369,18 @@ def main(argv=None):
 if __name__ == '__main__':
     status = main()
     sys.exit(status)
+
+
+
+
+# print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
+# print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
+#
+# print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
+# print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
+#
+# print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1, center_xyz2)))
+#
+# print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1, xyz_coords2)))
+#
+# print("\n\n\n")
