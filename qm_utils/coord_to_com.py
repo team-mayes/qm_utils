@@ -6,14 +6,16 @@ Reads a pdb (protein data bank") file and creates gaussian input files and files
 """
 
 from __future__ import print_function
+
 import argparse
 import os
 import sys
+
 import numpy as np
 import six
 
 from qm_common import (GOOD_RET, INVALID_DATA, warning, find_files_by_dir, create_out_fname, list_to_file, process_cfg,
-                       dequote, InvalidDataError, IO_ERROR, INPUT_ERROR)
+                       InvalidDataError, IO_ERROR, INPUT_ERROR, prep_string)
 
 try:
     # noinspection PyCompatibility
@@ -159,18 +161,6 @@ def parse_cmdline(argv):
             args.skip_cp = True
 
     return args, GOOD_RET
-
-
-def prep_string(raw_string):
-    """
-    Reads potentially multi-line raw string and returns string that will be correctly outputted
-    :param raw_string: a string which may have "\n" to denote line breaks and may be quoted
-    :return: a string ready to print to the com file, including extra return
-    """
-    if len(raw_string) < 1:
-        return raw_string
-    else:
-        return '\n'.join(dequote(raw_string).split('\\n'))
 
 
 def process_file(file_path, cp_data, cfg):

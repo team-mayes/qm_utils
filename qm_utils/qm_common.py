@@ -320,17 +320,19 @@ def list_to_file(list_to_print, fname, list_format=None, delimiter=' ', mode='w'
             print("  Appended: {}".format(fname))
 
 
-def read_csv_to_dict(src_file, quote_style=csv.QUOTE_MINIMAL):
+def read_csv_to_dict(src_file, mode='r', quote_style=csv.QUOTE_MINIMAL):
     """
     Reads the given CSV (comma-separated with a first-line header row) and returns a list of
     dicts where each dict contains a row's data keyed by the header row.
 
     @param src_file: The CSV to read.
     @param quote_style: how to read the dictionary
+    @param mode: default is 'r'; now can specify 'rb'
     @return: A list of dicts containing the file's data.
     """
     result = []
-    with open(src_file) as csv_file:
+
+    with open(src_file, mode) as csv_file:
         csv_reader = csv.DictReader(csv_file, quoting=quote_style)
         for line in csv_reader:
             result.append(convert_dict_line(line))
@@ -418,4 +420,14 @@ def read_csv_old(file_loc):
     return rows
 
 
+def prep_string(raw_string):
+    """
+    Reads potentially multi-line raw string and returns string that will be correctly outputted
+    :param raw_string: a string which may have "\n" to denote line breaks and may be quoted
+    :return: a string ready to print to the com file, including extra return
+    """
+    if len(raw_string) < 1:
+        return raw_string
+    else:
+        return '\n'.join(dequote(raw_string).split('\\n'))
 

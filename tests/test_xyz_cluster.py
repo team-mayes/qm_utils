@@ -29,9 +29,12 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'xyz_cluster')
 
 # Input files #
 
-OXANE_HARTREE_SUM_FILE = os.path.join(SUB_DATA_DIR, 'xyz_cluster-sampleout.txt')
+OXANE_HARTREE_SUM_FILE = os.path.join(SUB_DATA_DIR, 'm02X-test.csv')
 OXANE_1c4_INPUT_FILE = os.path.join(SUB_DATA_DIR, 'oxane-1c4-freeze_B3LYP-relax_B3LYP.xyz')
 OXANE_1e_INPUT_FILE = os.path.join(SUB_DATA_DIR, 'oxane-1e-freeze_B3LYP-relax_B3LYP.xyz')
+
+OXANE_HARTREE_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'xyz_cluster-sampleout.txt')
+
 
 class TestFailWell(unittest.TestCase):
     def testHelp(self):
@@ -50,15 +53,18 @@ class TestFailWell(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    def testSDF(self):
+    def testReadHartreeSummary(self):
         try:
-            main(["-s", OXANE_HARTREE_SUM_FILE])
             process_hartree_sum(OXANE_HARTREE_SUM_FILE)
         finally:
             print("We're writing tests!")
+
     def testTwoFiles(self):
         try:
             main(["-f1", OXANE_1c4_INPUT_FILE, "-f2", OXANE_1e_INPUT_FILE])
+        finally:
+            pass
+
 
 
 

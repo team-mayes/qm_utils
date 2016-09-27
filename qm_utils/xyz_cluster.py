@@ -7,22 +7,14 @@ can be clustered.
 """
 
 from __future__ import print_function
+
 import argparse
 import os
 import sys
 import numpy as np
-import csv
 
 from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR,
-                       list_to_file)
-
-ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
-
-GOOD_RET = 0
-INPUT_ERROR = 1
-IO_ERROR = 2
-INVALID_DATA = 3
-
+                       list_to_file, read_csv_to_dict)
 try:
     # noinspection PyCompatibility
     from ConfigParser import ConfigParser
@@ -36,6 +28,13 @@ __author__ = 'SPVicchio'
 
 TOL_centroid = [0.001, 0.001, 0.001]
 num_atoms_ring = 6
+
+
+ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
+
+# Hartree field headers
+FILE_NAME = 'File Name'
+PUCKER = 'Pucker'
 
 
 def get_coordinates_xyz(filename):
@@ -52,7 +51,7 @@ def get_coordinates_xyz(filename):
         for the atoms.
     """
 
-    f = open(filename, 'r')
+    f = open(filename, mode='r')
 
     xyz_atoms = []
     atoms_ring_order = []
@@ -272,21 +271,30 @@ def compare_rmsd_xyz(input_file1, input_file2):
                kabsch_algorithm(center_xyz1, center_xyz2),
                kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
 
-    return
-
 
 def process_hartree_sum(sum_file):
     """
-
     :param sum_file:
     :return:
     """
+    # TODO: make clusters based on puckers
+    hartree_dict = read_csv_to_dict(sum_file, mode='rU')
+    # print(hartree_dict[0].keys())
+    # print(hartree_dict[0].values())
+    # print(hartree_dict[0].items())
+    for row in hartree_dict:
+        print("file_name: {}, pucker: {}".format(row[FILE_NAME], row[PUCKER]))
+    # for key, val in hartree_dict[0].items():
+    #     print("my is key '{}' and its value is '{}'".format(key, val))
 
-    #    with open(sum_file) as readfile:
-    #        reader = csv.reader(readfile, delimiter=' ')
-    #        for row in reader:
-    #            print("{}".format(row))
-    pass
+    print("header name is {}".format(PUCKER))
+
+
+    # print(raw_string)
+
+    # hartree_dict = read_csv_old(sum_file)
+    # print(hartree_dict)
+    # print(hartree_dict.keys)
 
 
 # script, file1, file2 = sys.argv
@@ -314,6 +322,7 @@ def parse_cmdline(argv):
 
     args = None
     try:
+        # TODO: discuss Stephen's question
         args = parser.parse_args(argv)
         if args.sum_file is None:
             if args.file_1 and args.file_2 is True:
