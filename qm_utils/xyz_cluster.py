@@ -12,6 +12,7 @@ import argparse
 import os
 import sys
 import numpy as np
+from collections import defaultdict
 
 from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR,
                        list_to_file, read_csv_to_dict)
@@ -214,8 +215,7 @@ def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
     if atoms_ring_order1 != atoms_ring_order2:
         exit("The atoms in the ring are not aligned the same!")
     else:
-        print("The atoms are aligned properly!")
-        check_value = 0
+         check_value = 0
     return check_value
 
 
@@ -244,7 +244,13 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     return
 
 
-def compare_rmsd_xyz(input_file1, input_file2):
+def compare_rmsd_xyz(input_file1, input_file2, print_status='off'):
+    """ calculates the rmsd both using the standard method and rotating the structures
+
+    :param input_file1: xyz coordinates for the first molecular structure
+    :param input_file2: xyz coordinates for the second molecular structure
+    :return: returns all of the
+    """
     n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1)
     n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2)
 
@@ -262,14 +268,20 @@ def compare_rmsd_xyz(input_file1, input_file2):
     [center_ring_all_xyz1, center_ring_ring_xyz1] = translate_centroid_ring(xyz_coords1, xyz_coords_ring1)
     [center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
 
-    print("""Now print the different cases:
-    Rmsd (all align, standard): {}
-    Rmsd (ring align, standard): {}
-    Rmsd (all align, kabsch): {}
-    Rmsd (ring align, kabsch): {}
-    """.format(rmsd(center_xyz1, center_xyz2), rmsd(center_ring_ring_xyz1, center_ring_ring_xyz2),
+    if print_status == 'on':
+
+        print("""Now print the different cases:
+        Rmsd (all align, standard): {}
+        Rmsd (ring align, standard): {}
+        Rmsd (all align, kabsch): {}
+        Rmsd (ring align, kabsch): {}
+        """.format(rmsd(center_xyz1, center_xyz2), rmsd(center_ring_ring_xyz1, center_ring_ring_xyz2),
                kabsch_algorithm(center_xyz1, center_xyz2),
                kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
+
+    rmsd_kabsch = kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)[0]
+
+    return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2
 
 
 def process_hartree_sum(sum_file):
@@ -279,31 +291,32 @@ def process_hartree_sum(sum_file):
     """
     # TODO: make clusters based on puckers
     hartree_dict = read_csv_to_dict(sum_file, mode='rU')
+
+#    unique_hartree_pucker = hartree_dict[PUCKER]
+
+#    print("{}".format(unique_hartree_pucker))
+
+    for row in hartree_dict:
+        print("file_name: {}, pucker: {}".format(row[FILE_NAME], row[PUCKER]))
+
+
+    #for pucker in hartree_dict.keys(PUCKER):
+    #   num_hartree_pucker += 1
+
+    #print("\nThe puckering grouping is: {}".format(num_hartree_pucker))
+
+
     # print(hartree_dict[0].keys())
     # print(hartree_dict[0].values())
     # print(hartree_dict[0].items())
-    for row in hartree_dict:
-        print("file_name: {}, pucker: {}".format(row[FILE_NAME], row[PUCKER]))
+
     # for key, val in hartree_dict[0].items():
     #     print("my is key '{}' and its value is '{}'".format(key, val))
 
-    print("header name is {}".format(PUCKER))
 
+   # print("header name is {}".format(PUCKER))
 
-    # print(raw_string)
-
-    # hartree_dict = read_csv_old(sum_file)
-    # print(hartree_dict)
-    # print(hartree_dict.keys)
-
-
-# script, file1, file2 = sys.argv
-
-# compare_rmsd_xyz(file1, file2)
-
-# script, file1 = sys.argv
-
-# process_hartree_sum(file1)
+    return
 
 def parse_cmdline(argv):
     """
@@ -358,13 +371,15 @@ def main(argv=None):
     """
     args, ret = parse_cmdline(argv)
     if ret != GOOD_RET or args is None:
-        return ret
 
+        return ret
+# TODO: How do I organize my main to do a few different things? (maybe what I am refering to is creating tests that are able to do what I am referring here in main)
     try:
         print("Stephen will add a function call here!")
-        compare_rmsd_xyz(args.file_1, args.file_2)
+        a, b, c = compare_rmsd_xyz(args.file_1, args.file_2)
+        print("{}".format(a))
         print("We found this file! {}".format(args.sum_file))
-        process_hartree_sum(args.sum_file)
+       #process_hartree_sum(args.sum_file)
     except IOError as e:
         warning(e)
         return IO_ERROR
@@ -382,11 +397,12 @@ if __name__ == '__main__':
 
 
 
-# print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
-# print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
-#
-# print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
-# print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
+#print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
+#print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
+
+#print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
+#print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
+
 #
 # print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1, center_xyz2)))
 #
