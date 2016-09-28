@@ -12,10 +12,10 @@ import argparse
 import os
 import sys
 import numpy as np
-from collections import defaultdict
 
 from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR,
                        list_to_file, read_csv_to_dict)
+
 try:
     # noinspection PyCompatibility
     from ConfigParser import ConfigParser
@@ -29,7 +29,6 @@ __author__ = 'SPVicchio'
 
 TOL_centroid = [0.001, 0.001, 0.001]
 num_atoms_ring = 6
-
 
 ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 
@@ -105,23 +104,23 @@ def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
     print("\nThe XYZ coordinates are:\n {}".format(xyz_coords))
 
 
-def centroid(X):
+def centroid(xyz_coords):
     """ Calculates the centroid (geometric center) of the structure. The centroid
     is defined as the mean position of all the points in all of the coordinate directions.
 
-    :param X: xyz coordinates for the given molecular structure
+    :param xyz_coords: xyz coordinates for the given molecular structure
     :return: the xyz coordinates for the centroid of the structure
     """
-    centroid_xyz = sum(X) / len(X)
+    centroid_xyz = sum(xyz_coords) / len(xyz_coords)
     return centroid_xyz
 
 
 def translate_centroid_all(xyz_coords):
-    """ Calculates the centroid of the xyz coordinates based on all the atoms. Once the cetroid is found, then the
-    xyz corodinates are translated so that the centroid is at the origin.
+    """ Calculates the centroid of the xyz coordinates based on all the atoms. Once the centroid is found, then the
+    xyz coordinates are translated so that the centroid is at the origin.
 
     :param xyz_coords: the xyz coordinates for the molecular structure (centroid not aligned)
-    :return: outputs the xyz coordiantes for the molecular structure with the centroid located at the origin.
+    :return: outputs the xyz coordinates for the molecular structure with the centroid located at the origin.
     """
 
     centroid_xyz = sum(xyz_coords) / len(xyz_coords)
@@ -160,7 +159,7 @@ def translate_centroid_ring(xyz_coords, xyz_coords_ring):
 
 def rmsd(coords1, coords2):
     """Calculates the root-mean-square deviation from two sets of vectors xyz_1 and xyz_2 (both of which are xyz
-    coordintes for different molecules)
+    coordinates for different molecules)
 
     :param coords1: input xyz coordinates of a molecule
     :param coords2: input xyz coordinates of a molecule
@@ -184,16 +183,16 @@ def kabsch_algorithm(xyz_coords1, xyz_coords2):
     covariance_matrix = np.dot(np.transpose(xyz_coords1), xyz_coords2)
 
     # calculate the singular value decomposition (svd) of the covariance matrix using numpy linear algebra
-    V, S, W = np.linalg.svd(covariance_matrix)
+    v, s, w = np.linalg.svd(covariance_matrix)
 
     # check if the systems needs to be rotated to ensure a right-handed coordinate system
-    direction = (np.linalg.det(V) * np.linalg.det(W))
+    direction = (np.linalg.det(v) * np.linalg.det(w))
 
     if direction < 0.0:
-        S[-1] = -S[-1]
-        V[:, -1] = - V[:, -1]
+        s[-1] = -s[-1]
+        v[:, -1] = - v[:, -1]
 
-    rotation_matrix = np.dot(V, W)
+    rotation_matrix = np.dot(v, w)
 
     rotated_xyz_coords1 = np.dot(xyz_coords1, rotation_matrix)
 
@@ -215,8 +214,8 @@ def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
     if atoms_ring_order1 != atoms_ring_order2:
         exit("The atoms in the ring are not aligned the same!")
     else:
-         check_value = 0
-    return check_value
+        check_value = 0
+        return check_value
 
 
 def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
@@ -224,10 +223,11 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
 
     :param to_print_xyz_coords:
     :param to_print_atoms:
+    :param file_sum:
     :return:
     """
 
-    num_atoms = len(to_print_atoms)
+    # num_atoms = len(to_print_atoms)
     num_atoms = '16'
 
     to_print = [num_atoms, file_sum]
@@ -249,6 +249,7 @@ def compare_rmsd_xyz(input_file1, input_file2, print_status='off'):
 
     :param input_file1: xyz coordinates for the first molecular structure
     :param input_file2: xyz coordinates for the second molecular structure
+    :param print_status:
     :return: returns all of the
     """
     n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1)
@@ -269,54 +270,61 @@ def compare_rmsd_xyz(input_file1, input_file2, print_status='off'):
     [center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
 
     if print_status == 'on':
-
         print("""Now print the different cases:
         Rmsd (all align, standard): {}
         Rmsd (ring align, standard): {}
         Rmsd (all align, kabsch): {}
         Rmsd (ring align, kabsch): {}
         """.format(rmsd(center_xyz1, center_xyz2), rmsd(center_ring_ring_xyz1, center_ring_ring_xyz2),
-               kabsch_algorithm(center_xyz1, center_xyz2),
-               kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
+                   kabsch_algorithm(center_xyz1, center_xyz2),
+                   kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
 
     rmsd_kabsch = kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)[0]
 
     return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2
 
 
-def process_hartree_sum(sum_file):
+def hartree_sum_pucker_cluster(sum_file):
     """
-    :param sum_file:
-    :return:
+    Reads the hartree output file and creates a dictionary of all hartree output and clusters based on pucker
+    :param sum_file: name of hartree output file
+    :return: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and file_names
     """
     # TODO: make clusters based on puckers
     hartree_dict = read_csv_to_dict(sum_file, mode='rU')
+    pucker_filename_dict = {}
 
-#    unique_hartree_pucker = hartree_dict[PUCKER]
+    #    unique_hartree_pucker = hartree_dict[PUCKER]
 
-#    print("{}".format(unique_hartree_pucker))
+    #    print("{}".format(unique_hartree_pucker))
 
     for row in hartree_dict:
-        print("file_name: {}, pucker: {}".format(row[FILE_NAME], row[PUCKER]))
+        pucker_name = row[PUCKER]
+        file_name = row[FILE_NAME]
+        if pucker_name in pucker_filename_dict:
+            pucker_filename_dict[pucker_name].append(file_name)
+        else:
+            pucker_filename_dict[pucker_name] = [file_name]
+        # print("file_name: {}, pucker: {}".format(row[FILE_NAME], row[PUCKER]))
 
+    print("expect in dict: {os2: [1H2m062xconstb3lypbigcon2b3ltsm062x.log]}")
+    print(pucker_filename_dict)
+        # for pucker in hartree_dict.keys(PUCKER):
+        #   num_hartree_pucker += 1
 
-    #for pucker in hartree_dict.keys(PUCKER):
-    #   num_hartree_pucker += 1
+        # print("\nThe puckering grouping is: {}".format(num_hartree_pucker))
 
-    #print("\nThe puckering grouping is: {}".format(num_hartree_pucker))
+        # print(hartree_dict[0].keys())
+        # print(hartree_dict[0].values())
+        # print(hartree_dict[0].items())
 
+        # for key, val in hartree_dict[0].items():
+        #     print("my is key '{}' and its value is '{}'".format(key, val))
 
-    # print(hartree_dict[0].keys())
-    # print(hartree_dict[0].values())
-    # print(hartree_dict[0].items())
+        # print("header name is {}".format(PUCKER))
 
-    # for key, val in hartree_dict[0].items():
-    #     print("my is key '{}' and its value is '{}'".format(key, val))
+    return hartree_dict, pucker_filename_dict
 
-
-   # print("header name is {}".format(PUCKER))
-
-    return
 
 def parse_cmdline(argv):
     """
@@ -330,18 +338,12 @@ def parse_cmdline(argv):
     parser = argparse.ArgumentParser(description="Aligns xyz coordinates.")
     parser.add_argument('-s', "--sum_file", help="The summary file from hartree.",
                         default=None)
-    parser.add_argument('-f1', "--file_1", help="First XYZ file to be used in data analysis.")
-    parser.add_argument('-f2', "--file_2", help="Second XYZ file to be used in data analysis")
 
     args = None
     try:
-        # TODO: discuss Stephen's question
         args = parser.parse_args(argv)
         if args.sum_file is None:
-            if args.file_1 and args.file_2 is True:
-                print("No hartree input, but two single xyz coord inputs")
-            elif args.file_1 and args.file_2 is None:
-                raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
+            raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
         elif not os.path.isfile(args.sum_file):
             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
     except (KeyError, InvalidDataError) as e:
@@ -362,6 +364,32 @@ def parse_cmdline(argv):
     return args, GOOD_RET
 
 
+def test_clusters(pucker_filename_dict):
+    """
+    What I do
+    :param pucker_filename_dict:
+    :return:
+    """
+    ok_tol = 0.1
+    process_cluster_dict = {}
+    for pucker, file_list in pucker_filename_dict.items():
+        pucker_cluster = 0
+        cluster_name = pucker + "_" + str(pucker_cluster)
+        process_cluster_dict[cluster_name] = [file_list[0]]
+        raw_cluster_len = len(file_list)
+        for file_id in range(1, raw_cluster_len):
+            file_name = file_list[file_id]
+            for cluster_id in range(pucker_cluster):
+                rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2 = compare_rmsd_xyz(file_name,
+                                                                                     process_cluster_dict[cluster_id][0])
+                if rmsd_kabsch < ok_tol:
+                    process_cluster_dict[cluster_id].append(file_name)
+                else:
+                    pucker_cluster += 1
+                    cluster_name = pucker + "_" + str(pucker_cluster)
+                    process_cluster_dict[cluster_name] = [file_name]
+
+
 def main(argv=None):
     # type: (object) -> object
     """
@@ -371,15 +399,15 @@ def main(argv=None):
     """
     args, ret = parse_cmdline(argv)
     if ret != GOOD_RET or args is None:
-
         return ret
-# TODO: How do I organize my main to do a few different things? (maybe what I am refering to is creating tests that are able to do what I am referring here in main)
     try:
         print("Stephen will add a function call here!")
         a, b, c = compare_rmsd_xyz(args.file_1, args.file_2)
         print("{}".format(a))
         print("We found this file! {}".format(args.sum_file))
-       #process_hartree_sum(args.sum_file)
+
+        hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file)
+        test_clusters(pucker_filename_dict)
     except IOError as e:
         warning(e)
         return IO_ERROR
@@ -387,25 +415,22 @@ def main(argv=None):
         warning(e)
         return INVALID_DATA
 
+    # print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
+    # print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
+
+    # print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
+    # print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
+
+    #
+    # print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1, center_xyz2)))
+    #
+    # print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1, xyz_coords2)))
+    #
+    # print("\n\n\n")
+
     return GOOD_RET  # success
 
 
 if __name__ == '__main__':
     status = main()
     sys.exit(status)
-
-
-
-
-#print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
-#print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
-
-#print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
-#print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
-
-#
-# print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1, center_xyz2)))
-#
-# print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1, xyz_coords2)))
-#
-# print("\n\n\n")
