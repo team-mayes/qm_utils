@@ -81,3 +81,4 @@ class TestMain(unittest.TestCase):
         with capture_stdout(compare_rmsd_xyz, OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, print_status='on') as output:
             self.assertTrue("Rmsd" in output)
             self.assertTrue(len(output) > 100)
+

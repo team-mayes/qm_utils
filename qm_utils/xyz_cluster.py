@@ -12,9 +12,8 @@ import argparse
 import os
 import sys
 import numpy as np
-
-from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR,
-                       list_to_file, read_csv_to_dict)
+# TODO check error message that I am receiving only when running on my computer
+from qm_common import GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file, read_csv_to_dict
 
 try:
     # noinspection PyCompatibility
@@ -284,7 +283,7 @@ def compare_rmsd_xyz(input_file1, input_file2, print_status='off'):
     return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2
 
 
-def hartree_sum_pucker_cluster(sum_file):
+def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     """
     Reads the hartree output file and creates a dictionary of all hartree output and clusters based on pucker
     :param sum_file: name of hartree output file
@@ -294,10 +293,6 @@ def hartree_sum_pucker_cluster(sum_file):
     hartree_dict = read_csv_to_dict(sum_file, mode='rU')
     pucker_filename_dict = {}
 
-    #    unique_hartree_pucker = hartree_dict[PUCKER]
-
-    #    print("{}".format(unique_hartree_pucker))
-
     for row in hartree_dict:
         pucker_name = row[PUCKER]
         file_name = row[FILE_NAME]
@@ -305,25 +300,49 @@ def hartree_sum_pucker_cluster(sum_file):
             pucker_filename_dict[pucker_name].append(file_name)
         else:
             pucker_filename_dict[pucker_name] = [file_name]
-        # print("file_name: {}, pucker: {}".format(row[FILE_NAME], row[PUCKER]))
 
-    print("expect in dict: {os2: [1H2m062xconstb3lypbigcon2b3ltsm062x.log]}")
-    print(pucker_filename_dict)
-        # for pucker in hartree_dict.keys(PUCKER):
-        #   num_hartree_pucker += 1
-
-        # print("\nThe puckering grouping is: {}".format(num_hartree_pucker))
-
-        # print(hartree_dict[0].keys())
-        # print(hartree_dict[0].values())
-        # print(hartree_dict[0].items())
-
-        # for key, val in hartree_dict[0].items():
-        #     print("my is key '{}' and its value is '{}'".format(key, val))
-
-        # print("header name is {}".format(PUCKER))
+        if print_status != 'off':
+            print("Hartree Pucker: {} --> {}".format(row[PUCKER], row[FILE_NAME]))
 
     return hartree_dict, pucker_filename_dict
+
+
+def test_clusters(pucker_filename_dict):
+    """
+    What I do
+    :param pucker_filename_dict:
+    :return:
+    """
+
+    # TODO need to figure out why the clusters are arranged so that nothing else is being added or overwritten
+    #ok_tol = 0.0000000000000000000000001
+    ok_tol = 0.1
+    process_cluster_dict = {}
+    for pucker, file_list in pucker_filename_dict.items():
+        pucker_cluster = 0 # initial pucker list count is 0
+        cluster_name = pucker + "_" + str(pucker_cluster) # creates new name for cluster key
+        process_cluster_dict[cluster_name] = [file_list[0]]  # adds new cluster key and first file into items of key
+        raw_cluster_len = len(file_list) # calculates the length of the file list (how many files in hartree clustering)
+
+        for file_id in range(1, raw_cluster_len ): # looks at all the files in the initial clustering
+            file_name = file_list[file_id] # looks at a specific filename
+            # TODO Figure out why I am not going into this for loop...since pucker cluster is empty
+#            hi = range(file_id)
+#            print(range(file_id)) # prints the number of clusters that needs to be further analyzed
+            for cluster_id in range(pucker_cluster):
+                rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2 = compare_rmsd_xyz(file_name,
+                                                                                     process_cluster_dict[cluster_id][0])
+                # calculates the rmsd by rotating and translating the rings so that they align properly
+
+                if rmsd_kabsch < ok_tol:
+                    process_cluster_dict[cluster_id].append(file_name) # add the file to the current key
+                else:
+                    pucker_cluster += 1 # say the criteria isn't met so another key is needed
+                    cluster_name = pucker + "_" + str(pucker_cluster) # creates the new name for cluster key
+                    process_cluster_dict[cluster_name] = [file_name] # adds the filename to the new cluster key
+
+
+    print(process_cluster_dict)
 
 
 def parse_cmdline(argv):
@@ -364,32 +383,6 @@ def parse_cmdline(argv):
     return args, GOOD_RET
 
 
-def test_clusters(pucker_filename_dict):
-    """
-    What I do
-    :param pucker_filename_dict:
-    :return:
-    """
-    ok_tol = 0.1
-    process_cluster_dict = {}
-    for pucker, file_list in pucker_filename_dict.items():
-        pucker_cluster = 0
-        cluster_name = pucker + "_" + str(pucker_cluster)
-        process_cluster_dict[cluster_name] = [file_list[0]]
-        raw_cluster_len = len(file_list)
-        for file_id in range(1, raw_cluster_len):
-            file_name = file_list[file_id]
-            for cluster_id in range(pucker_cluster):
-                rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2 = compare_rmsd_xyz(file_name,
-                                                                                     process_cluster_dict[cluster_id][0])
-                if rmsd_kabsch < ok_tol:
-                    process_cluster_dict[cluster_id].append(file_name)
-                else:
-                    pucker_cluster += 1
-                    cluster_name = pucker + "_" + str(pucker_cluster)
-                    process_cluster_dict[cluster_name] = [file_name]
-
-
 def main(argv=None):
     # type: (object) -> object
     """
@@ -401,12 +394,9 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return ret
     try:
-        print("Stephen will add a function call here!")
-        a, b, c = compare_rmsd_xyz(args.file_1, args.file_2)
-        print("{}".format(a))
-        print("We found this file! {}".format(args.sum_file))
+        print("\nThe following Hartree file has been found: {}\n".format(args.sum_file))
 
-        hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file)
+        hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file, print_status='off')
         test_clusters(pucker_filename_dict)
     except IOError as e:
         warning(e)
