@@ -11,9 +11,13 @@ from __future__ import print_function
 import argparse
 import os
 import sys
+import csv
 import numpy as np
 # TODO check error message that I am receiving only when running on my computer
-from qm_common import GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file, read_csv_to_dict
+from pip.utils import splitext
+
+from qm_common import GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file, read_csv_to_dict, \
+    create_out_fname
 
 try:
     # noinspection PyCompatibility
@@ -51,9 +55,9 @@ def get_coordinates_xyz(filename, xyz_dir):
     @return: A list of coordinates associated with the atom numbers and a list of lists containing the xyz coordinates
         for the atoms.
     """
-    file_path = os.path.join(xyz_dir, filename)
+    xyz_file_path = create_out_fname(filename, base_dir=xyz_dir, ext='.xyz')
 
-    f = open(file_path, mode='r')
+    f = open(xyz_file_path, mode='r')
 
     xyz_atoms = []
     atoms_ring_order = []
@@ -246,7 +250,7 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     return
 
 
-def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_opt='off'):
+def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
     """ calculates the rmsd both using the standard method and rotating the structures
 
     :param input_file1: xyz coordinates for the first molecular structure
@@ -255,6 +259,8 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_opt='off'):
     :param print_opt:
     :return: returns all of the
     """
+
+    # TODO add a function that takes an imput log file but accesses the xyz
     n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1, xyz_dir)
     n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2, xyz_dir)
 
@@ -272,7 +278,7 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_opt='off'):
     [center_ring_all_xyz1, center_ring_ring_xyz1] = translate_centroid_ring(xyz_coords1, xyz_coords_ring1)
     [center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
 
-    if print_opt == 'on':
+    if print_option == 'on':
         print("""Now print the different cases:
         Rmsd (all align, standard): {}
         Rmsd (ring align, standard): {}
@@ -310,16 +316,13 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     return hartree_dict, pucker_filename_dict
 
 
-def test_clusters(pucker_filename_dict, xyz_dir):
+def test_clusters(pucker_filename_dict, xyz_dir, ok_tol=DEF_TOL_CLUSTER,print_option ='off'):
     """
     What I do
     :param pucker_filename_dict:
     :param xyz_dir:
     :return:
     """
-    # TODO need to figure out why the clusters are arranged so that nothing else is being added or overwritten
-    # ok_tol = 0.0000000000000000000000001
-    ok_tol = 0.1
     process_cluster_dict = {}
     for pucker, file_list in pucker_filename_dict.items():
         pucker_cluster = 0 # initial pucker list count is 0
@@ -351,7 +354,12 @@ def test_clusters(pucker_filename_dict, xyz_dir):
                 # adds the filename to the new cluster key
                 process_cluster_dict[cluster_name] = [file_name]
 
-    print(process_cluster_dict)
+    #print(process_cluster_dict)
+
+    if print_option != 'off':
+        for cluster_key, cluster_values in process_cluster_dict.items():
+            print("Cluster Key: {} Cluster Files: {}".format(cluster_key,cluster_values))
+    return
 
 
 def parse_cmdline(argv):
@@ -404,6 +412,16 @@ def parse_cmdline(argv):
     return args, GOOD_RET
 
 
+def dict_to_csv_writer(dict_to_write, out_filename, xyz_dir):
+
+    correct_filename = os.path.join(xyz_dir,out_filename)
+
+    with open (correct_filename, 'wb') as csv_file:
+        writer = csv.writer(csv_file)
+        for key, value in dict_to_write.items():
+            writer.writerow([key, value])
+
+
 def main(argv=None):
     # type: (object) -> object
     """
@@ -415,8 +433,8 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return ret
     try:
-        hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file, print_status='off')
-        test_clusters(pucker_filename_dict, args.dir_xyz)
+        hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file)
+        test_clusters(pucker_filename_dict, args.dir_xyz,ok_tol=0.000000000001, print_option = 'on')
     except IOError as e:
         warning(e)
         return IO_ERROR
