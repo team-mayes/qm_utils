@@ -27,6 +27,7 @@ __author__ = 'SPVicchio'
 # Constants #
 
 TOL_centroid = [0.001, 0.001, 0.001]
+DEF_TOL_CLUSTER = 0.001
 num_atoms_ring = 6
 
 ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
@@ -36,7 +37,7 @@ FILE_NAME = 'File Name'
 PUCKER = 'Pucker'
 
 
-def get_coordinates_xyz(filename):
+def get_coordinates_xyz(filename, xyz_dir):
     """This function is designed to upload xyz coordinates from .xyz files. The .xyz file format should contain the
     number of atoms on the first line followed by the filename on the second line. After the second line, the lines
     should be organized as followed:
@@ -46,11 +47,13 @@ def get_coordinates_xyz(filename):
     This function stores the the xyz coordinates along with the atom numbers.
 
     :param filename:
+    :param xyz_dir:
     @return: A list of coordinates associated with the atom numbers and a list of lists containing the xyz coordinates
         for the atoms.
     """
+    file_path = os.path.join(xyz_dir, filename)
 
-    f = open(filename, mode='r')
+    f = open(file_path, mode='r')
 
     xyz_atoms = []
     atoms_ring_order = []
@@ -243,16 +246,17 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     return
 
 
-def compare_rmsd_xyz(input_file1, input_file2, print_status='off'):
+def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_opt='off'):
     """ calculates the rmsd both using the standard method and rotating the structures
 
     :param input_file1: xyz coordinates for the first molecular structure
     :param input_file2: xyz coordinates for the second molecular structure
-    :param print_status:
+    :param xyz_dir:
+    :param print_opt:
     :return: returns all of the
     """
-    n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1)
-    n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2)
+    n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1, xyz_dir)
+    n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2, xyz_dir)
 
     if n_atoms1 != n_atoms2:
         exit("Error in the number of atoms! The number of atoms doesn't match!")
@@ -268,7 +272,7 @@ def compare_rmsd_xyz(input_file1, input_file2, print_status='off'):
     [center_ring_all_xyz1, center_ring_ring_xyz1] = translate_centroid_ring(xyz_coords1, xyz_coords_ring1)
     [center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
 
-    if print_status == 'on':
+    if print_opt == 'on':
         print("""Now print the different cases:
         Rmsd (all align, standard): {}
         Rmsd (ring align, standard): {}
@@ -289,7 +293,6 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     :param sum_file: name of hartree output file
     :return: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and file_names
     """
-    # TODO: make clusters based on puckers
     hartree_dict = read_csv_to_dict(sum_file, mode='rU')
     pucker_filename_dict = {}
 
@@ -307,15 +310,15 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     return hartree_dict, pucker_filename_dict
 
 
-def test_clusters(pucker_filename_dict):
+def test_clusters(pucker_filename_dict, xyz_dir):
     """
     What I do
     :param pucker_filename_dict:
+    :param xyz_dir:
     :return:
     """
-
     # TODO need to figure out why the clusters are arranged so that nothing else is being added or overwritten
-    #ok_tol = 0.0000000000000000000000001
+    # ok_tol = 0.0000000000000000000000001
     ok_tol = 0.1
     process_cluster_dict = {}
     for pucker, file_list in pucker_filename_dict.items():
@@ -324,23 +327,29 @@ def test_clusters(pucker_filename_dict):
         process_cluster_dict[cluster_name] = [file_list[0]]  # adds new cluster key and first file into items of key
         raw_cluster_len = len(file_list) # calculates the length of the file list (how many files in hartree clustering)
 
-        for file_id in range(1, raw_cluster_len ): # looks at all the files in the initial clustering
-            file_name = file_list[file_id] # looks at a specific filename
-            # TODO Figure out why I am not going into this for loop...since pucker cluster is empty
-#            hi = range(file_id)
-#            print(range(file_id)) # prints the number of clusters that needs to be further analyzed
-            for cluster_id in range(pucker_cluster):
-                rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2 = compare_rmsd_xyz(file_name,
-                                                                                     process_cluster_dict[cluster_id][0])
+        for file_id in range(1, raw_cluster_len): # looks at all the files in the initial clustering
+            # looks at a specific filename
+            file_name = file_list[file_id]
+            not_assigned = True
+
+            for assigned_cluster_name in process_cluster_dict:
                 # calculates the rmsd by rotating and translating the rings so that they align properly
+                rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2 = compare_rmsd_xyz(file_name,
+                                                                                     process_cluster_dict[assigned_cluster_name][0],
+                                                                                     xyz_dir)
 
                 if rmsd_kabsch < ok_tol:
-                    process_cluster_dict[cluster_id].append(file_name) # add the file to the current key
-                else:
-                    pucker_cluster += 1 # say the criteria isn't met so another key is needed
-                    cluster_name = pucker + "_" + str(pucker_cluster) # creates the new name for cluster key
-                    process_cluster_dict[cluster_name] = [file_name] # adds the filename to the new cluster key
-
+                    # add the file to the current key
+                    process_cluster_dict[assigned_cluster_name].append(file_name)
+                    not_assigned = False
+                    break
+            if not_assigned:
+                # say the criteria isn't met so another key is needed
+                # creates the new name for cluster key
+                pucker_cluster += 1
+                cluster_name = pucker + "_" + str(pucker_cluster)
+                # adds the filename to the new cluster key
+                process_cluster_dict[cluster_name] = [file_name]
 
     print(process_cluster_dict)
 
@@ -355,8 +364,13 @@ def parse_cmdline(argv):
 
     # initialize the parser object:
     parser = argparse.ArgumentParser(description="Aligns xyz coordinates.")
+    parser.add_argument('-d', "--dir_xyz", help="The directory where the xyz files can be found. The default is the"
+                                                "directory where the Hartree summary file can be found.",
+                        default=None)
     parser.add_argument('-s', "--sum_file", help="The summary file from hartree.",
                         default=None)
+    parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
+                        default=DEF_TOL_CLUSTER, type=float)
 
     args = None
     try:
@@ -365,6 +379,13 @@ def parse_cmdline(argv):
             raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
         elif not os.path.isfile(args.sum_file):
             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
+        # Finally, if the summary file is there, and there is no dir_xyz provided
+        if args.dir_xyz is None:
+            args.dir_xyz = os.path.dirname(args.sum_file)
+        # if a  dir_xyz is provided, ensure valid
+        elif not os.path.isdir(args.dir_xyz):
+            raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
+
     except (KeyError, InvalidDataError) as e:
         warning(e)
         parser.print_help()
@@ -394,29 +415,14 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return ret
     try:
-        print("\nThe following Hartree file has been found: {}\n".format(args.sum_file))
-
         hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file, print_status='off')
-        test_clusters(pucker_filename_dict)
+        test_clusters(pucker_filename_dict, args.dir_xyz)
     except IOError as e:
         warning(e)
         return IO_ERROR
     except InvalidDataError as e:
         warning(e)
         return INVALID_DATA
-
-    # print_xyz_coords(center_xyz1, atoms1, 'xyz_coords_all-align_1e.xyz')
-    # print_xyz_coords(center_ring_all_xyz1, atoms1, 'xyz_coords_ring-align_1e.xyz')
-
-    # print_xyz_coords(center_xyz2, atoms2, 'xyz_coords_all-align_1c4.xyz')
-    # print_xyz_coords(center_ring_all_xyz2, atoms2, 'xyz_coords_ring-align_1c4.xyz')
-
-    #
-    # print("\n The rmsd without aligning and rotating the structures is {}\n".format(rmsd(center_xyz1, center_xyz2)))
-    #
-    # print("\n The rmsd from the Kabsch method is: {}\n".format(kabsch_algorithm(center_xyz1, xyz_coords2)))
-    #
-    # print("\n\n\n")
 
     return GOOD_RET  # success
 

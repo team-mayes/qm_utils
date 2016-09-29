@@ -31,7 +31,7 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'xyz_cluster')
 
 # Input files #
 
-OXANE_HARTREE_SUM_FILE = os.path.join(SUB_DATA_DIR, 'm02X-test.csv')
+OXANE_HARTREE_SUM_FILE = os.path.join(SUB_DATA_DIR, 'b3lyp-test.csv')
 OXANE_1c4_INPUT_FILE = os.path.join(SUB_DATA_DIR, 'oxane-1c4-freeze_B3LYP-relax_B3LYP.xyz')
 OXANE_1e_INPUT_FILE = os.path.join(SUB_DATA_DIR, 'oxane-1e-freeze_B3LYP-relax_B3LYP.xyz')
 OXANE_4c1_INPUT_FILE = os.path.join(SUB_DATA_DIR, 'oxane-4c1-freeze_B3LYP-relax_B3LYP.xyz')
@@ -43,6 +43,7 @@ RMSD_KABSCH_SIMILAR_GOOD = (0.000300503125935, 3, 6)
 RMSD_KABSCH_SIMILAR_1c4to4c1 = (0.45429783853700906, 3, 6)
 PUCK_2SO = '2so'
 PUCK_2SO_FILES = ['25Bm062xconstb3lypbigb3lrelm062x.log', 'E4m062xconstb3lypbigcon1b3ltsm062x.log']
+TEST_XYZ_TOL = '0.000001'
 
 
 class TestFailWell(unittest.TestCase):
@@ -77,8 +78,11 @@ class TestMain(unittest.TestCase):
         self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_1c4to4c1[0]) < XYZ_TOL)
 
     def testTwoFiles_PrintFeature(self):
-        compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, print_status='on')
+        # compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, print_status='on')
         with capture_stdout(compare_rmsd_xyz, OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, print_status='on') as output:
             self.assertTrue("Rmsd" in output)
             self.assertTrue(len(output) > 100)
 
+    def testMain(self):
+        test_input = ["-s", OXANE_HARTREE_SUM_FILE, "-t", TEST_XYZ_TOL]
+        main(test_input)
