@@ -11,7 +11,8 @@ import unittest
 import os
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, warning, create_out_fname, \
     write_csv
-from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, dict_to_csv_writer
+from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, dict_to_csv_writer, \
+    read_clustered_keys_in_hartree
 import logging
 
 
@@ -99,6 +100,14 @@ class TestMain(unittest.TestCase):
             self.assertTrue(diff_lines(out_filename_path,OXANE_HARTREE_DICT_CLUSTER_FILE))
         finally:
             silent_remove(os.path.join(SUB_DATA_DIR,out_fname))
+
+# TODO create this test for lookinga at the lowest energy structures
+    def testLowestEnergyStructures(self):
+        hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+        process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR, print_option = 'off')
+        read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
+
+
 
 #    def testMain(self):
 #        test_input = ["-s", OXANE_HARTREE_SUM_HEATHER_FILE, "-t", TEST_XYZ_TOL]

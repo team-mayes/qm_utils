@@ -33,13 +33,15 @@ __author__ = 'SPVicchio'
 TOL_centroid = [0.001, 0.001, 0.001]
 DEF_TOL_CLUSTER = 0.001
 num_atoms_ring = 6
-
 ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
+HARTREE_TO_KCALMOL = 627.5095
+STRUCTURE_COMPARE_TOL = 5.0
 
 # Hartree field headers
 FILE_NAME = 'File Name'
 PUCKER = 'Pucker'
-
+ENERGY_GIBBS = 'G298 (Hartrees)'
+ENERGY_ELECTRONIC = 'Energy (A.U.)'
 
 def get_coordinates_xyz(filename, xyz_dir):
     """This function is designed to upload xyz coordinates from .xyz files. The .xyz file format should contain the
@@ -354,13 +356,64 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol=DEF_TOL_CLUSTER,print_op
                 # adds the filename to the new cluster key
                 process_cluster_dict[cluster_name] = [file_name]
 
-    #print(process_cluster_dict)
-
     if print_option != 'off':
         for cluster_key, cluster_values in process_cluster_dict.items():
             print("Cluster Key: {} Cluster Files: {}".format(cluster_key,cluster_values))
-    return
+    return process_cluster_dict
 
+
+def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
+
+    print('\nhi\nLooks like we made it at least this far...')
+
+    flux_filename_runs = []
+
+    for cluster_keys, clusters in process_cluster_dict.items():
+
+        num_cluster = len(clusters)
+        if num_cluster > 1:
+            cluster1_filename = clusters[0]
+            cluster2_filename = clusters[1]
+
+
+            print(cluster1_filename)
+            print(cluster2_filename)
+
+            for row in hartree_dict:
+                file_name = row[FILE_NAME]
+
+                if file_name == cluster1_filename:
+                    cluster1_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
+                    print('found the first file')
+                elif file_name == cluster2_filename:
+                    cluster2_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
+                    print('found the second file')
+
+
+#            if abs(cluster1_energy-cluster2_energy) < STRUCTURE_COMPARE_TOL:
+#                flux_filename_runs.append(cluster1_filename)
+#                flux_filename_runs.append(cluster2_filename)
+
+            if cluster1_energy > cluster2_energy:
+            #elif cluster1_energy > cluster2_energy:
+                print('Number 1 Wins!')
+                low_energy_cluster_filename = cluster2_filename
+                flux_filename_runs.append(low_energy_cluster_filename)
+            elif cluster1_energy < cluster2_energy:
+                print('Number 2 Wins!')
+                low_energy_cluster_filename = cluster1_filename
+                flux_filename_runs.append(low_energy_cluster_filename)
+
+
+
+            print(flux_filename_runs)
+
+        elif num_cluster == 1:
+            pass
+        else:
+            print("There is something seriously wrong if your code....")
+
+    return
 
 def parse_cmdline(argv):
     """
@@ -434,7 +487,10 @@ def main(argv=None):
         return ret
     try:
         hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file)
-        test_clusters(pucker_filename_dict, args.dir_xyz,ok_tol=0.000000000001, print_option = 'on')
+        process_cluster_dict = test_clusters(pucker_filename_dict, args.dir_xyz, print_option = 'off')
+        out_filename = os.path.join(args.dir_xyz,'oxane_cont-clustered_B3LYP.csv')
+#        dict_to_csv_writer(process_cluster_dict, out_filename,args.dir_xyz)
+        read_clustered_keys_in_hartree(process_cluster_dict,hartree_dict)
     except IOError as e:
         warning(e)
         return IO_ERROR
