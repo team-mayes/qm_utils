@@ -364,52 +364,57 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol=DEF_TOL_CLUSTER,print_op
 
 def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
 
-    print('\nhi\nLooks like we made it at least this far...')
+# TODO need to still look at the files and make it so that it read multiple files and compares
 
     flux_filename_runs = []
 
     for cluster_keys, clusters in process_cluster_dict.items():
 
-        num_cluster = len(clusters)
-        if num_cluster > 1:
+        total_num_cluster = len(clusters)
+        num_cluster = total_num_cluster
+        if total_num_cluster == 1:
+            pass
+        elif total_num_cluster > 1:
+
             cluster1_filename = clusters[0]
             cluster2_filename = clusters[1]
 
-
-            print(cluster1_filename)
-            print(cluster2_filename)
-
-            for row in hartree_dict:
-                file_name = row[FILE_NAME]
-
-                if file_name == cluster1_filename:
-                    cluster1_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-                    print('found the first file')
-                elif file_name == cluster2_filename:
-                    cluster2_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-                    print('found the second file')
+            for num_cluster in clusters:
 
 
-#            if abs(cluster1_energy-cluster2_energy) < STRUCTURE_COMPARE_TOL:
-#                flux_filename_runs.append(cluster1_filename)
-#                flux_filename_runs.append(cluster2_filename)
-
-            if cluster1_energy > cluster2_energy:
-            #elif cluster1_energy > cluster2_energy:
-                print('Number 1 Wins!')
-                low_energy_cluster_filename = cluster2_filename
-                flux_filename_runs.append(low_energy_cluster_filename)
-            elif cluster1_energy < cluster2_energy:
-                print('Number 2 Wins!')
-                low_energy_cluster_filename = cluster1_filename
-                flux_filename_runs.append(low_energy_cluster_filename)
+                # for num_cluster_current in clusters
 
 
 
-            print(flux_filename_runs)
+                print(cluster1_filename)
+                print(cluster2_filename)
 
-        elif num_cluster == 1:
-            pass
+                for row in hartree_dict:
+                    file_name = row[FILE_NAME]
+
+                    if file_name == cluster1_filename:
+                        cluster1_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
+                        print('found the first file')
+                    elif file_name == cluster2_filename:
+                        cluster2_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
+                        print('found the second file')
+
+        #            if abs(cluster1_energy-cluster2_energy) < STRUCTURE_COMPARE_TOL:
+        #                flux_filename_runs.append(cluster1_filename)
+        #                flux_filename_runs.append(cluster2_filename)
+        
+                if cluster1_energy > cluster2_energy:
+                #elif cluster1_energy > cluster2_energy:
+                    print('Number 1 Wins!')
+                    low_energy_cluster_filename = cluster2_filename
+                    flux_filename_runs.append(low_energy_cluster_filename)
+                elif cluster1_energy < cluster2_energy:
+                    print('Number 2 Wins!')
+                    low_energy_cluster_filename = cluster1_filename
+                    flux_filename_runs.append(low_energy_cluster_filename)
+
+                print(flux_filename_runs)
+
         else:
             print("There is something seriously wrong if your code....")
 
