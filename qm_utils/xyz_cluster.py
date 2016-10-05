@@ -17,7 +17,7 @@ import numpy as np
 from pip.utils import splitext
 
 from qm_common import GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file, read_csv_to_dict, \
-    create_out_fname
+    create_out_fname, list_to_dict
 
 try:
     # noinspection PyCompatibility
@@ -364,60 +364,60 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol=DEF_TOL_CLUSTER,print_op
 
 def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
 
-# TODO need to still look at the files and make it so that it read multiple files and compares
-
-    flux_filename_runs = []
+    # TODO need to still look at the files and make it so that it read multiple files and compares
+    low_e_per_cluster = []
 
     for cluster_keys, clusters in process_cluster_dict.items():
 
-        total_num_cluster = len(clusters)
-        num_cluster = total_num_cluster
-        if total_num_cluster == 1:
-            pass
-        elif total_num_cluster > 1:
+        num_files_in_cluster = len(clusters)
+        if num_files_in_cluster == 1:
+            low_e_per_cluster.append(clusters[0])
+        elif num_files_in_cluster > 1:
 
             cluster1_filename = clusters[0]
             cluster2_filename = clusters[1]
 
-            for num_cluster in clusters:
+            for num_cluster in range(0, num_files_in_cluster):
 
-
-                # for num_cluster_current in clusters
-
-
-
-                print(cluster1_filename)
-                print(cluster2_filename)
+                #print("First file: {}".format(cluster1_filename))
+                #print("Second file: {}".format(cluster2_filename))
 
                 for row in hartree_dict:
                     file_name = row[FILE_NAME]
 
                     if file_name == cluster1_filename:
                         cluster1_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-                        print('found the first file')
+                        #print('found the first file')
                     elif file_name == cluster2_filename:
                         cluster2_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-                        print('found the second file')
+                        #print('found the second file')
 
         #            if abs(cluster1_energy-cluster2_energy) < STRUCTURE_COMPARE_TOL:
-        #                flux_filename_runs.append(cluster1_filename)
-        #                flux_filename_runs.append(cluster2_filename)
-        
+        #                low_e_per_cluster.append(cluster1_filename)
+        #                low_e_per_cluster.append(cluster2_filename)
+
                 if cluster1_energy > cluster2_energy:
                 #elif cluster1_energy > cluster2_energy:
-                    print('Number 1 Wins!')
+                    #print('Number 1 Wins!')
                     low_energy_cluster_filename = cluster2_filename
-                    flux_filename_runs.append(low_energy_cluster_filename)
+                    low_e_per_cluster.append(low_energy_cluster_filename)
+                    cluster1_filename = cluster2_filename
+                    cluster2_filename = clusters[num_cluster]
                 elif cluster1_energy < cluster2_energy:
-                    print('Number 2 Wins!')
+                    #print('Number 2 Wins!')
                     low_energy_cluster_filename = cluster1_filename
-                    flux_filename_runs.append(low_energy_cluster_filename)
-
-                print(flux_filename_runs)
+                    low_e_per_cluster.append(low_energy_cluster_filename)
+                    cluster1_filename = cluster1_filename
+                    cluster2_filename = clusters[num_cluster]
 
         else:
             print("There is something seriously wrong if your code....")
 
+
+    print(low_e_per_cluster)
+    print(len(low_e_per_cluster))
+    print(len(cluster_keys))
+    # RIGHT NOW.... if low_e_per_cluster == clsuter_keys then I know that my code is working properly!
     return
 
 def parse_cmdline(argv):
@@ -480,6 +480,9 @@ def dict_to_csv_writer(dict_to_write, out_filename, xyz_dir):
             writer.writerow([key, value])
 
 
+
+
+
 def main(argv=None):
     # type: (object) -> object
     """
@@ -491,7 +494,8 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return ret
     try:
-        hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file)
+        hartree_list, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file)
+        hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict = test_clusters(pucker_filename_dict, args.dir_xyz, print_option = 'off')
         out_filename = os.path.join(args.dir_xyz,'oxane_cont-clustered_B3LYP.csv')
 #        dict_to_csv_writer(process_cluster_dict, out_filename,args.dir_xyz)
@@ -499,7 +503,7 @@ def main(argv=None):
     except IOError as e:
         warning(e)
         return IO_ERROR
-    except InvalidDataError as e:
+    except (InvalidDataError, KeyError) as e:
         warning(e)
         return INVALID_DATA
 
