@@ -370,54 +370,71 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
     for cluster_keys, clusters in process_cluster_dict.items():
 
         num_files_in_cluster = len(clusters)
+
         if num_files_in_cluster == 1:
             low_e_per_cluster.append(clusters[0])
         elif num_files_in_cluster > 1:
 
-            cluster1_filename = clusters[0]
-            cluster2_filename = clusters[1]
+            cluster_low_filename = clusters[0]
 
-            for num_cluster in range(0, num_files_in_cluster):
+            status = 'low_is_low'
 
-                #print("First file: {}".format(cluster1_filename))
-                #print("Second file: {}".format(cluster2_filename))
+            selected_file_cluster = 1
 
-                for row in hartree_dict:
-                    file_name = row[FILE_NAME]
+            hi = len(clusters)
 
-                    if file_name == cluster1_filename:
-                        cluster1_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-                        #print('found the first file')
-                    elif file_name == cluster2_filename:
-                        cluster2_energy = float(row[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-                        #print('found the second file')
+            sample_range = range(1 ,1)
 
-        #            if abs(cluster1_energy-cluster2_energy) < STRUCTURE_COMPARE_TOL:
-        #                low_e_per_cluster.append(cluster1_filename)
-        #                low_e_per_cluster.append(cluster2_filename)
+            for selected_file_cluster in range(1, len(clusters)):
 
-                if cluster1_energy > cluster2_energy:
-                #elif cluster1_energy > cluster2_energy:
-                    #print('Number 1 Wins!')
-                    low_energy_cluster_filename = cluster2_filename
-                    low_e_per_cluster.append(low_energy_cluster_filename)
-                    cluster1_filename = cluster2_filename
-                    cluster2_filename = clusters[num_cluster]
-                elif cluster1_energy < cluster2_energy:
-                    #print('Number 2 Wins!')
-                    low_energy_cluster_filename = cluster1_filename
-                    low_e_per_cluster.append(low_energy_cluster_filename)
-                    cluster1_filename = cluster1_filename
-                    cluster2_filename = clusters[num_cluster]
+                if selected_file_cluster == len(clusters):
+                    pass
+                else:
+                    if status == 'low_is_low':
+                        cluster_low_dict = hartree_dict[cluster_low_filename]
+
+                        cluster_compare_filename = clusters[selected_file_cluster]
+                        cluster_compare_dict = hartree_dict[cluster_compare_filename]
+                        cluster_low_energy = float(cluster_low_dict[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
+                        cluster_compare_energy = float(cluster_compare_dict[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
+
+                    elif status == 'compare_is_low':
+
+                        print('silly stephen')
+
+                    else:
+                        print("Something is really wrong here!")
+
+
+
+                    if cluster_low_energy > cluster_compare_energy:
+                        low_energy_cluster_filename = cluster_compare_filename
+
+                        #low_e_per_cluster.append(low_energy_cluster_filename)
+
+                        cluster_low_filename = cluster_compare_filename
+
+                        status = 'low_is_low'
+                    elif cluster_low_energy < cluster_compare_energy:
+                        low_energy_cluster_filename = cluster_low_filename
+                        #low_e_per_cluster.append(low_energy_cluster_filename)
+
+                        cluster_low_filename = cluster_low_filename
+
+                        status = 'compare_is_low'
+
+
+                    if selected_file_cluster == len(clusters)-1:
+                         low_e_per_cluster.append(low_energy_cluster_filename)
 
         else:
             print("There is something seriously wrong if your code....")
 
 
-    print(low_e_per_cluster)
-    print(len(low_e_per_cluster))
-    print(len(cluster_keys))
-    # RIGHT NOW.... if low_e_per_cluster == clsuter_keys then I know that my code is working properly!
+        print(low_e_per_cluster)
+        print(len(low_e_per_cluster))
+        print(len(cluster_keys))
+        # RIGHT NOW.... if low_e_per_cluster == cluster_keys then I know that my code is working properly!
     return
 
 def parse_cmdline(argv):
