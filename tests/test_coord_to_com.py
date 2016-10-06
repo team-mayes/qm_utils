@@ -66,6 +66,7 @@ class TestMain(unittest.TestCase):
                 self.assertTrue('Will use only default values' in output)
             self.assertFalse(diff_lines(COM_1C4, COM_1C4_GOOD))
             self.assertFalse(diff_lines(CP_FILE, CP_FILE_GOOD))
+            print(diff_lines(COM_1C4,COM_1C4_GOOD))
         finally:
             for o_file in [COM_1C4, COM_E3_FILE, COM_4C1_FILE]:
                 silent_remove(o_file, disable=DISABLE_REMOVE)

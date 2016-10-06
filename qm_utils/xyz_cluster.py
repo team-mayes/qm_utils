@@ -449,7 +449,6 @@ def parse_cmdline(argv):
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
 
-
     args = None
     try:
         args = parser.parse_args(argv)
