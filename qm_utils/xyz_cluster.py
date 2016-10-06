@@ -13,11 +13,10 @@ import os
 import sys
 import csv
 import numpy as np
-# TODO check error message that I am receiving only when running on my computer
-from pip.utils import splitext
+from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file,
+                       read_csv_to_dict, create_out_fname, list_to_dict, get_csv_fieldnames, write_csv)
 
-from qm_common import GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file, read_csv_to_dict, \
-    create_out_fname, list_to_dict
+TRIGGER_WARN_TOL = 1.00
 
 try:
     # noinspection PyCompatibility
@@ -42,6 +41,7 @@ FILE_NAME = 'File Name'
 PUCKER = 'Pucker'
 ENERGY_GIBBS = 'G298 (Hartrees)'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
+
 
 def get_coordinates_xyz(filename, xyz_dir):
     """This function is designed to upload xyz coordinates from .xyz files. The .xyz file format should contain the
@@ -255,10 +255,10 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
 def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
     """ calculates the rmsd both using the standard method and rotating the structures
 
+    :param print_option:
     :param input_file1: xyz coordinates for the first molecular structure
     :param input_file2: xyz coordinates for the second molecular structure
     :param xyz_dir:
-    :param print_opt:
     :return: returns all of the
     """
 
@@ -298,10 +298,13 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
 def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     """
     Reads the hartree output file and creates a dictionary of all hartree output and clusters based on pucker
+    :param print_status:
     :param sum_file: name of hartree output file
-    :return: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and file_names
+    :return: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and file_names,
+        and a list of headers
     """
     hartree_dict = read_csv_to_dict(sum_file, mode='rU')
+    hartree_headers = get_csv_fieldnames(sum_file, mode='rU')
     pucker_filename_dict = {}
 
     for row in hartree_dict:
@@ -315,34 +318,37 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
         if print_status != 'off':
             print("Hartree Pucker: {} --> {}".format(row[PUCKER], row[FILE_NAME]))
 
-    return hartree_dict, pucker_filename_dict
+    return hartree_dict, pucker_filename_dict, hartree_headers
 
 
-def test_clusters(pucker_filename_dict, xyz_dir, ok_tol=DEF_TOL_CLUSTER,print_option ='off'):
+def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
     """
     What I do
+    :param print_option:
     :param pucker_filename_dict:
     :param xyz_dir:
+    :param ok_tol:
     :return:
     """
     process_cluster_dict = {}
     for pucker, file_list in pucker_filename_dict.items():
-        pucker_cluster = 0 # initial pucker list count is 0
-        cluster_name = pucker + "_" + str(pucker_cluster) # creates new name for cluster key
+        pucker_cluster = 0  # initial pucker list count is 0
+        cluster_name = pucker + "_" + str(pucker_cluster)  # creates new name for cluster key
         process_cluster_dict[cluster_name] = [file_list[0]]  # adds new cluster key and first file into items of key
-        raw_cluster_len = len(file_list) # calculates the length of the file list (how many files in hartree clustering)
+        raw_cluster_len = len(
+            file_list)  # calculates the length of the file list (how many files in hartree clustering)
 
-        for file_id in range(1, raw_cluster_len): # looks at all the files in the initial clustering
+        for file_id in range(1, raw_cluster_len):  # looks at all the files in the initial clustering
             # looks at a specific filename
             file_name = file_list[file_id]
             not_assigned = True
 
             for assigned_cluster_name in process_cluster_dict:
                 # calculates the rmsd by rotating and translating the rings so that they align properly
-                rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2 = compare_rmsd_xyz(file_name,
-                                                                                     process_cluster_dict[assigned_cluster_name][0],
-                                                                                     xyz_dir)
-
+                (rmsd_kabsch, ctr_ring_all_xyz1,
+                 ctr_ring_all_xyz2) = compare_rmsd_xyz(file_name,
+                                                       process_cluster_dict[assigned_cluster_name][0], xyz_dir)
+                # print("hey there", rmsd_kabsch, file_name, process_cluster_dict[assigned_cluster_name][0])
                 if rmsd_kabsch < ok_tol:
                     # add the file to the current key
                     process_cluster_dict[assigned_cluster_name].append(file_name)
@@ -358,84 +364,38 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol=DEF_TOL_CLUSTER,print_op
 
     if print_option != 'off':
         for cluster_key, cluster_values in process_cluster_dict.items():
-            print("Cluster Key: {} Cluster Files: {}".format(cluster_key,cluster_values))
+            print("Cluster Key: {} Cluster Files: {}".format(cluster_key, cluster_values))
     return process_cluster_dict
 
 
 def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
-
-    # TODO need to still look at the files and make it so that it read multiple files and compares
+    """
+    Select only one file name from each cluster, based on lowest energy
+    :param process_cluster_dict:
+    :param hartree_dict:
+    :return:
+    """
     low_e_per_cluster = []
 
-    for cluster_keys, clusters in process_cluster_dict.items():
+    for cluster_keys, cluster_file_names in process_cluster_dict.items():
+        cluster_low_filename = cluster_file_names[0]
+        cluster_low_e = float(hartree_dict[cluster_low_filename][ENERGY_ELECTRONIC]) * HARTREE_TO_KCALMOL
 
-        num_files_in_cluster = len(clusters)
+        for selected_file_cluster in cluster_file_names[1:]:
+            test_cluster_dict = hartree_dict[selected_file_cluster]
+            cluster_test_energy = float(test_cluster_dict[ENERGY_ELECTRONIC]) * HARTREE_TO_KCALMOL
+            if abs(cluster_test_energy - cluster_low_e) > TRIGGER_WARN_TOL:
+                print("Energy difference within cluster '{}' is greater than {}. "
+                      "Check files: {}, {}".format(cluster_keys, TRIGGER_WARN_TOL,
+                                                   selected_file_cluster, cluster_low_filename))
+            if cluster_test_energy < cluster_low_e:
+                cluster_low_filename = selected_file_cluster
+                cluster_low_e = cluster_test_energy
 
-        if num_files_in_cluster == 1:
-            low_e_per_cluster.append(clusters[0])
-        elif num_files_in_cluster > 1:
+        low_e_per_cluster.append(hartree_dict[cluster_low_filename])
 
-            cluster_low_filename = clusters[0]
+    return low_e_per_cluster
 
-            status = 'low_is_low'
-
-            selected_file_cluster = 1
-
-            hi = len(clusters)
-
-            sample_range = range(1 ,1)
-
-            for selected_file_cluster in range(1, len(clusters)):
-
-                if selected_file_cluster == len(clusters):
-                    pass
-                else:
-                    if status == 'low_is_low':
-                        cluster_low_dict = hartree_dict[cluster_low_filename]
-
-                        cluster_compare_filename = clusters[selected_file_cluster]
-                        cluster_compare_dict = hartree_dict[cluster_compare_filename]
-                        cluster_low_energy = float(cluster_low_dict[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-                        cluster_compare_energy = float(cluster_compare_dict[ENERGY_ELECTRONIC])*HARTREE_TO_KCALMOL
-
-                    elif status == 'compare_is_low':
-
-                        print('silly stephen')
-
-                    else:
-                        print("Something is really wrong here!")
-
-
-
-                    if cluster_low_energy > cluster_compare_energy:
-                        low_energy_cluster_filename = cluster_compare_filename
-
-                        #low_e_per_cluster.append(low_energy_cluster_filename)
-
-                        cluster_low_filename = cluster_compare_filename
-
-                        status = 'low_is_low'
-                    elif cluster_low_energy < cluster_compare_energy:
-                        low_energy_cluster_filename = cluster_low_filename
-                        #low_e_per_cluster.append(low_energy_cluster_filename)
-
-                        cluster_low_filename = cluster_low_filename
-
-                        status = 'compare_is_low'
-
-
-                    if selected_file_cluster == len(clusters)-1:
-                         low_e_per_cluster.append(low_energy_cluster_filename)
-
-        else:
-            print("There is something seriously wrong if your code....")
-
-
-        print(low_e_per_cluster)
-        print(len(low_e_per_cluster))
-        print(len(cluster_keys))
-        # RIGHT NOW.... if low_e_per_cluster == cluster_keys then I know that my code is working properly!
-    return
 
 def parse_cmdline(argv):
     """
@@ -488,16 +448,12 @@ def parse_cmdline(argv):
 
 
 def dict_to_csv_writer(dict_to_write, out_filename, xyz_dir):
+    correct_filename = os.path.join(xyz_dir, out_filename)
 
-    correct_filename = os.path.join(xyz_dir,out_filename)
-
-    with open (correct_filename, 'wb') as csv_file:
+    with open(correct_filename, 'wb') as csv_file:
         writer = csv.writer(csv_file)
         for key, value in dict_to_write.items():
             writer.writerow([key, value])
-
-
-
 
 
 def main(argv=None):
@@ -511,12 +467,12 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return ret
     try:
-        hartree_list, pucker_filename_dict = hartree_sum_pucker_cluster(args.sum_file)
+        hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
-        process_cluster_dict = test_clusters(pucker_filename_dict, args.dir_xyz, print_option = 'off')
-        out_filename = os.path.join(args.dir_xyz,'oxane_cont-clustered_B3LYP.csv')
-#        dict_to_csv_writer(process_cluster_dict, out_filename,args.dir_xyz)
-        read_clustered_keys_in_hartree(process_cluster_dict,hartree_dict)
+        process_cluster_dict = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol,  print_option='off')
+        filtered_cluster_list = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
+        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', ext='.csv')
+        write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
     except IOError as e:
         warning(e)
         return IO_ERROR

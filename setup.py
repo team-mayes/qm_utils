@@ -12,11 +12,13 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'six',
     'seaborn',
+    'numpy',
 ]
 
 test_requirements = [
     'seaborn',
     'six',
+    'numpy',
 ]
 
 setup(
@@ -24,7 +26,7 @@ setup(
     version='0.1.0',
     description="tools  for QM projects in Team Mayes & Blue",
     long_description=readme + '\n\n' + history,
-    author="Heather Beth Mayes",
+    author="Team Mayes and Blue",
     author_email='hbmayes@umich.edu',
     url='https://github.com/hmayes/qm_utils',
     packages=[
@@ -35,6 +37,7 @@ setup(
     entry_points={
         'console_scripts': ['cp_params=qm_utils.cp_params:main',
                             'coord_to_com=qm_utils.coord_to_com:main',
+                            'xyz_cluster=qm_utils.xyz_cluster:main'
                             ]
     },
     include_package_data=True,

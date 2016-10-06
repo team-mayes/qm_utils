@@ -327,7 +327,7 @@ def read_csv_to_dict(src_file, mode='r', quote_style=csv.QUOTE_MINIMAL):
 
     @param src_file: The CSV to read.
     @param quote_style: how to read the dictionary
-    @param mode: default is 'r'; now can specify 'rb'
+    @param mode: default is 'r'; now can specify 'rb' or 'rU'
     @return: A list of dicts containing the file's data.
     """
     result = []
@@ -339,11 +339,39 @@ def read_csv_to_dict(src_file, mode='r', quote_style=csv.QUOTE_MINIMAL):
     return result
 
 
+def get_csv_fieldnames(src_file, mode='r', quote_style=csv.QUOTE_MINIMAL):
+    """
+    Get fieldnames in preserved order (list)
+    :param src_file:
+    :param quote_style:
+    @param mode: default is 'r'; now can specify 'rb' or 'rU'
+    :return: list of fieldnames from CSV
+    """
+    with open(src_file, mode) as csv_file:
+        csv_reader = csv.DictReader(csv_file, quoting=quote_style)
+        return csv_reader.fieldnames
+
+
 def convert_dict_line(line):
     s_dict = {}
     for s_key, s_val in line.items():
         s_dict[s_key] = s_val
     return s_dict
+
+
+def list_to_dict(list_of_dicts, key_for_dict):
+    """
+    Convert a list of dicts to a dict of dicts
+    :param list_of_dicts: a list of dicts
+    :param key_for_dict: key in inner dict, whose value will be the key for the outer dict
+    :return : a dict of dicts, with the keys being based on key_for_dict, and the values being the "inner" dict
+    """
+    dict_of_dicts = {}
+    for row in list_of_dicts:
+        if row[key_for_dict] in dict_of_dicts:
+            warning("Will overwrite dictionary entry for key '{}'".format(row[key_for_dict]))
+        dict_of_dicts[row[key_for_dict]] = row
+    return dict_of_dicts
 
 
 def write_csv(data, out_fname, fieldnames, extrasaction="raise", mode='w', quote_style=csv.QUOTE_NONNUMERIC):

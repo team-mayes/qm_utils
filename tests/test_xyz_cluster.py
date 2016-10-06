@@ -41,6 +41,9 @@ OXANE_HARTREE_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'xyz_cluster-sampleout.t
 OXANE_HARTREE_SUM_B3LYP_FILE = os.path.join(SUB_DATA_DIR, 'B3LYP_hartree_sum-cpsnap.csv')
 OXANE_HARTREE_DICT_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'oxane_hartree_sum_B3LYP_hartree_dict_GOOD.csv')
 
+OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
+GOOD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap_good.csv')
+
 # Good output
 XYZ_TOL = 1.0e-12
 RMSD_KABSCH_SIMILAR_GOOD = (0.000300503125935, 3, 6)
@@ -48,6 +51,7 @@ RMSD_KABSCH_SIMILAR_1c4to4c1 = (0.45429783853700906, 3, 6)
 PUCK_2SO = '2so'
 PUCK_2SO_FILES = ['25Bm062xconstb3lypbigb3lrelm062x.log', 'E4m062xconstb3lypbigcon1b3ltsm062x.log']
 TEST_XYZ_TOL = '0.000001'
+
 
 
 class TestFailWell(unittest.TestCase):
@@ -90,18 +94,18 @@ class TestMain(unittest.TestCase):
             self.assertTrue("Rmsd" in output)
             self.assertTrue(len(output) > 100)
 
-# TODO discussion with Heather.. need to make sure that all of the lines are aligned properly
-    def testwrite_csv(self):
+    # TODO discussion with Heather.. need to make sure that all of the lines are aligned properly
+    def testWriteCsv(self):
         try:
-            hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+            hartree_dict = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
             out_fname = 'oxane_hartree_sum_B3LYP_hartree_dict.csv'
             out_filename_path = os.path.join(SUB_DATA_DIR,out_fname)
             dict_to_csv_writer(pucker_filename_dict,out_fname, SUB_DATA_DIR)
-            self.assertTrue(diff_lines(out_filename_path,OXANE_HARTREE_DICT_CLUSTER_FILE))
+            self.assertTrue(diff_lines(OUT_FILE, GOOD_OUT_FILE))
         finally:
-            silent_remove(os.path.join(SUB_DATA_DIR,out_fname))
+            silent_remove(OUT_FILE)
 
-# TODO create this test for lookinga at the lowest energy structures
+    # TODO create this test for looking at the lowest energy structures
     def testLowestEnergyStructures(self):
         hartree_dict, pucker_filename_dict = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR, print_option = 'off')
