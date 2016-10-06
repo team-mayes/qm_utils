@@ -52,8 +52,8 @@ def get_coordinates_xyz(filename, xyz_dir):
 
     This function stores the the xyz coordinates along with the atom numbers.
 
-    :param filename:
-    :param xyz_dir:
+    :param filename: The input file must be an xyz file
+    :param xyz_dir: The directory that the xyz files are located is needed
     @return: A list of coordinates associated with the atom numbers and a list of lists containing the xyz coordinates
         for the atoms.
     """
@@ -187,6 +187,20 @@ def rmsd(coords1, coords2):
 
 
 def kabsch_algorithm(xyz_coords1, xyz_coords2):
+    """ Method for calculating the optimal rotation matrix that minimizes the RMSD between two paired sets of points.
+    The method rotates the structures and ensures the correct orientation of the structure.
+
+    More general information can be found at:
+    https://en.wikipedia.org/wiki/Kabsch_algorithm
+
+    More complex information on the algorithm can be found at:
+    http://cnx.org/contents/HV-RsdwL@23/Molecular-Distance-Measures
+
+    :param xyz_coords1: xyz coordinates for the first structure
+    :param xyz_coords2: xyz coordinates for the second structure
+    :return: the rmsd using the kabsch algorithm
+    """
+
     # calculate the covariance matrix between the two sets of xyz coordinates
     covariance_matrix = np.dot(np.transpose(xyz_coords1), xyz_coords2)
 
@@ -227,11 +241,11 @@ def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
 
 
 def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
-    """
+    """ Prints the xyz coordintes of the updates structure for further analysis (the structures can be input into VMD)
 
-    :param to_print_xyz_coords:
-    :param to_print_atoms:
-    :param file_sum:
+    :param to_print_xyz_coords: the xyz coordinates of the structure that you are going to print
+    :param to_print_atoms: the atoms in the same ordering as xyz coordinates that you want to print
+    :param file_sum: summary information on what file these coordinates orginally orginated from
     :return:
     """
 
@@ -253,16 +267,15 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
 
 
 def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
-    """ calculates the rmsd both using the standard method and rotating the structures
+    """ calculates the rmsd both using the standard method and rotating the structures method
 
-    :param print_option:
+    :param print_option: has the ability to print out the output..or not
     :param input_file1: xyz coordinates for the first molecular structure
     :param input_file2: xyz coordinates for the second molecular structure
-    :param xyz_dir:
-    :return: returns all of the
+    :param xyz_dir: the location of the xyz coordinates that are going to be printed
+    :return: rmsd using the kabsch method, coordinates of the centered rings
     """
 
-    # TODO add a function that takes an imput log file but accesses the xyz
     n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1, xyz_dir)
     n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2, xyz_dir)
 
@@ -298,6 +311,7 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
 def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     """
     Reads the hartree output file and creates a dictionary of all hartree output and clusters based on pucker
+
     :param print_status:
     :param sum_file: name of hartree output file
     :return: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and file_names,
@@ -322,44 +336,40 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
 
 
 def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
-    """
-    What I do
-    :param print_option:
-    :param pucker_filename_dict:
-    :param xyz_dir:
-    :param ok_tol:
-    :return:
+    """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
+    are further expanded to ensure the cluster is consistent.
+
+    :param print_option: turns on and off the print option
+    :param pucker_filename_dict: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and
+        file_names, and a list of headers
+    :param xyz_dir: the location of the directory in which all of the files are located (must contain xyz and log files)
+    :param ok_tol: the tolerance for when grouping two different structures
+    :return: returns a dict (keys being the puckering geometries w/ potential duplicates) of lists (containing the
+        clustered file names)
     """
     process_cluster_dict = {}
     for pucker, file_list in pucker_filename_dict.items():
-        pucker_cluster = 0  # initial pucker list count is 0
-        cluster_name = pucker + "_" + str(pucker_cluster)  # creates new name for cluster key
-        process_cluster_dict[cluster_name] = [file_list[0]]  # adds new cluster key and first file into items of key
-        raw_cluster_len = len(
-            file_list)  # calculates the length of the file list (how many files in hartree clustering)
+        pucker_cluster = 0
+        cluster_name = pucker + "_" + str(pucker_cluster)
+        process_cluster_dict[cluster_name] = [file_list[0]]
+        raw_cluster_len = len(file_list)
 
-        for file_id in range(1, raw_cluster_len):  # looks at all the files in the initial clustering
-            # looks at a specific filename
+        for file_id in range(1, raw_cluster_len):
             file_name = file_list[file_id]
             not_assigned = True
 
             for assigned_cluster_name in process_cluster_dict:
-                # calculates the rmsd by rotating and translating the rings so that they align properly
                 (rmsd_kabsch, ctr_ring_all_xyz1,
                  ctr_ring_all_xyz2) = compare_rmsd_xyz(file_name,
                                                        process_cluster_dict[assigned_cluster_name][0], xyz_dir)
-                # print("hey there", rmsd_kabsch, file_name, process_cluster_dict[assigned_cluster_name][0])
+
                 if rmsd_kabsch < ok_tol:
-                    # add the file to the current key
                     process_cluster_dict[assigned_cluster_name].append(file_name)
                     not_assigned = False
                     break
             if not_assigned:
-                # say the criteria isn't met so another key is needed
-                # creates the new name for cluster key
                 pucker_cluster += 1
                 cluster_name = pucker + "_" + str(pucker_cluster)
-                # adds the filename to the new cluster key
                 process_cluster_dict[cluster_name] = [file_name]
 
     if print_option != 'off':
@@ -369,10 +379,11 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
 
 
 def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
-    """
-    Select only one file name from each cluster, based on lowest energy
+    """ Select only one file name from each cluster (based on the lowest energy)
+
     :param process_cluster_dict:
-    :param hartree_dict:
+    :param hartree_dict: a dict of dicts (where the outer key is the file name form the inner key) and the inner dict is
+        with the keys and the corresponding value from Hartree
     :return:
     """
     low_e_per_cluster = []
@@ -397,6 +408,22 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
     return low_e_per_cluster
 
 
+def dict_to_csv_writer(dict_to_write, out_filename, xyz_dir):
+    """ Writes a dict to csv file to be further analyzed
+
+    :param dict_to_write: the dict that needs to be written to csv
+    :param out_filename: the output file name for the csv file
+    :param xyz_dir: the directory where the file will be return
+    :return:
+    """
+    correct_filename = os.path.join(xyz_dir, out_filename)
+
+    with open(correct_filename, 'wb') as csv_file:
+        writer = csv.writer(csv_file)
+        for key, value in dict_to_write.items():
+            writer.writerow([key, value])
+
+
 def parse_cmdline(argv):
     """
     Returns the parsed argument list and return code.
@@ -406,14 +433,22 @@ def parse_cmdline(argv):
         argv = sys.argv[1:]
 
     # initialize the parser object:
-    parser = argparse.ArgumentParser(description="Aligns xyz coordinates.")
+    parser = argparse.ArgumentParser(description="Creates a list of the lowest energy pucker in each pucker grouping "
+                                                 "from a Hartree input file. The script calculates the rmsd between "
+                                                 "two sets of xyz coordinates based on the 6 membered ring to verify "
+                                                 "that all structures belong to the same pucker. Next, the script "
+                                                 "compares the lowest energy of each pucker group to select the final "
+                                                 "structures for further analysis. The output is a condensed csv file "
+                                                 "that follows the same form as Hartree.")
+
     parser.add_argument('-d', "--dir_xyz", help="The directory where the xyz files can be found. The default is the"
                                                 "directory where the Hartree summary file can be found.",
                         default=None)
-    parser.add_argument('-s', "--sum_file", help="The summary file from hartree.",
+    parser.add_argument('-s', "--sum_file", help="The summary file from Hartree.",
                         default=None)
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
+
 
     args = None
     try:
@@ -447,17 +482,7 @@ def parse_cmdline(argv):
     return args, GOOD_RET
 
 
-def dict_to_csv_writer(dict_to_write, out_filename, xyz_dir):
-    correct_filename = os.path.join(xyz_dir, out_filename)
-
-    with open(correct_filename, 'wb') as csv_file:
-        writer = csv.writer(csv_file)
-        for key, value in dict_to_write.items():
-            writer.writerow([key, value])
-
-
 def main(argv=None):
-    # type: (object) -> object
     """
     Runs the main program
     :param argv: The command line arguments.
@@ -469,7 +494,7 @@ def main(argv=None):
     try:
         hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
-        process_cluster_dict = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol,  print_option='off')
+        process_cluster_dict = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
         filtered_cluster_list = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
         out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
