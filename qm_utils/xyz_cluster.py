@@ -249,14 +249,10 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     :return:
     """
 
-    # num_atoms = len(to_print_atoms)
     num_atoms = '16'
 
     to_print = [num_atoms, file_sum]
     to_print2 = list(to_print)
-
-    #    for line_id in range(len(atoms1)):
-    #        to_print.append([atoms1[line_id]] + xyz_coords1[line_id].tolist())
 
     for atom_type, atom_xyz in zip(to_print_atoms, to_print_xyz_coords):
         to_print2.append([atom_type] + atom_xyz.tolist())
