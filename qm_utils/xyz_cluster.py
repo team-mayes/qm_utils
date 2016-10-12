@@ -249,6 +249,7 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     :return:
     """
 
+    # TODO alter the number of atoms to change depending on the input file...right not only works for oxane
     num_atoms = '16'
 
     to_print = [num_atoms, file_sum]
@@ -447,7 +448,7 @@ def parse_cmdline(argv):
     parser.add_argument('-p', "--xyz_print", help="Prints the xyz coordinates of the aligned structures in the finally"
                                                   "output file from xyz_cluster. The coordinates can be used for"
                                                   "verification in VMD to ensure the alignment and grouping is correct",
-                        action='store_true')
+                        default='true')
     # TODO add a command line option that uses the print xyz
 
     args = None
@@ -500,11 +501,12 @@ def main(argv=None):
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
         # TODO add the xyz_print option here
         if args.xyz_print == 'true':
-            print('true')
-        elif args.xyz_print == 'false':
-            print('false')
+            for row in filtered_cluster_list:
+                print(row[FILE_NAME])
+
+
         else:
-            print('not working')
+            print('Currently not writing the new xyz_files')
     except IOError as e:
         warning(e)
         return IO_ERROR
