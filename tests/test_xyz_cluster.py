@@ -46,6 +46,8 @@ OXANE_XYZ_COORDS_WRITE_FILE_5e = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5e-freeze
 OXANE_XYZ_COORDS_WRITE_FILE_25b = os.path.join(SUB_DATA_DIR, 'xyz_oxane-25b-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
 OXANE_XYZ_COORDS_WRITE_FILE_b25 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-b25-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
 OXANE_XYZ_COORDS_WRITE_FILE_e5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-e5-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_1s5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s5-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_5s1 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5s1-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
 GLUCOSE_XYZ_COORDS_HEATHER_03b_1 = os.path.join(SUB_DATA_DIR, 'bglc_03b_1.log.xyz')
 GLUCOSE_XYZ_COORDS_HEATHER_03b_2 = os.path.join(SUB_DATA_DIR, 'bglc_03b_2.log.xyz')
 
@@ -178,6 +180,8 @@ class TestMain(unittest.TestCase):
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_b25)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_e5)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s5)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5s1)
             silent_remove(OUT_FILE)
 
     def testMainNotPrintXYZCoords(self):
