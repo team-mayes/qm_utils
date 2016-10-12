@@ -363,7 +363,10 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
             file_name = file_list[0]
             num_atoms, xyz_atoms, xyz_coords, atoms_ring_order,\
                 xyz_coords_ring, list_atoms = get_coordinates_xyz(file_name, xyz_dir)
-            xyz_coords_dict[file_name] = translate_centroid_ring(xyz_coords,xyz_coords_ring)
+
+            xyz_coords_all_translate, xyz_coords_ring_translate = translate_centroid_ring(xyz_coords,xyz_coords_ring)
+
+            xyz_coords_dict[file_name] = xyz_coords_all_translate
 
         for file_id in range(1, raw_cluster_len):
             file_name = file_list[file_id]
