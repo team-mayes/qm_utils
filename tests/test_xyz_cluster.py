@@ -40,6 +40,14 @@ OXANE_4c1_INPUT_FILE = os.path.join(SUB_DATA_DIR, 'oxane-4c1-freeze_B3LYP-relax_
 OXANE_HARTREE_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'xyz_cluster-sampleout.txt')
 OXANE_HARTREE_SUM_B3LYP_FILE = os.path.join(SUB_DATA_DIR, 'B3LYP_hartree_sum-cpsnap.csv')
 OXANE_HARTREE_DICT_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'oxane_hartree_sum_B3LYP_hartree_dict_good.csv')
+OXANE_XYZ_COORDS_WRITE_FILE_1s3 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s3-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_3s1 =os.path.join(SUB_DATA_DIR, 'xyz_oxane-3s1-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_5e = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5e-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_25b = os.path.join(SUB_DATA_DIR, 'xyz_oxane-25b-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_b25 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-b25-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_e5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-e5-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+GLUCOSE_XYZ_COORDS_HEATHER_03b_1 = os.path.join(SUB_DATA_DIR, 'bglc_03b_1.log.xyz')
+GLUCOSE_XYZ_COORDS_HEATHER_03b_2 = os.path.join(SUB_DATA_DIR, 'bglc_03b_2.log.xyz')
 
 
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
@@ -53,7 +61,8 @@ PUCK_2SO = '2so'
 PUCK_2SO_FILES = ['25Bm062xconstb3lypbigb3lrelm062x.log', 'E4m062xconstb3lypbigcon1b3ltsm062x.log']
 TEST_XYZ_TOL = '0.000001'
 FILE_NAME = 'File Name'
-
+CLUSTER_DICT_NUM_PUCKER_GROUPS = 8
+TOTAL_NUM_OXANE_CLUSTER = 38
 
 
 class TestFailWell(unittest.TestCase):
@@ -79,15 +88,13 @@ class TestXYZFunctions(unittest.TestCase):
         self.assertTrue(pucker_filename_dict[PUCK_2SO], PUCK_2SO_FILES)
 
     def testTwoFiles_similar(self):
-        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE,
-                                                                                 OXANE_1e_INPUT_FILE,
-                                                                                 SUB_DATA_DIR)
+        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar,\
+                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, SUB_DATA_DIR)
         self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_GOOD[0]) < XYZ_TOL)
 
     def testTwoFiles_1c4to4c1(self):
-        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE,
-                                                                                 OXANE_4c1_INPUT_FILE,
-                                                                                 SUB_DATA_DIR)
+        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar,\
+                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_4c1_INPUT_FILE, SUB_DATA_DIR)
         self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_1c4to4c1[0]) < XYZ_TOL)
 
     def testTwoFiles_PrintFeature(self):
@@ -115,61 +122,39 @@ class TestXYZFunctions(unittest.TestCase):
         if len(hartree_dict) == len(hartree_list):
             pass
 
-    def testTestClustersNormalTol(self):
-        try:
-            hartree_list, pucker_filename_dict, hartree_headers \
-                = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
-            hartree_dict = list_to_dict(hartree_list,FILE_NAME)
-            process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,0.1, print_option='off')
-
-# TODO still need to write this...
-            print(process_cluster_dict)
-
-        finally:
-            pass
-
     def testTestClustersLowTol(self):
         low_tol = 0.00001
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list,FILE_NAME)
-        process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,low_tol, print_option='off')
-
-        self.assertEquals()
-
-        if len(process_cluster_dict)-len(hartree_list) == 0:
-            pass
+        process_cluster_dict, xyz_coords_dict, atom_order\
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR,low_tol, print_option='off')
+        self.assertEquals(len(process_cluster_dict),len(hartree_dict))
 
     def testTestClustersHighTol(self):
         high_tol = 100
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list,FILE_NAME)
-        process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,high_tol, print_option='off')
+        process_cluster_dict, xyz_coords_dict, atom_order\
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR,high_tol, print_option='off')
 
-
-        out_f_name = create_out_fname(SUB_DATA_DIR, prefix='z_test_clusters_high_tol', suffix='_output_good',
-                                      ext='.csv')
-
-        write_csv(process_cluster_dict.keys(),out_f_name,'NEEDED',extrasaction="ignore")
-
-
-    def testReadClusters(self):
-        pass
+        self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS,len(process_cluster_dict))
+        self.assertEqual(TOTAL_NUM_OXANE_CLUSTER,len(hartree_dict))
 
     def testMainWrongWay(self):
         try:
             hartree_list, pucker_filename_dict, hartree_headers \
                 = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
             hartree_dict = list_to_dict(hartree_list,FILE_NAME)
-            process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,0.1, print_option='off')
+            process_cluster_dict, xyz_coords_dict, atom_order\
+                = test_clusters(pucker_filename_dict, SUB_DATA_DIR,0.1, print_option='off')
             filtered_clustered_list = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
             out_f_name = create_out_fname(OUT_FILE, ext='.csv')
             write_csv(filtered_clustered_list, out_f_name, hartree_headers, extrasaction="ignore")
             self.assertFalse(diff_lines(out_f_name, GOOD_OUT_FILE))
         finally:
             silent_remove(out_f_name)
-
 
 class TestMain(unittest.TestCase):
     def testMain(self):
@@ -182,9 +167,25 @@ class TestMain(unittest.TestCase):
 
     def testMainPrintXYZCoords(self):
         try:
-            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1',"-p"]
+            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1',"-p","true"]
             main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue('Printing the xyz coordinates from the lowest energy pcukers!' in output)
+        finally:
+            #silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_b25)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_e5)
+            silent_remove(OUT_FILE)
 
+    def testMainNotPrintXYZCoords(self):
+        try:
+            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
+            main(test_input)
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue('Not printing xyz coords for lowest energy puckers.' in output)
         finally:
             silent_remove(OUT_FILE)
-            pass
+

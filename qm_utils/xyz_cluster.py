@@ -95,9 +95,11 @@ def get_coordinates_xyz(filename, xyz_dir):
         lines_read += 1
     f.close()
 
+    list_atoms = xyz_atoms
+
     xyz_atoms = np.array(xyz_atoms)
 
-    return num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring
+    return num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring, list_atoms
 
 
 def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
@@ -249,8 +251,7 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     :return:
     """
 
-    # TODO alter the number of atoms to change depending on the input file...right not only works for oxane
-    num_atoms = '16'
+    num_atoms = str(len(to_print_atoms))
 
     to_print = [num_atoms, file_sum]
     to_print2 = list(to_print)
@@ -273,8 +274,10 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
     :return: rmsd using the kabsch method, coordinates of the centered rings
     """
 
-    n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1 = get_coordinates_xyz(input_file1, xyz_dir)
-    n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2 = get_coordinates_xyz(input_file2, xyz_dir)
+    n_atoms1, atoms1, xyz_coords1, atoms_ring_order1,\
+        xyz_coords_ring1, list_atoms1 = get_coordinates_xyz(input_file1, xyz_dir)
+    n_atoms2, atoms2, xyz_coords2, atoms_ring_order2,\
+        xyz_coords_ring2, list_atoms2 = get_coordinates_xyz(input_file2, xyz_dir)
 
     if n_atoms1 != n_atoms2:
         exit("Error in the number of atoms! The number of atoms doesn't match!")
@@ -283,6 +286,10 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
 
     if check_value != 0:
         exit("The atoms alignment isn't the same!")
+    elif check_value == 0:
+        check_value_all = check_ring_ordering(list_atoms1, list_atoms2)
+        if check_value_all == 0:
+            atom_order = list_atoms1
 
     center_xyz1 = translate_centroid_all(xyz_coords1)
     center_xyz2 = translate_centroid_all(xyz_coords2)
@@ -302,7 +309,7 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
 
     rmsd_kabsch = kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)[0]
 
-    return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2
+    return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2, atom_order
 
 
 def hartree_sum_pucker_cluster(sum_file, print_status='off'):
@@ -345,11 +352,13 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
         clustered file names)
     """
     process_cluster_dict = {}
+    xyz_coords_dict = {}
     for pucker, file_list in pucker_filename_dict.items():
         pucker_cluster = 0
         cluster_name = pucker + "_" + str(pucker_cluster)
         process_cluster_dict[cluster_name] = [file_list[0]]
         raw_cluster_len = len(file_list)
+
 
         for file_id in range(1, raw_cluster_len):
             file_name = file_list[file_id]
@@ -357,9 +366,10 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
 
             for assigned_cluster_name in process_cluster_dict:
                 (rmsd_kabsch, ctr_ring_all_xyz1,
-                 ctr_ring_all_xyz2) = compare_rmsd_xyz(file_name,
+                ctr_ring_all_xyz2, atoms_order) = compare_rmsd_xyz(file_name,
                                                        process_cluster_dict[assigned_cluster_name][0], xyz_dir)
-
+                xyz_coords_dict[file_name] = ctr_ring_all_xyz1
+                xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
                 if rmsd_kabsch < ok_tol:
                     process_cluster_dict[assigned_cluster_name].append(file_name)
                     not_assigned = False
@@ -372,7 +382,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
     if print_option != 'off':
         for cluster_key, cluster_values in process_cluster_dict.items():
             print("Cluster Key: {} Cluster Files: {}".format(cluster_key, cluster_values))
-    return process_cluster_dict
+    return process_cluster_dict, xyz_coords_dict, atoms_order
 
 
 def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
@@ -448,8 +458,7 @@ def parse_cmdline(argv):
     parser.add_argument('-p', "--xyz_print", help="Prints the xyz coordinates of the aligned structures in the finally"
                                                   "output file from xyz_cluster. The coordinates can be used for"
                                                   "verification in VMD to ensure the alignment and grouping is correct",
-                        default='true')
-    # TODO add a command line option that uses the print xyz
+                        default='false')
 
     args = None
     try:
@@ -495,18 +504,22 @@ def main(argv=None):
     try:
         hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
-        process_cluster_dict = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
+        process_cluster_dict, xyz_coords_dict, atom_order\
+                = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
         filtered_cluster_list = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
-        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', ext='.csv')
+        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_',base_dir=args.dir_xyz, ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
-        # TODO add the xyz_print option here
         if args.xyz_print == 'true':
+            print('\nPrinting the xyz coordinates from the lowest energy pcukers!\n')
             for row in filtered_cluster_list:
-                print(row[FILE_NAME])
-
-
-        else:
-            print('Currently not writing the new xyz_files')
+                filename_written_coords = row[FILE_NAME]
+                coords_need_writing = xyz_coords_dict[filename_written_coords]
+                filename_xyz_coords = create_out_fname(filename_written_coords, prefix="xyz_",
+                                                       suffix="-xyz_updated",base_dir=args.dir_xyz,ext=".xyz")
+                print_xyz_coords(coords_need_writing,atom_order,filename_xyz_coords)
+        elif args.xyz_print == 'false':
+            print('\nNot printing xyz coords for lowest energy puckers.'
+                  '\nTo turn on printing add -p "true" to command line.')
     except IOError as e:
         warning(e)
         return IO_ERROR
