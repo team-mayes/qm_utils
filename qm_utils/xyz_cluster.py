@@ -444,6 +444,11 @@ def parse_cmdline(argv):
                         default=None)
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
+    parser.add_argument('-p', "--xyz_print", help="Prints the xyz coordinates of the aligned structures in the finally"
+                                                  "output file from xyz_cluster. The coordinates can be used for"
+                                                  "verification in VMD to ensure the alignment and grouping is correct",
+                        action='store_true')
+    # TODO add a command line option that uses the print xyz
 
     args = None
     try:
@@ -493,6 +498,13 @@ def main(argv=None):
         filtered_cluster_list = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
         out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
+        # TODO add the xyz_print option here
+        if args.xyz_print == 'true':
+            print('true')
+        elif args.xyz_print == 'false':
+            print('false')
+        else:
+            print('not working')
     except IOError as e:
         warning(e)
         return IO_ERROR

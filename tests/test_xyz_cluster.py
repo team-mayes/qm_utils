@@ -41,6 +41,7 @@ OXANE_HARTREE_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'xyz_cluster-sampleout.t
 OXANE_HARTREE_SUM_B3LYP_FILE = os.path.join(SUB_DATA_DIR, 'B3LYP_hartree_sum-cpsnap.csv')
 OXANE_HARTREE_DICT_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'oxane_hartree_sum_B3LYP_hartree_dict_good.csv')
 
+
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
 GOOD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap_good.csv')
 
@@ -71,7 +72,7 @@ class TestFailWell(unittest.TestCase):
             self.assertTrue("Could not find" in output)
 
 
-class TestMain(unittest.TestCase):
+class TestXYZFunctions(unittest.TestCase):
     def testReadHartreeSummary(self):
         hartree_dict, pucker_filename_dict,\
             hartree_headers = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_HEATHER_FILE)
@@ -95,19 +96,70 @@ class TestMain(unittest.TestCase):
             self.assertTrue("Rmsd" in output)
             self.assertTrue(len(output) > 100)
 
-# TODO make a test to test Hartree Sum Cluster Pucker
     def testHartreeSumPuckerCluster(self):
-
-        hartree_list, pucker_filename_dict, hartree_headers\
-                = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
-
-        print(hartree_list)
-        print(pucker_filename_dict)
-        print(hartree_headers)
-
-    def testMain(self):
         try:
             hartree_list, pucker_filename_dict, hartree_headers\
+                = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+            out_f_name = create_out_fname(SUB_DATA_DIR, prefix='hartree_list_', suffix='_output',
+                                                    ext='.csv')
+            write_csv(hartree_list, out_f_name, hartree_headers, extrasaction="ignore")
+            self.assertFalse(diff_lines(out_f_name,OXANE_HARTREE_SUM_B3LYP_FILE))
+        finally:
+            silent_remove(out_f_name)
+
+    def testListToDict(self):
+        hartree_list, pucker_filename_dict, hartree_headers \
+              = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+        hartree_dict = list_to_dict(hartree_list,FILE_NAME)
+        len(hartree_dict)
+        if len(hartree_dict) == len(hartree_list):
+            pass
+
+    def testTestClustersNormalTol(self):
+        try:
+            hartree_list, pucker_filename_dict, hartree_headers \
+                = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+            hartree_dict = list_to_dict(hartree_list,FILE_NAME)
+            process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,0.1, print_option='off')
+
+# TODO still need to write this...
+            print(process_cluster_dict)
+
+        finally:
+            pass
+
+    def testTestClustersLowTol(self):
+        low_tol = 0.00001
+        hartree_list, pucker_filename_dict, hartree_headers \
+            = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+        hartree_dict = list_to_dict(hartree_list,FILE_NAME)
+        process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,low_tol, print_option='off')
+
+        self.assertEquals()
+
+        if len(process_cluster_dict)-len(hartree_list) == 0:
+            pass
+
+    def testTestClustersHighTol(self):
+        high_tol = 100
+        hartree_list, pucker_filename_dict, hartree_headers \
+            = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+        hartree_dict = list_to_dict(hartree_list,FILE_NAME)
+        process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,high_tol, print_option='off')
+
+
+        out_f_name = create_out_fname(SUB_DATA_DIR, prefix='z_test_clusters_high_tol', suffix='_output_good',
+                                      ext='.csv')
+
+        write_csv(process_cluster_dict.keys(),out_f_name,'NEEDED',extrasaction="ignore")
+
+
+    def testReadClusters(self):
+        pass
+
+    def testMainWrongWay(self):
+        try:
+            hartree_list, pucker_filename_dict, hartree_headers \
                 = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
             hartree_dict = list_to_dict(hartree_list,FILE_NAME)
             process_cluster_dict = test_clusters(pucker_filename_dict, SUB_DATA_DIR,0.1, print_option='off')
@@ -117,3 +169,22 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(out_f_name, GOOD_OUT_FILE))
         finally:
             silent_remove(out_f_name)
+
+
+class TestMain(unittest.TestCase):
+    def testMain(self):
+        try:
+            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
+            main(test_input)
+            self.assertFalse(diff_lines(GOOD_OUT_FILE,OUT_FILE))
+        finally:
+            silent_remove(OUT_FILE)
+
+    def testMainPrintXYZCoords(self):
+        try:
+            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1',"-p"]
+            main(test_input)
+
+        finally:
+            silent_remove(OUT_FILE)
+            pass
