@@ -359,7 +359,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
         process_cluster_dict[cluster_name] = [file_list[0]]
         raw_cluster_len = len(file_list)
 
-
+        # TODO
         for file_id in range(1, raw_cluster_len):
             file_name = file_list[file_id]
             not_assigned = True

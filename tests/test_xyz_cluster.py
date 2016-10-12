@@ -172,7 +172,7 @@ class TestMain(unittest.TestCase):
             with capture_stdout(main, test_input) as output:
                 self.assertTrue('Printing the xyz coordinates from the lowest energy pcukers!' in output)
         finally:
-            #silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
