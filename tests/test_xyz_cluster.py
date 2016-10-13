@@ -204,6 +204,3 @@ class TestMain(unittest.TestCase):
             self.assertFalse(os.path.isfile(OXANE_XYZ_COORDS_WRITE_FILE_1s3))
         finally:
             silent_remove(OUT_FILE)
-
-
-
