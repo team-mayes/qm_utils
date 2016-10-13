@@ -6,16 +6,14 @@ test_xyz_cluster
 ----------------------------------
 
 """
-import csv
-import unittest
-import os
-from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, warning, create_out_fname, \
-    write_csv, list_to_dict
-from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, dict_to_csv_writer, \
-    read_clustered_keys_in_hartree
 import logging
+import os
+import unittest
 
-
+from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
+    write_csv, list_to_dict
+from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
+    read_clustered_keys_in_hartree
 
 __author__ = 'SPVicchio'
 
@@ -54,6 +52,14 @@ GLUCOSE_XYZ_COORDS_HEATHER_03b_2 = os.path.join(SUB_DATA_DIR, 'bglc_03b_2.log.xy
 
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
 GOOD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap_good.csv')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s3-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1 =os.path.join(SUB_DATA_DIR, 'xyz_oxane-3s1-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5e-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b = os.path.join(SUB_DATA_DIR, 'xyz_oxane-25b-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-b25-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-e5-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s5-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5s1-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
 
 # Good output
 XYZ_TOL = 1.0e-12
@@ -171,8 +177,14 @@ class TestMain(unittest.TestCase):
         try:
             test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1',"-p","true"]
             main(test_input)
-            with capture_stdout(main, test_input) as output:
-                self.assertTrue('Printing the xyz coordinates from the lowest energy pcukers!' in output)
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s3,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_3s1,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5e,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_25b,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_b25,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_e5,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s5,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5s1,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1))
         finally:
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
@@ -186,10 +198,12 @@ class TestMain(unittest.TestCase):
 
     def testMainNotPrintXYZCoords(self):
         try:
+            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
             test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
             main(test_input)
-            with capture_stdout(main, test_input) as output:
-                self.assertTrue('Not printing xyz coords for lowest energy puckers.' in output)
+            self.assertFalse(os.path.isfile(OXANE_XYZ_COORDS_WRITE_FILE_1s3))
         finally:
             silent_remove(OUT_FILE)
+
+
 

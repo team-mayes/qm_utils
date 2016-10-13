@@ -289,7 +289,7 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
     elif check_value == 0:
         check_value_all = check_ring_ordering(list_atoms1, list_atoms2)
         if check_value_all == 0:
-            atom_order = list_atoms1
+            atom_ordering = list_atoms1
 
     center_xyz1 = translate_centroid_all(xyz_coords1)
     center_xyz2 = translate_centroid_all(xyz_coords2)
@@ -309,7 +309,7 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
 
     rmsd_kabsch = kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)[0]
 
-    return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2, atom_order
+    return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2, atom_ordering
 
 
 def hartree_sum_pucker_cluster(sum_file, print_status='off'):
@@ -456,16 +456,17 @@ def parse_cmdline(argv):
                                                  "structures for further analysis. The output is a condensed csv file "
                                                  "that follows the same form as Hartree.")
 
-    parser.add_argument('-d', "--dir_xyz", help="The directory where the xyz files can be found. The default is the"
+    parser.add_argument('-d', "--dir_xyz", help="The directory where the xyz files can be found. The default is the "
                                                 "directory where the Hartree summary file can be found.",
                         default=None)
     parser.add_argument('-s', "--sum_file", help="The summary file from Hartree.",
                         default=None)
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
-    parser.add_argument('-p', "--xyz_print", help="Prints the xyz coordinates of the aligned structures in the finally"
-                                                  "output file from xyz_cluster. The coordinates can be used for"
-                                                  "verification in VMD to ensure the alignment and grouping is correct",
+    # TODO just say that -p "true" to add written coords
+    parser.add_argument('-p', "--xyz_print", help='Prints the xyz coordinates of the aligned structures in the finally '
+                                                  'output file from xyz_cluster. To print coordinates please use: '
+                                                  ' -p \'true\'',
                         default='false')
 
     args = None
@@ -518,16 +519,12 @@ def main(argv=None):
         out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_',base_dir=args.dir_xyz, ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
         if args.xyz_print == 'true':
-            print('\nPrinting the xyz coordinates from the lowest energy pcukers!\n')
             for row in filtered_cluster_list:
                 filename_written_coords = row[FILE_NAME]
                 coords_need_writing = xyz_coords_dict[filename_written_coords]
                 filename_xyz_coords = create_out_fname(filename_written_coords, prefix="xyz_",
                                                        suffix="-xyz_updated",base_dir=args.dir_xyz,ext=".xyz")
                 print_xyz_coords(coords_need_writing,atom_order,filename_xyz_coords)
-        elif args.xyz_print == 'false':
-            print('\nNot printing xyz coords for lowest energy puckers.'
-                  '\nTo turn on printing add -p "true" to command line.')
     except IOError as e:
         warning(e)
         return IO_ERROR
