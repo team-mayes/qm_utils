@@ -51,6 +51,8 @@ GLUCOSE_XYZ_COORDS_HEATHER_03b_2 = os.path.join(SUB_DATA_DIR, 'bglc_03b_2.log.xy
 
 
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
+OUT_FILE_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsB3LYP_hartree_sum-cpsnap.txt')
+OUT_FILE_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsB3LYP_hartree_sum-cpsnap_good.txt')
 GOOD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap_good.csv')
 GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s3-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
 GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1 =os.path.join(SUB_DATA_DIR, 'xyz_oxane-3s1-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
@@ -150,19 +152,6 @@ class TestXYZFunctions(unittest.TestCase):
         self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS,len(process_cluster_dict))
         self.assertEqual(TOTAL_NUM_OXANE_CLUSTER,len(hartree_dict))
 
-    def testMainWrongWay(self):
-        try:
-            hartree_list, pucker_filename_dict, hartree_headers \
-                = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
-            hartree_dict = list_to_dict(hartree_list,FILE_NAME)
-            process_cluster_dict, xyz_coords_dict, atom_order\
-                = test_clusters(pucker_filename_dict, SUB_DATA_DIR,0.1, print_option='off')
-            filtered_clustered_list = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
-            out_f_name = create_out_fname(OUT_FILE, ext='.csv')
-            write_csv(filtered_clustered_list, out_f_name, hartree_headers, extrasaction="ignore")
-            self.assertFalse(diff_lines(out_f_name, GOOD_OUT_FILE))
-        finally:
-            silent_remove(out_f_name)
 
 class TestMain(unittest.TestCase):
     def testMain(self):
@@ -172,6 +161,7 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(GOOD_OUT_FILE,OUT_FILE))
         finally:
             silent_remove(OUT_FILE)
+            silent_remove(OUT_FILE_LIST)
 
     def testMainPrintXYZCoords(self):
         try:

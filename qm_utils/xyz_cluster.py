@@ -102,29 +102,6 @@ def get_coordinates_xyz(filename, xyz_dir):
     return num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring, list_atoms
 
 
-def print_xyz_coord_info(num_atoms, xyz_atoms, xyz_coords):
-    """ Prints the information from the get_coordinates_xyz
-    :param num_atoms: the number of atoms in the molecule
-    :param xyz_atoms: prints the order of the atoms (used to know which coordinates are which in xyz_cords)
-    :param xyz_coords: prints the xyz coordinates (the row correspondence can be found from xyz_atoms)
-    :return:
-    """
-    print("Your molecule currently has {} atoms.".format(num_atoms))
-    print("\nThe atom ordering is:\n {}".format(xyz_atoms))
-    print("\nThe XYZ coordinates are:\n {}".format(xyz_coords))
-
-
-def centroid(xyz_coords):
-    """ Calculates the centroid (geometric center) of the structure. The centroid
-    is defined as the mean position of all the points in all of the coordinate directions.
-
-    :param xyz_coords: xyz coordinates for the given molecular structure
-    :return: the xyz coordinates for the centroid of the structure
-    """
-    centroid_xyz = sum(xyz_coords) / len(xyz_coords)
-    return centroid_xyz
-
-
 def translate_centroid_all(xyz_coords):
     """ Calculates the centroid of the xyz coordinates based on all the atoms. Once the centroid is found, then the
     xyz coordinates are translated so that the centroid is at the origin.
@@ -138,9 +115,6 @@ def translate_centroid_all(xyz_coords):
     xyz_coords_translate = np.array([xyz_coords - centroid_xyz])
 
     centroid_xyz_check = sum(xyz_coords_translate) / len(xyz_coords_translate)
-
-    if centroid_xyz_check.all > TOL_centroid:
-        exit("\nCould not properly align the centroid to the origin\n.")
 
     xyz_coords_translate = np.array(np.mat(xyz_coords_translate))
     return xyz_coords_translate
@@ -399,9 +373,10 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
     :param process_cluster_dict:
     :param hartree_dict: a dict of dicts (where the outer key is the file name form the inner key) and the inner dict is
         with the keys and the corresponding value from Hartree
-    :return:
+    :return: a list containing all of the low energy files and information
     """
     low_e_per_cluster = []
+    low_e_per_cluster_filename_list = []
 
     for cluster_keys, cluster_file_names in process_cluster_dict.items():
         cluster_low_filename = cluster_file_names[0]
@@ -419,8 +394,9 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
                 cluster_low_e = cluster_test_energy
 
         low_e_per_cluster.append(hartree_dict[cluster_low_filename])
+        low_e_per_cluster_filename_list.append(cluster_low_filename)
 
-    return low_e_per_cluster
+    return low_e_per_cluster, low_e_per_cluster_filename_list
 
 
 def dict_to_csv_writer(dict_to_write, out_filename, xyz_dir):
@@ -463,7 +439,6 @@ def parse_cmdline(argv):
                         default=None)
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
-    # TODO just say that -p "true" to add written coords
     parser.add_argument('-p', "--xyz_print", help='Prints the xyz coordinates of the aligned structures in the finally '
                                                   'output file from xyz_cluster. To print coordinates please use: '
                                                   ' -p \'true\'',
@@ -515,9 +490,12 @@ def main(argv=None):
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order\
                 = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
-        filtered_cluster_list = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
+        filtered_cluster_list, filtered_cluster_filename_list\
+                = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
         out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_',base_dir=args.dir_xyz, ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
+        list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs',base_dir=args.dir_xyz, ext='.txt')
+        list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w', print_message=True)
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
                 filename_written_coords = row[FILE_NAME]
