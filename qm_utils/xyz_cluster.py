@@ -11,7 +11,6 @@ from __future__ import print_function
 import argparse
 import os
 import sys
-import csv
 import numpy as np
 from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file,
                        read_csv_to_dict, create_out_fname, list_to_dict, get_csv_fieldnames, write_csv)
@@ -113,8 +112,6 @@ def translate_centroid_all(xyz_coords):
     centroid_xyz = sum(xyz_coords) / len(xyz_coords)
 
     xyz_coords_translate = np.array([xyz_coords - centroid_xyz])
-
-    centroid_xyz_check = sum(xyz_coords_translate) / len(xyz_coords_translate)
 
     xyz_coords_translate = np.array(np.mat(xyz_coords_translate))
     return xyz_coords_translate
@@ -247,11 +244,11 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
     :param xyz_dir: the location of the xyz coordinates that are going to be printed
     :return: rmsd using the kabsch method, coordinates of the centered rings
     """
-
-    n_atoms1, atoms1, xyz_coords1, atoms_ring_order1,\
-        xyz_coords_ring1, list_atoms1 = get_coordinates_xyz(input_file1, xyz_dir)
-    n_atoms2, atoms2, xyz_coords2, atoms_ring_order2,\
-        xyz_coords_ring2, list_atoms2 = get_coordinates_xyz(input_file2, xyz_dir)
+    atom_ordering = None
+    n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1, list_atoms1 \
+        = get_coordinates_xyz(input_file1, xyz_dir)
+    n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2, list_atoms2 = \
+        get_coordinates_xyz(input_file2, xyz_dir)
 
     if n_atoms1 != n_atoms2:
         exit("Error in the number of atoms! The number of atoms doesn't match!")
@@ -327,6 +324,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
     """
     process_cluster_dict = {}
     xyz_coords_dict = {}
+    atoms_order = None
     for pucker, file_list in pucker_filename_dict.items():
         pucker_cluster = 0
         cluster_name = pucker + "_" + str(pucker_cluster)
@@ -335,10 +333,10 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
 
         if raw_cluster_len == 1:
             file_name = file_list[0]
-            num_atoms, xyz_atoms, xyz_coords, atoms_ring_order,\
-                xyz_coords_ring, list_atoms = get_coordinates_xyz(file_name, xyz_dir)
+            num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring, list_atoms \
+                = get_coordinates_xyz(file_name, xyz_dir)
 
-            xyz_coords_all_translate, xyz_coords_ring_translate = translate_centroid_ring(xyz_coords,xyz_coords_ring)
+            xyz_coords_all_translate, xyz_coords_ring_translate = translate_centroid_ring(xyz_coords, xyz_coords_ring)
 
             xyz_coords_dict[file_name] = xyz_coords_all_translate
 
@@ -347,9 +345,8 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
             not_assigned = True
 
             for assigned_cluster_name in process_cluster_dict:
-                (rmsd_kabsch, ctr_ring_all_xyz1,
-                ctr_ring_all_xyz2, atoms_order) = compare_rmsd_xyz(file_name,
-                                                       process_cluster_dict[assigned_cluster_name][0], xyz_dir)
+                (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
+                    compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir)
                 xyz_coords_dict[file_name] = ctr_ring_all_xyz1
                 xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
                 if rmsd_kabsch < ok_tol:
@@ -397,22 +394,6 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
         low_e_per_cluster_filename_list.append(cluster_low_filename)
 
     return low_e_per_cluster, low_e_per_cluster_filename_list
-
-
-def dict_to_csv_writer(dict_to_write, out_filename, xyz_dir):
-    """ Writes a dict to csv file to be further analyzed
-
-    :param dict_to_write: the dict that needs to be written to csv
-    :param out_filename: the output file name for the csv file
-    :param xyz_dir: the directory where the file will be return
-    :return:
-    """
-    correct_filename = os.path.join(xyz_dir, out_filename)
-
-    with open(correct_filename, 'wb') as csv_file:
-        writer = csv.writer(csv_file)
-        for key, value in dict_to_write.items():
-            writer.writerow([key, value])
 
 
 def parse_cmdline(argv):
@@ -488,21 +469,24 @@ def main(argv=None):
     try:
         hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
-        process_cluster_dict, xyz_coords_dict, atom_order\
-                = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
-        filtered_cluster_list, filtered_cluster_filename_list\
-                = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
-        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_',base_dir=args.dir_xyz, ext='.csv')
+        process_cluster_dict, xyz_coords_dict, atom_order \
+            = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
+        filtered_cluster_list, filtered_cluster_filename_list \
+            = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
+        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
-        list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs',base_dir=args.dir_xyz, ext='.txt')
-        list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w', print_message=True)
+        list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
+                                       ext='.txt')
+        list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
+                     print_message=True)
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
+                # noinspection PyTypeChecker
                 filename_written_coords = row[FILE_NAME]
                 coords_need_writing = xyz_coords_dict[filename_written_coords]
                 filename_xyz_coords = create_out_fname(filename_written_coords, prefix="xyz_",
-                                                       suffix="-xyz_updated",base_dir=args.dir_xyz,ext=".xyz")
-                print_xyz_coords(coords_need_writing,atom_order,filename_xyz_coords)
+                                                       suffix="-xyz_updated", base_dir=args.dir_xyz, ext=".xyz")
+                print_xyz_coords(coords_need_writing, atom_order, filename_xyz_coords)
     except IOError as e:
         warning(e)
         return IO_ERROR
