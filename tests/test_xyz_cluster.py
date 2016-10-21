@@ -13,7 +13,7 @@ import unittest
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
-    read_clustered_keys_in_hartree
+    read_clustered_keys_in_hartree, check_ring_ordering
 
 __author__ = 'SPVicchio'
 
@@ -48,6 +48,10 @@ OXANE_XYZ_COORDS_WRITE_FILE_1s5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s5-free
 OXANE_XYZ_COORDS_WRITE_FILE_5s1 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5s1-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
 GLUCOSE_XYZ_COORDS_HEATHER_03b_1 = os.path.join(SUB_DATA_DIR, 'bglc_03b_1.log.xyz')
 GLUCOSE_XYZ_COORDS_HEATHER_03b_2 = os.path.join(SUB_DATA_DIR, 'bglc_03b_2.log.xyz')
+ATOMS_RING_ORDER2 =  ['1', '6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+ATOMS_RING_ORDER1 =  ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+ATOMS_RING_ORDER3 =  ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+
 
 
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
@@ -92,6 +96,16 @@ class TestFailWell(unittest.TestCase):
 
 
 class TestXYZFunctions(unittest.TestCase):
+
+    def testAtomRingOrderingWrong(self):
+        status = check_ring_ordering(ATOMS_RING_ORDER1, ATOMS_RING_ORDER2)
+        #self.assertEqual(status, 0)
+        self.assertEqual(status,1)
+
+    def testAtomRingOrderingCorrect(self):
+        status = check_ring_ordering(ATOMS_RING_ORDER1, ATOMS_RING_ORDER3)
+        self.assertEqual(status,0)
+
     def testReadHartreeSummary(self):
         hartree_dict, pucker_filename_dict,\
             hartree_headers = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_HEATHER_FILE)

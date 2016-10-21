@@ -3,7 +3,8 @@
 
 """
 The purpose of this python script to align xyz coordinate files so that the structures
-can be clustered.
+can be clustered. The script calculates the rmsd for structures in a given hartree cluster designation, and then
+determines the lowest energy structure.
 """
 
 from __future__ import print_function
@@ -14,8 +15,6 @@ import sys
 import numpy as np
 from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file,
                        read_csv_to_dict, create_out_fname, list_to_dict, get_csv_fieldnames, write_csv)
-
-TRIGGER_WARN_TOL = 1.00
 
 try:
     # noinspection PyCompatibility
@@ -34,6 +33,7 @@ num_atoms_ring = 6
 ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 HARTREE_TO_KCALMOL = 627.5095
 STRUCTURE_COMPARE_TOL = 5.0
+TRIGGER_WARN_TOL = 1.00
 
 # Hartree field headers
 FILE_NAME = 'File Name'
@@ -207,10 +207,11 @@ def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
     """
 
     if atoms_ring_order1 != atoms_ring_order2:
-        exit("The atoms in the ring are not aligned the same!")
+        print('The atoms in the ring are not aligned the same!')
+        check_value = 1
     else:
         check_value = 0
-        return check_value
+    return check_value
 
 
 def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
@@ -367,7 +368,8 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
 def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
     """ Select only one file name from each cluster (based on the lowest energy)
 
-    :param process_cluster_dict:
+    :param process_cluster_dict: returns a dict (keys being the puckering geometries w/ potential duplicates) of lists
+        (containing the clustered file names)
     :param hartree_dict: a dict of dicts (where the outer key is the file name form the inner key) and the inner dict is
         with the keys and the corresponding value from Hartree
     :return: a list containing all of the low energy files and information
