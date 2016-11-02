@@ -12,9 +12,11 @@ from __future__ import print_function
 import argparse
 import os
 import sys
+from shutil import copyfile
+
 import numpy as np
-from qm_common import (GOOD_RET, INVALID_DATA, warning, InvalidDataError, IO_ERROR, INPUT_ERROR, list_to_file,
-                       read_csv_to_dict, create_out_fname, list_to_dict, get_csv_fieldnames, write_csv)
+
+import qm_common
 
 try:
     # noinspection PyCompatibility
@@ -56,7 +58,7 @@ def get_coordinates_xyz(filename, xyz_dir):
     @return: A list of coordinates associated with the atom numbers and a list of lists containing the xyz coordinates
         for the atoms.
     """
-    xyz_file_path = create_out_fname(filename, base_dir=xyz_dir, ext='.xyz')
+    xyz_file_path = qm_common.create_out_fname(filename, base_dir=xyz_dir, ext='.xyz')
 
     f = open(xyz_file_path, mode='r')
 
@@ -231,7 +233,7 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     for atom_type, atom_xyz in zip(to_print_atoms, to_print_xyz_coords):
         to_print2.append([atom_type] + atom_xyz.tolist())
 
-    list_to_file(to_print2, file_sum)
+    qm_common.list_to_file(to_print2, file_sum)
 
     return
 
@@ -288,13 +290,13 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     """
     Reads the hartree output file and creates a dictionary of all hartree output and clusters based on pucker
 
-    :param print_status:
+    :param print_status: turns the print status on and off
     :param sum_file: name of hartree output file
     :return: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and file_names,
         and a list of headers
     """
-    hartree_dict = read_csv_to_dict(sum_file, mode='rU')
-    hartree_headers = get_csv_fieldnames(sum_file, mode='rU')
+    hartree_dict = qm_common.read_csv_to_dict(sum_file, mode='rU')
+    hartree_headers = qm_common.get_csv_fieldnames(sum_file, mode='rU')
     pucker_filename_dict = {}
 
     for row in hartree_dict:
@@ -398,6 +400,23 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
     return low_e_per_cluster, low_e_per_cluster_filename_list
 
 
+def update_lowest_energy_filename_list(filtered_cluster_list, xyz_dir):
+    filename_list_newpucker = []
+    for row in filtered_cluster_list:
+        filename_orgin = row[FILE_NAME]
+        pucker_id = row[PUCKER]
+        updated_filename = qm_common.create_out_fname(filename_orgin, suffix="-newpuck_{}".format(pucker_id),
+                                                      base_dir=xyz_dir)
+
+        filename_head, filename_to_list = os.path.split(updated_filename)
+
+        filename_list_newpucker.append(filename_to_list)
+
+        copyfile(os.path.join(xyz_dir, filename_orgin), updated_filename)
+
+    return filename_list_newpucker
+
+
 def parse_cmdline(argv):
     """
     Returns the parsed argument list and return code.
@@ -431,7 +450,7 @@ def parse_cmdline(argv):
     try:
         args = parser.parse_args(argv)
         if args.sum_file is None:
-            raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
+            raise qm_common.InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
         elif not os.path.isfile(args.sum_file):
             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
         # Finally, if the summary file is there, and there is no dir_xyz provided
@@ -439,24 +458,24 @@ def parse_cmdline(argv):
             args.dir_xyz = os.path.dirname(args.sum_file)
         # if a  dir_xyz is provided, ensure valid
         elif not os.path.isdir(args.dir_xyz):
-            raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
+            raise qm_common.InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
 
-    except (KeyError, InvalidDataError) as e:
-        warning(e)
+    except (KeyError, qm_common.InvalidDataError) as e:
+        qm_common.warning(e)
         parser.print_help()
-        return args, INPUT_ERROR
+        return args, qm_common.INPUT_ERROR
     except IOError as e:
-        warning(e)
+        qm_common.warning(e)
         parser.print_help()
-        return args, IO_ERROR
+        return args, qm_common.IO_ERROR
     except SystemExit as e:
         if e.message == 0:
-            return args, GOOD_RET
-        warning(e)
+            return args, qm_common.GOOD_RET
+        qm_common.warning(e)
         parser.print_help()
-        return args, INPUT_ERROR
+        return args, qm_common.INPUT_ERROR
 
-    return args, GOOD_RET
+    return args, qm_common.GOOD_RET
 
 
 def main(argv=None):
@@ -466,37 +485,47 @@ def main(argv=None):
     :return: The return code for the program's termination.
     """
     args, ret = parse_cmdline(argv)
-    if ret != GOOD_RET or args is None:
+    if ret != qm_common.GOOD_RET or args is None:
         return ret
     try:
         hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
-        hartree_dict = list_to_dict(hartree_list, FILE_NAME)
+        hartree_dict = qm_common.list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
             = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
         filtered_cluster_list, filtered_cluster_filename_list \
             = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
-        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')
-        write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
-        list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
-                                       ext='.txt')
-        list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
-                     print_message=True)
+        out_f_name = qm_common.create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')
+        qm_common.write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
+
+        filename_list_newpucker = update_lowest_energy_filename_list(filtered_cluster_list, args.dir_xyz)
+
+        list_f_name = qm_common.create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
+                                                 ext='.txt')
+
+        list_f_name_new_puck = qm_common.create_out_fname(args.sum_file, prefix='z_files_list_new_puck_',
+                                                          base_dir=args.dir_xyz, ext='.txt')
+        qm_common.list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
+                               print_message=True)
+        qm_common.list_to_file(filename_list_newpucker, list_f_name_new_puck,
+                               list_format=None, delimiter=' ', mode='w', print_message=True)
+
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
                 # noinspection PyTypeChecker
                 filename_written_coords = row[FILE_NAME]
                 coords_need_writing = xyz_coords_dict[filename_written_coords]
-                filename_xyz_coords = create_out_fname(filename_written_coords, prefix="xyz_",
-                                                       suffix="-xyz_updated", base_dir=args.dir_xyz, ext=".xyz")
+                filename_xyz_coords = qm_common.create_out_fname(filename_written_coords, prefix="xyz_",
+                                                                 suffix="-xyz_updated", base_dir=args.dir_xyz,
+                                                                 ext=".xyz")
                 print_xyz_coords(coords_need_writing, atom_order, filename_xyz_coords)
     except IOError as e:
-        warning(e)
-        return IO_ERROR
-    except (InvalidDataError, KeyError) as e:
-        warning(e)
-        return INVALID_DATA
+        qm_common.warning(e)
+        return qm_common.IO_ERROR
+    except (qm_common.InvalidDataError, KeyError) as e:
+        qm_common.warning(e)
+        return qm_common.INVALID_DATA
 
-    return GOOD_RET  # success
+    return qm_common.GOOD_RET  # success
 
 
 if __name__ == '__main__':

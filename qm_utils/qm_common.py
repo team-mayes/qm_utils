@@ -411,10 +411,6 @@ def conv_map_old(conv_dict, raw_vals):
     """
     Takes a dictionary mapping column name to conversion function
     and a list of dictionaries containing unconverted data.
-    >>> funcmap = {'A' : int, 'B' : float, 'C': str}
-    >>> rawstr = [{'A': '1', 'B': '1.2', 'C': 'hi'}, {'A': '33', 'B': '1.8', 'C': 'hi2'}]
-    >>> conv_map(funcmap, rawstr)
-    [{'A': 1, 'B': 1.2, 'C': 'hi'}, {'A': 33, 'B': 1.8, 'C': 'hi2'}]
     """
     conv_vals = list()
     for raw_row in raw_vals:
@@ -433,8 +429,6 @@ def read_csv_old(file_loc):
     """
     Reads the given file, mapping data rows to their respective
     header row.
-    >>> read_csv('test.csv')
-    [[('one', 'a'), ('two', 'b'), ('three', 'c')]]
     """
     reader = csv.reader(open(file_loc, 'r'))
     is_first = True

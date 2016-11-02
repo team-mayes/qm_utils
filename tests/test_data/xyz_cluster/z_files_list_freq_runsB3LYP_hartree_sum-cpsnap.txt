@@ -1,8 +1,0 @@
-oxane-b25-freeze_B3LYP-relax_B3LYP.log
-oxane-3s1-freeze_B3LYP-relax_B3LYP.log
-oxane-e5-freeze_B3LYP-relax_B3LYP.log
-oxane-1s3-freeze_B3LYP-relax_B3LYP.log
-oxane-25b-freeze_B3LYP-relax_B3LYP.log
-oxane-5e-freeze_B3LYP-relax_B3LYP.log
-oxane-5s1-freeze_B3LYP-relax_B3LYP.log
-oxane-1s5-freeze_B3LYP-relax_B3LYP.log
