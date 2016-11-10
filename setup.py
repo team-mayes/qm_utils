@@ -12,11 +12,15 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'six',
     'seaborn',
+    'pandas>=0.19.1',
+    'numpy>=1.11.2',
 ]
 
 test_requirements = [
-    'seaborn',
     'six',
+    'seaborn',
+    'pandas>=0.19.1',
+    'numpy>=1.11.2',
 ]
 
 setup(
