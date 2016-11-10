@@ -14,8 +14,8 @@ import os
 import sys
 from shutil import copyfile
 import numpy as np
-from qm_common import GOOD_RET, list_to_dict, create_out_fname, write_csv, list_to_file, warning, IO_ERROR, \
-    InvalidDataError, INVALID_DATA, read_csv_to_dict, get_csv_fieldnames, INPUT_ERROR
+from qm_common import (GOOD_RET, list_to_dict, create_out_fname, write_csv, list_to_file, warning, IO_ERROR,
+                       InvalidDataError, INVALID_DATA, read_csv_to_dict, get_csv_fieldnames, INPUT_ERROR)
 
 try:
     # noinspection PyCompatibility
@@ -55,15 +55,15 @@ def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
 
     :param filename: The input file must be an xyz file
     :param xyz_dir: The directory that the xyz files are located is needed
-    @return: A list of coordinates associated with the atom_type xyz_coords and a list of lists containing the xyz coordinates
-        for the atoms.
+    @return: A list of coordinates associated with the atom_type xyz_coords and
+       a list of lists containing the xyz coordinates for the atoms.
     """
     xyz_file_path = create_out_fname(filename, base_dir=xyz_dir, ext='.xyz')
 
     f = open(xyz_file_path, mode='r')
 
     xyz_atoms = []
-    atoms_ring_order = [None]*6
+    atoms_ring_order = [None] * 6
     total_num_atoms = 0
     atom_num = 0
     # TODO: remove lines_read_ring
@@ -77,21 +77,22 @@ def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
     f.next()
 
     xyz_coords_ring = np.full((num_atoms_ring, 3), np.nan)
-    xyz_coords = np.full((total_num_atoms, 3), np.nan)  # creates an array that will be populated later with xyz coordinates
+    # creates an array that will be populated later with xyz coordinates
+    xyz_coords = np.full((total_num_atoms, 3), np.nan)
 
     for line in f:
         if atom_num == total_num_atoms:
             break
         atom_type, coor_x, coor_y, coor_z = line.split()
         # map to take all of the coordinates and turn them into xyz_coords using float option
-        xyz_coords = map(float, [coor_x, coor_y, coor_z])
+        coord_floats = map(float, [coor_x, coor_y, coor_z])
         if len(xyz_coords) == 3:
-            xyz_coords[atom_num] = xyz_coords
+            xyz_coords[atom_num] = coord_floats
             xyz_atoms.append(atom_type)
 
         if atom_num in ring_atom_order:
             ring_index = ring_atom_order.index(atom_num)
-            xyz_coords_ring[ring_index] = xyz_coords
+            xyz_coords_ring[ring_index] = coord_floats
             # Todo fix next line:
             atoms_ring_order[ring_index] = atom_type
             lines_read_ring += 1
@@ -220,11 +221,11 @@ def check_ring_ordering(atoms_ring_order1, atoms_ring_order2):
 
 
 def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
-    """ Prints the xyz coordintes of the updates structure for further analysis (the structures can be input into VMD)
+    """ Prints the xyz coordinates of the updates structure for further analysis (the structures can be input into VMD)
 
     :param to_print_xyz_coords: the xyz coordinates of the structure that you are going to print
     :param to_print_atoms: the atoms in the same ordering as xyz coordinates that you want to print
-    :param file_sum: summary information on what file these coordinates orginally orginated from
+    :param file_sum: summary information on what file these coordinates originated from
     :return:
     """
 
@@ -244,10 +245,11 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
 def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_option='off'):
     """ calculates the rmsd both using the standard method and rotating the structures method
 
-    :param print_option: has the ability to print out the output..or not
     :param input_file1: xyz coordinates for the first molecular structure
     :param input_file2: xyz coordinates for the second molecular structure
     :param xyz_dir: the location of the xyz coordinates that are going to be printed
+    :param ring_atom_order: user input of index of atoms in the ring
+    :param print_option: has the ability to print out the output..or not
     :return: rmsd using the kabsch method, coordinates of the centered rings
     """
     atom_ordering = None
@@ -320,6 +322,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
     """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
     are further expanded to ensure the cluster is consistent.
 
+    :param ring_num_list: list of atom numbers in the ring (in order O, C1, C2, C3, C4, C5)
     :param print_option: turns on and off the print option
     :param pucker_filename_dict: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and
         file_names, and a list of headers
@@ -406,16 +409,12 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
 def update_lowest_energy_filename_list(filtered_cluster_list, xyz_dir):
     filename_list_newpucker = []
     for row in filtered_cluster_list:
-        filename_orgin = row[FILE_NAME]
+        filename_origin = row[FILE_NAME]
         pucker_id = row[PUCKER]
-        updated_filename = create_out_fname(filename_orgin, suffix="-newpuck_{}".format(pucker_id),
-                                                      base_dir=xyz_dir)
-
+        updated_filename = create_out_fname(filename_origin, suffix="-newpuck_{}".format(pucker_id), base_dir=xyz_dir)
         filename_head, filename_to_list = os.path.split(updated_filename)
-
         filename_list_newpucker.append(filename_to_list)
-
-        copyfile(os.path.join(xyz_dir, filename_orgin), updated_filename)
+        copyfile(os.path.join(xyz_dir, filename_origin), updated_filename)
 
     return filename_list_newpucker
 
@@ -521,14 +520,13 @@ def main(argv=None):
         filename_list_newpucker = update_lowest_energy_filename_list(filtered_cluster_list, args.dir_xyz)
 
         list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
-                                                 ext='.txt')
-
+                                       ext='.txt')
         list_f_name_new_puck = create_out_fname(args.sum_file, prefix='z_files_list_new_puck_',
-                                                          base_dir=args.dir_xyz, ext='.txt')
+                                                base_dir=args.dir_xyz, ext='.txt')
         list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
-                               print_message=True)
+                     print_message=True)
         list_to_file(filename_list_newpucker, list_f_name_new_puck,
-                               list_format=None, delimiter=' ', mode='w', print_message=True)
+                     list_format=None, delimiter=' ', mode='w', print_message=True)
 
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
@@ -536,8 +534,8 @@ def main(argv=None):
                 filename_written_coords = row[FILE_NAME]
                 coords_need_writing = xyz_coords_dict[filename_written_coords]
                 filename_xyz_coords = create_out_fname(filename_written_coords, prefix="xyz_",
-                                                                 suffix="-xyz_updated", base_dir=args.dir_xyz,
-                                                                 ext=".xyz")
+                                                       suffix="-xyz_updated", base_dir=args.dir_xyz,
+                                                       ext=".xyz")
                 print_xyz_coords(coords_need_writing, atom_order, filename_xyz_coords)
     except IOError as e:
         warning(e)
