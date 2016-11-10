@@ -13,10 +13,9 @@ import argparse
 import os
 import sys
 from shutil import copyfile
-
 import numpy as np
-
-import qm_common
+from qm_common import GOOD_RET, list_to_dict, create_out_fname, write_csv, list_to_file, warning, IO_ERROR, \
+    InvalidDataError, INVALID_DATA, read_csv_to_dict, get_csv_fieldnames, INPUT_ERROR
 
 try:
     # noinspection PyCompatibility
@@ -31,6 +30,7 @@ __author__ = 'SPVicchio'
 
 TOL_centroid = [0.001, 0.001, 0.001]
 DEF_TOL_CLUSTER = 0.001
+DEF_RING_ORDER = '5,0,1,2,3,4'
 num_atoms_ring = 6
 ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 HARTREE_TO_KCALMOL = 627.5095
@@ -44,63 +44,66 @@ ENERGY_GIBBS = 'G298 (Hartrees)'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
 
 
-def get_coordinates_xyz(filename, xyz_dir):
+def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
     """This function is designed to upload xyz coordinates from .xyz files. The .xyz file format should contain the
     number of atoms on the first line followed by the filename on the second line. After the second line, the lines
     should be organized as followed:
 
-    atom number         x coordinate        y coordinate        z coordinate
+    atom_type number         x coordinate        y coordinate        z coordinate
 
-    This function stores the the xyz coordinates along with the atom numbers.
+    This function stores the the xyz coordinates along with the atom_type xyz_coords.
 
     :param filename: The input file must be an xyz file
     :param xyz_dir: The directory that the xyz files are located is needed
-    @return: A list of coordinates associated with the atom numbers and a list of lists containing the xyz coordinates
+    @return: A list of coordinates associated with the atom_type xyz_coords and a list of lists containing the xyz coordinates
         for the atoms.
     """
-    xyz_file_path = qm_common.create_out_fname(filename, base_dir=xyz_dir, ext='.xyz')
+    xyz_file_path = create_out_fname(filename, base_dir=xyz_dir, ext='.xyz')
 
     f = open(xyz_file_path, mode='r')
 
     xyz_atoms = []
-    atoms_ring_order = []
-    num_atoms = 0
-    lines_read = 0
+    atoms_ring_order = [None]*6
+    total_num_atoms = 0
+    atom_num = 0
+    # TODO: remove lines_read_ring
     lines_read_ring = 0
     # Read the first line to obtain the number of atoms read
     try:
-        num_atoms = int(f.next())
+        total_num_atoms = int(f.next())
     except ValueError:
         exit("Could not obtain the number of atoms in the .xyz file.")
     # Skip the title line
     f.next()
 
     xyz_coords_ring = np.full((num_atoms_ring, 3), np.nan)
-    xyz_coords = np.full((num_atoms, 3), np.nan)  # creates an array that will be populated later with xyz coordinates
+    xyz_coords = np.full((total_num_atoms, 3), np.nan)  # creates an array that will be populated later with xyz coordinates
 
     for line in f:
-        if lines_read == num_atoms:
+        if atom_num == total_num_atoms:
             break
-        atom, coor_x, coor_y, coor_z = line.split()
-        # map to take all of the coordinates and turn them into numbers using float option
-        numbers = map(float, [coor_x, coor_y, coor_z])
-        if len(numbers) == 3:
-            xyz_coords[lines_read] = numbers
-            xyz_atoms.append(atom)
+        atom_type, coor_x, coor_y, coor_z = line.split()
+        # map to take all of the coordinates and turn them into xyz_coords using float option
+        xyz_coords = map(float, [coor_x, coor_y, coor_z])
+        if len(xyz_coords) == 3:
+            xyz_coords[atom_num] = xyz_coords
+            xyz_atoms.append(atom_type)
 
-        if atom != '1':
-            xyz_coords_ring[lines_read_ring] = numbers
-            atoms_ring_order.append(atom)
+        if atom_num in ring_atom_order:
+            ring_index = ring_atom_order.index(atom_num)
+            xyz_coords_ring[ring_index] = xyz_coords
+            # Todo fix next line:
+            atoms_ring_order[ring_index] = atom_type
             lines_read_ring += 1
 
-        lines_read += 1
+        atom_num += 1
     f.close()
 
     list_atoms = xyz_atoms
 
     xyz_atoms = np.array(xyz_atoms)
 
-    return num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring, list_atoms
+    return total_num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring, list_atoms
 
 
 def translate_centroid_all(xyz_coords):
@@ -233,12 +236,12 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     for atom_type, atom_xyz in zip(to_print_atoms, to_print_xyz_coords):
         to_print2.append([atom_type] + atom_xyz.tolist())
 
-    qm_common.list_to_file(to_print2, file_sum)
+    list_to_file(to_print2, file_sum)
 
     return
 
 
-def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
+def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_option='off'):
     """ calculates the rmsd both using the standard method and rotating the structures method
 
     :param print_option: has the ability to print out the output..or not
@@ -249,9 +252,9 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, print_option='off'):
     """
     atom_ordering = None
     n_atoms1, atoms1, xyz_coords1, atoms_ring_order1, xyz_coords_ring1, list_atoms1 \
-        = get_coordinates_xyz(input_file1, xyz_dir)
+        = get_coordinates_xyz(input_file1, xyz_dir, ring_atom_order)
     n_atoms2, atoms2, xyz_coords2, atoms_ring_order2, xyz_coords_ring2, list_atoms2 = \
-        get_coordinates_xyz(input_file2, xyz_dir)
+        get_coordinates_xyz(input_file2, xyz_dir, ring_atom_order)
 
     if n_atoms1 != n_atoms2:
         exit("Error in the number of atoms! The number of atoms doesn't match!")
@@ -295,8 +298,8 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     :return: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and file_names,
         and a list of headers
     """
-    hartree_dict = qm_common.read_csv_to_dict(sum_file, mode='rU')
-    hartree_headers = qm_common.get_csv_fieldnames(sum_file, mode='rU')
+    hartree_dict = read_csv_to_dict(sum_file, mode='rU')
+    hartree_headers = get_csv_fieldnames(sum_file, mode='rU')
     pucker_filename_dict = {}
 
     for row in hartree_dict:
@@ -313,7 +316,7 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     return hartree_dict, pucker_filename_dict, hartree_headers
 
 
-def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
+def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_option='off'):
     """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
     are further expanded to ensure the cluster is consistent.
 
@@ -337,7 +340,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
         if raw_cluster_len == 1:
             file_name = file_list[0]
             num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring, list_atoms \
-                = get_coordinates_xyz(file_name, xyz_dir)
+                = get_coordinates_xyz(file_name, xyz_dir, ring_num_list)
 
             xyz_coords_all_translate, xyz_coords_ring_translate = translate_centroid_ring(xyz_coords, xyz_coords_ring)
 
@@ -349,7 +352,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, print_option='off'):
 
             for assigned_cluster_name in process_cluster_dict:
                 (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
-                    compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir)
+                    compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir, ring_num_list)
                 xyz_coords_dict[file_name] = ctr_ring_all_xyz1
                 xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
                 if rmsd_kabsch < ok_tol:
@@ -405,7 +408,7 @@ def update_lowest_energy_filename_list(filtered_cluster_list, xyz_dir):
     for row in filtered_cluster_list:
         filename_orgin = row[FILE_NAME]
         pucker_id = row[PUCKER]
-        updated_filename = qm_common.create_out_fname(filename_orgin, suffix="-newpuck_{}".format(pucker_id),
+        updated_filename = create_out_fname(filename_orgin, suffix="-newpuck_{}".format(pucker_id),
                                                       base_dir=xyz_dir)
 
         filename_head, filename_to_list = os.path.split(updated_filename)
@@ -415,6 +418,21 @@ def update_lowest_energy_filename_list(filtered_cluster_list, xyz_dir):
         copyfile(os.path.join(xyz_dir, filename_orgin), updated_filename)
 
     return filename_list_newpucker
+
+
+def read_ring_atom_ids(atom_str):
+    """
+    Read entry for the list of atom numbers and convert to a list of ints
+    :param atom_str: a string that is ideally a comma-separated list of 6 integers.
+    :return: int list
+    """
+    try:
+        int_list = [int(atom_num) for atom_num in atom_str.split(',')]
+        if len(int_list) != 6:
+            raise ValueError
+    except ValueError:
+        raise ValueError("Expected a comma-separated list of 6 integers. Read: {}".format(atom_str))
+    return int_list
 
 
 def parse_cmdline(argv):
@@ -441,6 +459,9 @@ def parse_cmdline(argv):
                         default=None)
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
+    parser.add_argument('-r', "--ring_order", help="List of the atom ids in the order C1,C2,C3,C4,C5,O which define "
+                                                   "the six-membered ring. The default is: {}.",
+                        default=DEF_RING_ORDER, type=read_ring_atom_ids)
     parser.add_argument('-p', "--xyz_print", help='Prints the xyz coordinates of the aligned structures in the finally '
                                                   'output file from xyz_cluster. To print coordinates please use: '
                                                   ' -p \'true\'',
@@ -450,7 +471,7 @@ def parse_cmdline(argv):
     try:
         args = parser.parse_args(argv)
         if args.sum_file is None:
-            raise qm_common.InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
+            raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
         elif not os.path.isfile(args.sum_file):
             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
         # Finally, if the summary file is there, and there is no dir_xyz provided
@@ -458,24 +479,24 @@ def parse_cmdline(argv):
             args.dir_xyz = os.path.dirname(args.sum_file)
         # if a  dir_xyz is provided, ensure valid
         elif not os.path.isdir(args.dir_xyz):
-            raise qm_common.InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
+            raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
 
-    except (KeyError, qm_common.InvalidDataError) as e:
-        qm_common.warning(e)
+    except (KeyError, InvalidDataError) as e:
+        warning(e)
         parser.print_help()
-        return args, qm_common.INPUT_ERROR
+        return args, INPUT_ERROR
     except IOError as e:
-        qm_common.warning(e)
+        warning(e)
         parser.print_help()
-        return args, qm_common.IO_ERROR
-    except SystemExit as e:
+        return args, IO_ERROR
+    except (ValueError, SystemExit) as e:
         if e.message == 0:
-            return args, qm_common.GOOD_RET
-        qm_common.warning(e)
+            return args, GOOD_RET
+        warning(e)
         parser.print_help()
-        return args, qm_common.INPUT_ERROR
+        return args, INPUT_ERROR
 
-    return args, qm_common.GOOD_RET
+    return args, GOOD_RET
 
 
 def main(argv=None):
@@ -485,28 +506,28 @@ def main(argv=None):
     :return: The return code for the program's termination.
     """
     args, ret = parse_cmdline(argv)
-    if ret != qm_common.GOOD_RET or args is None:
+    if ret != GOOD_RET or args is None:
         return ret
     try:
         hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
-        hartree_dict = qm_common.list_to_dict(hartree_list, FILE_NAME)
+        hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, print_option='off')
+            = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, args.ring_order, print_option='off')
         filtered_cluster_list, filtered_cluster_filename_list \
             = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
-        out_f_name = qm_common.create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')
-        qm_common.write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
+        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')
+        write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
 
         filename_list_newpucker = update_lowest_energy_filename_list(filtered_cluster_list, args.dir_xyz)
 
-        list_f_name = qm_common.create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
+        list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
                                                  ext='.txt')
 
-        list_f_name_new_puck = qm_common.create_out_fname(args.sum_file, prefix='z_files_list_new_puck_',
+        list_f_name_new_puck = create_out_fname(args.sum_file, prefix='z_files_list_new_puck_',
                                                           base_dir=args.dir_xyz, ext='.txt')
-        qm_common.list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
+        list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
                                print_message=True)
-        qm_common.list_to_file(filename_list_newpucker, list_f_name_new_puck,
+        list_to_file(filename_list_newpucker, list_f_name_new_puck,
                                list_format=None, delimiter=' ', mode='w', print_message=True)
 
         if args.xyz_print == 'true':
@@ -514,18 +535,18 @@ def main(argv=None):
                 # noinspection PyTypeChecker
                 filename_written_coords = row[FILE_NAME]
                 coords_need_writing = xyz_coords_dict[filename_written_coords]
-                filename_xyz_coords = qm_common.create_out_fname(filename_written_coords, prefix="xyz_",
+                filename_xyz_coords = create_out_fname(filename_written_coords, prefix="xyz_",
                                                                  suffix="-xyz_updated", base_dir=args.dir_xyz,
                                                                  ext=".xyz")
                 print_xyz_coords(coords_need_writing, atom_order, filename_xyz_coords)
     except IOError as e:
-        qm_common.warning(e)
-        return qm_common.IO_ERROR
-    except (qm_common.InvalidDataError, KeyError) as e:
-        qm_common.warning(e)
-        return qm_common.INVALID_DATA
+        warning(e)
+        return IO_ERROR
+    except (InvalidDataError, KeyError) as e:
+        warning(e)
+        return INVALID_DATA
 
-    return qm_common.GOOD_RET  # success
+    return GOOD_RET  # success
 
 
 if __name__ == '__main__':
