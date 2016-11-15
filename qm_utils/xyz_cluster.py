@@ -66,8 +66,6 @@ def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
     atoms_ring_order = [None] * 6
     total_num_atoms = 0
     atom_num = 0
-    # TODO: remove lines_read_ring
-    lines_read_ring = 0
     # Read the first line to obtain the number of atoms read
     try:
         total_num_atoms = int(f.next())
@@ -86,17 +84,14 @@ def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
         atom_type, coor_x, coor_y, coor_z = line.split()
         # map to take all of the coordinates and turn them into xyz_coords using float option
         coord_floats = map(float, [coor_x, coor_y, coor_z])
-        if len(xyz_coords) == 3:
+        if len(coord_floats) == 3:
             xyz_coords[atom_num] = coord_floats
             xyz_atoms.append(atom_type)
 
         if atom_num in ring_atom_order:
             ring_index = ring_atom_order.index(atom_num)
             xyz_coords_ring[ring_index] = coord_floats
-            # Todo fix next line:
             atoms_ring_order[ring_index] = atom_type
-            lines_read_ring += 1
-
         atom_num += 1
     f.close()
 
@@ -459,7 +454,7 @@ def parse_cmdline(argv):
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
     parser.add_argument('-r', "--ring_order", help="List of the atom ids in the order C1,C2,C3,C4,C5,O which define "
-                                                   "the six-membered ring. The default is: {}.",
+                                                   "the six-membered ring. The default is: {}.".format(DEF_RING_ORDER),
                         default=DEF_RING_ORDER, type=read_ring_atom_ids)
     parser.add_argument('-p', "--xyz_print", help='Prints the xyz coordinates of the aligned structures in the finally '
                                                   'output file from xyz_cluster. To print coordinates please use: '

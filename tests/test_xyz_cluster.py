@@ -13,7 +13,7 @@ import unittest
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
-    check_ring_ordering
+    check_ring_ordering, read_ring_atom_ids
 
 __author__ = 'SPVicchio'
 
@@ -60,7 +60,7 @@ FILE_NEW_PUCK_LIST = os.path.join(SUB_DATA_DIR,'z_files_list_new_puck_B3LYP_hart
 ATOMS_RING_ORDER2 =  ['1', '6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1']
 ATOMS_RING_ORDER1 =  ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
 ATOMS_RING_ORDER3 =  ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
-
+OXANE_RING_ATOM_ORDER = '5,0,1,2,3,4'
 
 
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
@@ -130,17 +130,22 @@ class TestXYZFunctions(unittest.TestCase):
         self.assertTrue(pucker_filename_dict[PUCK_2SO], PUCK_2SO_FILES)
 
     def testTwoFiles_similar(self):
+        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar,\
-                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, SUB_DATA_DIR)
+                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE,
+                                                      SUB_DATA_DIR, atoms_order)
         self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_GOOD[0]) < XYZ_TOL)
 
     def testTwoFiles_1c4to4c1(self):
+        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar,\
-                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_4c1_INPUT_FILE, SUB_DATA_DIR)
+                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_4c1_INPUT_FILE,
+                                                      SUB_DATA_DIR, atoms_order)
         self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_1c4to4c1[0]) < XYZ_TOL)
 
     def testTwoFiles_PrintFeature(self):
-        with capture_stdout(compare_rmsd_xyz, OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, SUB_DATA_DIR,
+        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
+        with capture_stdout(compare_rmsd_xyz, OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, SUB_DATA_DIR, atoms_order,
                                                                                         print_option='on') as output:
             self.assertTrue("Rmsd" in output)
             self.assertTrue(len(output) > 100)
@@ -166,20 +171,22 @@ class TestXYZFunctions(unittest.TestCase):
 
     def testTestClustersLowTol(self):
         low_tol = 0.00001
+        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list,FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order\
-            = test_clusters(pucker_filename_dict, SUB_DATA_DIR,low_tol, print_option='off')
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
         self.assertEquals(len(process_cluster_dict),len(hartree_dict))
 
     def testTestClustersHighTol(self):
         high_tol = 100
+        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list,FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order\
-            = test_clusters(pucker_filename_dict, SUB_DATA_DIR,high_tol, print_option='off')
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, high_tol, atoms_order, print_option='off')
 
         self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS,len(process_cluster_dict))
         self.assertEqual(TOTAL_NUM_OXANE_CLUSTER,len(hartree_dict))
@@ -232,7 +239,7 @@ class TestXYZFunctions(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    def testMain(self):
+    def testMain1(self):
         try:
             test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
             main(test_input)
