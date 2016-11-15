@@ -520,8 +520,8 @@ def main(argv=None):
                                                 base_dir=args.dir_xyz, ext='.txt')
         list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
                      print_message=True)
-        list_to_file(filename_list_newpucker, list_f_name_new_puck,
-                     list_format=None, delimiter=' ', mode='w', print_message=True)
+        #list_to_file(filename_list_newpucker, list_f_name_new_puck,
+        #             list_format=None, delimiter=' ', mode='w', print_message=True)
 
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:

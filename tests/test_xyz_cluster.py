@@ -217,25 +217,27 @@ class TestXYZFunctions(unittest.TestCase):
             silent_remove(FILE_e5_TO_4c1)
             silent_remove(FILE_NEW_PUCK_LIST)
 
-    def testUpdateLowestEnergyList(self):
-        try:
-            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
-            out_file = os.path.join(SUB_DATA_DIR,
-                        'z_files_list_new_puck_B3LYP_hartree_sum-cpsnap.txt')
-            main(test_input)
-            self.assertFalse(diff_lines(out_file,GOOD_NEW_PUCKER_LIST))
-        finally:
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_b25)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_e5)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s5)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5s1)
-            silent_remove(OUT_FILE)
-            silent_remove(OUT_FILE_LIST)
-            silent_remove(FILE_NEW_PUCK_LIST)
+# The function people has been removed because updating the filename to contain the pucker information isn't needed
+# at this time.
+    #def testUpdateLowestEnergyList(self):
+    #    try:
+    #        test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
+    #        out_file = os.path.join(SUB_DATA_DIR,
+    #                    'z_files_list_new_puck_B3LYP_hartree_sum-cpsnap.txt')
+    #        main(test_input)
+    #        self.assertFalse(diff_lines(out_file,GOOD_NEW_PUCKER_LIST))
+    #    finally:
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_b25)
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_e5)
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s5)
+    #        silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5s1)
+    #        silent_remove(OUT_FILE)
+    #        silent_remove(OUT_FILE_LIST)
+    #        silent_remove(FILE_NEW_PUCK_LIST)
 
 
 class TestMain(unittest.TestCase):
