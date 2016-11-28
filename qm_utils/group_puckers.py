@@ -1,10 +1,12 @@
 from __future__ import print_function
 
 #!/usr/bin/env python
+from collections import OrderedDict
+
 import pandas as pd
 
 from qm_utils.hartree_valid import verify_local_minimum, verify_transition_state
-from qm_utils.qm_common import warning
+from qm_utils.qm_common import warning, create_out_fname
 
 """
 Groups output from Hartree by pucker (for local minima) or path (for transition states).
@@ -28,7 +30,8 @@ GROUP_COL = 'group_name'
 
 
 def create_dframes(inputs):
-    dframes = {}
+    # We use the first input for out default out_file, so we use an OrderedDict here
+    dframes = OrderedDict()
     for fname in inputs:
         dframes[fname] = pd.read_csv(fname)
     return dframes
@@ -52,6 +55,9 @@ def parse_cmdline(argv):
     parser.add_argument("input", help="The input files to process", nargs='+')
     parser.add_argument("-g", "--group_type", help="The type of grouping to perform",
                         default=GROUP_PUCKER, choices=[GROUP_PUCKER, GROUP_PATH])
+    parser.add_argument("-o", "--out_file", help="The name of the out file.  Defaults "
+                                                 "to the first input file name with the "
+                                                 "suffix of the data type")
 
     args = None
     try:
@@ -64,13 +70,20 @@ def parse_cmdline(argv):
     return args, 0
 
 
-def group_by_pucker(dframe):
+def group_by_pucker(dframes):
+    dframe = pd.concat(dframes.values())
     dframe[GROUP_COL] = dframe['Pucker']
     return dframe
 
 
-def group_by_path(dframe):
-    pass
+def group_by_path(dframes):
+    return pd.concat(dframes.values())
+
+
+def get_out_file_name(out_file, first_in_file, group_type):
+    if out_file is not None:
+        return out_file
+    return create_out_fname(first_in_file, suffix="_" + group_type)
 
 
 def main(argv=None):
@@ -98,20 +111,23 @@ def main(argv=None):
         warning("File(s) do not match criteria for", DATA_NAMES[args.type], ":", " ,".join(invalids))
         exit(3)
 
-
     if args.group_type == GROUP_PUCKER:
-        grouped_dframe = group_by_pucker(pd.concat(dframes.values()))
+        grouped_dframe = group_by_pucker(dframes)
     elif args.group_type == GROUP_PATH:
-        # TODO: Verify TS
-        grouped_dframe = group_by_path(pd.concat(dframes.values()))
+        # TODO: Verify TS && multiple
+        if args.type != DT_TS or len(dframes) < 2:
+            warning("Cannot group by path without multiple transition state files")
+            exit(5)
+
+        grouped_dframe = group_by_path(dframes)
     else:
         warning("Unhandled group type '", args.group_type, "'")
         exit(4)
 
     # TODO: create a better outfile name
-    grouped_dframe.to_csv("test_result.csv")
+    grouped_dframe.to_csv(get_out_file_name(args.out_file, dframes.keys()[0], args.group_type), index=False)
 
-    exit(0)  # success
+    return 0  # success
 
 
 if __name__ == '__main__':
