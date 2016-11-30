@@ -388,9 +388,9 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
             test_cluster_dict = hartree_dict[selected_file_cluster]
             cluster_test_energy = float(test_cluster_dict[ENERGY_ELECTRONIC]) * HARTREE_TO_KCALMOL
             if abs(cluster_test_energy - cluster_low_e) > TRIGGER_WARN_TOL:
-                print("Energy difference within cluster '{}' is greater than {}. "
-                      "Check files: {}, {}".format(cluster_keys, TRIGGER_WARN_TOL,
-                                                   selected_file_cluster, cluster_low_filename))
+                print("Energy difference ({}) within cluster '{}' is greater than {}."
+                      "Check files: {}, {}".format(abs(cluster_test_energy - cluster_low_e), cluster_keys,
+                                                   TRIGGER_WARN_TOL, selected_file_cluster, cluster_low_filename))
             if cluster_test_energy < cluster_low_e:
                 cluster_low_filename = selected_file_cluster
                 cluster_low_e = cluster_test_energy
