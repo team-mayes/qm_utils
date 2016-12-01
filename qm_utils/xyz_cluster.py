@@ -400,20 +400,6 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
 
     return low_e_per_cluster, low_e_per_cluster_filename_list
 
-
-def update_lowest_energy_filename_list(filtered_cluster_list, xyz_dir):
-    filename_list_newpucker = []
-    for row in filtered_cluster_list:
-        filename_origin = row[FILE_NAME]
-        pucker_id = row[PUCKER]
-        updated_filename = create_out_fname(filename_origin, suffix="-newpuck_{}".format(pucker_id), base_dir=xyz_dir)
-        filename_head, filename_to_list = os.path.split(updated_filename)
-        filename_list_newpucker.append(filename_to_list)
-        copyfile(os.path.join(xyz_dir, filename_origin), updated_filename)
-
-    return filename_list_newpucker
-
-
 def read_ring_atom_ids(atom_str):
     """
     Read entry for the list of atom numbers and convert to a list of ints
@@ -512,16 +498,14 @@ def main(argv=None):
         out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
 
-        filename_list_newpucker = update_lowest_energy_filename_list(filtered_cluster_list, args.dir_xyz)
+
 
         list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
                                        ext='.txt')
-        list_f_name_new_puck = create_out_fname(args.sum_file, prefix='z_files_list_new_puck_',
-                                                base_dir=args.dir_xyz, ext='.txt')
+
         list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
                      print_message=True)
-        #list_to_file(filename_list_newpucker, list_f_name_new_puck,
-        #             list_format=None, delimiter=' ', mode='w', print_message=True)
+
 
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
