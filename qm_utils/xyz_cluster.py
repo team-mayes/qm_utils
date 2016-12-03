@@ -35,7 +35,7 @@ num_atoms_ring = 6
 ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 HARTREE_TO_KCALMOL = 627.5095
 STRUCTURE_COMPARE_TOL = 5.0
-TRIGGER_WARN_TOL = 1.00
+TRIGGER_WARN_TOL = 2.50
 
 # Hartree field headers
 FILE_NAME = 'File Name'
