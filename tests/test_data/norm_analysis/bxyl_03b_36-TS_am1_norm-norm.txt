@@ -1,0 +1,782 @@
+Normal mode summary for file bxyl_03b_36-TS_am1_norm.log
+
+Highest DoF percentages by dihedral:
+    pair   | mode |   %   | freq 
+----------------------------------
+(  1,   3) |   1  | 76.30 | -131.88
+(  1,   8) |   4  | 11.10 | 178.28
+(  1,   9) |   3  | 32.80 | 61.93
+(  5,   8) |  19  | 13.80 | 983.90
+(  5,  17) |  11  | 32.40 | 383.29
+(  9,  11) |   9  | 55.40 | 351.09
+(  9,  13) |   2  | 23.10 | 31.82
+( 13,  15) |   6  | 47.20 | 290.23
+( 13,  17) |   2  | 29.60 | 31.82
+( 17,  19) |  10  | 73.20 | 358.45
+
+=== Normal mode   1 ===
+Frequency          : -131.88
+Angle Bending   (A): 3.30
+Bond Stretching (R): 0.30
+Dihedral pairs  (D):
+         (  1,   3): 76.30
+         (  1,   8): 1.70
+         (  1,   9): 2.80
+         (  9,  11): 6.40
+         ( 13,  15): 1.30
+         ( 17,  19): 1.60
+
+=== Normal mode   2 ===
+Frequency          : 31.82
+Angle Bending   (A): 0.00
+Bond Stretching (R): 0.00
+Dihedral pairs  (D):
+         (  1,   3): 5.30
+         (  1,   8): 8.70
+         (  1,   9): 5.80
+         (  5,   8): 5.90
+         (  5,  17): 13.50
+         (  9,  13): 23.10
+         ( 13,  15): 3.40
+         ( 13,  17): 29.60
+
+=== Normal mode   3 ===
+Frequency          : 61.93
+Angle Bending   (A): 1.60
+Bond Stretching (R): 0.00
+Dihedral pairs  (D):
+         (  1,   3): 10.20
+         (  1,   8): 10.90
+         (  1,   9): 32.80
+         (  5,   8): 6.70
+         (  5,  17): 2.30
+         (  9,  11): 4.70
+         (  9,  13): 17.40
+         ( 13,  15): 4.10
+         ( 13,  17): 5.10
+
+=== Normal mode   4 ===
+Frequency          : 178.28
+Angle Bending   (A): 7.00
+Bond Stretching (R): 0.00
+Dihedral pairs  (D):
+         (  1,   3): 2.70
+         (  1,   8): 11.10
+         (  1,   9): 8.40
+         (  5,   8): 13.60
+         (  5,  17): 30.10
+         (  9,  13): 6.30
+         ( 13,  15): 0.40
+         ( 13,  17): 12.00
+         ( 17,  19): 4.30
+
+=== Normal mode   5 ===
+Frequency          : 262.41
+Angle Bending   (A): 17.20
+Bond Stretching (R): 0.70
+Dihedral pairs  (D):
+         (  1,   3): 2.20
+         (  1,   8): 1.70
+         (  1,   9): 12.10
+         (  5,   8): 4.40
+         (  5,  17): 7.20
+         (  9,  11): 2.20
+         (  9,  13): 11.20
+         ( 13,  15): 17.80
+         ( 13,  17): 16.50
+         ( 17,  19): 1.60
+
+=== Normal mode   6 ===
+Frequency          : 290.23
+Angle Bending   (A): 10.70
+Bond Stretching (R): 0.30
+Dihedral pairs  (D):
+         (  1,   8): 2.40
+         (  1,   9): 6.70
+         (  5,  17): 0.30
+         (  9,  11): 16.40
+         (  9,  13): 4.50
+         ( 13,  15): 47.20
+         ( 13,  17): 2.70
+         ( 17,  19): 1.00
+
+=== Normal mode   7 ===
+Frequency          : 301.57
+Angle Bending   (A): 13.30
+Bond Stretching (R): 0.00
+Dihedral pairs  (D):
+         (  1,   3): 1.90
+         (  1,   8): 2.70
+         (  1,   9): 4.10
+         (  5,  17): 5.20
+         (  9,  11): 17.70
+         (  9,  13): 5.60
+         ( 13,  15): 38.00
+         ( 13,  17): 2.90
+         ( 17,  19): 0.60
+
+=== Normal mode   8 ===
+Frequency          : 313.29
+Angle Bending   (A): 22.90
+Bond Stretching (R): 2.30
+Dihedral pairs  (D):
+         (  1,   3): 1.50
+         (  1,   8): 2.80
+         (  1,   9): 7.10
+         (  5,   8): 7.00
+         (  5,  17): 3.80
+         (  9,  11): 2.30
+         (  9,  13): 18.50
+         ( 13,  15): 7.00
+         ( 13,  17): 12.70
+         ( 17,  19): 7.00
+
+=== Normal mode   9 ===
+Frequency          : 351.09
+Angle Bending   (A): 2.50
+Bond Stretching (R): 0.00
+Dihedral pairs  (D):
+         (  1,   3): 4.40
+         (  1,   9): 0.40
+         (  5,  17): 0.70
+         (  9,  11): 55.40
+         (  9,  13): 2.00
+         ( 13,  15): 21.60
+         ( 17,  19): 3.60
+
+=== Normal mode  10 ===
+Frequency          : 358.45
+Angle Bending   (A): 5.00
+Bond Stretching (R): 0.00
+Dihedral pairs  (D):
+         (  1,   3): 1.00
+         (  1,   8): 0.40
+         (  5,  17): 3.50
+         (  9,  11): 4.90
+         (  9,  13): 1.80
+         ( 13,  15): 0.40
+         ( 13,  17): 2.10
+         ( 17,  19): 73.20
+
+=== Normal mode  11 ===
+Frequency          : 383.29
+Angle Bending   (A): 19.30
+Bond Stretching (R): 1.30
+Dihedral pairs  (D):
+         (  1,   3): 2.70
+         (  1,   8): 4.30
+         (  1,   9): 1.80
+         (  5,   8): 9.90
+         (  5,  17): 32.40
+         (  9,  11): 7.10
+         (  9,  13): 6.30
+         ( 13,  15): 2.50
+         ( 13,  17): 6.00
+         ( 17,  19): 1.10
+
+=== Normal mode  12 ===
+Frequency          : 428.19
+Angle Bending   (A): 21.10
+Bond Stretching (R): 1.70
+Dihedral pairs  (D):
+         (  1,   3): 2.60
+         (  1,   8): 2.30
+         (  1,   9): 13.80
+         (  5,   8): 10.00
+         (  5,  17): 9.80
+         (  9,  11): 2.80
+         (  9,  13): 15.50
+         ( 13,  15): 10.90
+         ( 13,  17): 3.40
+         ( 17,  19): 1.60
+
+=== Normal mode  13 ===
+Frequency          : 474.20
+Angle Bending   (A): 29.00
+Bond Stretching (R): 3.50
+Dihedral pairs  (D):
+         (  1,   3): 2.80
+         (  1,   8): 4.90
+         (  1,   9): 8.50
+         (  5,   8): 10.20
+         (  5,  17): 10.40
+         (  9,  11): 4.20
+         (  9,  13): 4.30
+         ( 13,  15): 3.00
+         ( 13,  17): 4.70
+         ( 17,  19): 9.80
+
+=== Normal mode  14 ===
+Frequency          : 541.38
+Angle Bending   (A): 31.40
+Bond Stretching (R): 3.30
+Dihedral pairs  (D):
+         (  1,   3): 1.20
+         (  1,   8): 1.50
+         (  1,   9): 11.70
+         (  5,   8): 1.40
+         (  5,  17): 9.90
+         (  9,  11): 5.40
+         (  9,  13): 9.60
+         ( 13,  15): 6.60
+         ( 13,  17): 7.10
+         ( 17,  19): 5.70
+
+=== Normal mode  15 ===
+Frequency          : 548.40
+Angle Bending   (A): 28.10
+Bond Stretching (R): 2.30
+Dihedral pairs  (D):
+         (  1,   3): 3.50
+         (  1,   8): 4.50
+         (  1,   9): 6.00
+         (  5,   8): 3.90
+         (  5,  17): 16.70
+         (  9,  11): 2.60
+         (  9,  13): 9.70
+         ( 13,  15): 2.00
+         ( 13,  17): 13.30
+         ( 17,  19): 2.50
+
+=== Normal mode  16 ===
+Frequency          : 620.07
+Angle Bending   (A): 26.20
+Bond Stretching (R): 1.70
+Dihedral pairs  (D):
+         (  1,   3): 4.00
+         (  1,   8): 3.50
+         (  1,   9): 12.90
+         (  5,   8): 2.80
+         (  5,  17): 3.60
+         (  9,  11): 5.50
+         (  9,  13): 15.30
+         ( 13,  15): 4.00
+         ( 13,  17): 15.20
+         ( 17,  19): 1.10
+
+=== Normal mode  17 ===
+Frequency          : 646.32
+Angle Bending   (A): 19.60
+Bond Stretching (R): 5.00
+Dihedral pairs  (D):
+         (  1,   3): 3.30
+         (  1,   8): 4.50
+         (  1,   9): 14.70
+         (  5,   8): 8.60
+         (  5,  17): 17.10
+         (  9,  11): 1.90
+         (  9,  13): 10.70
+         ( 13,  15): 2.50
+         ( 13,  17): 5.40
+         ( 17,  19): 0.40
+
+=== Normal mode  18 ===
+Frequency          : 809.94
+Angle Bending   (A): 35.70
+Bond Stretching (R): 4.20
+Dihedral pairs  (D):
+         (  1,   3): 1.60
+         (  1,   8): 6.90
+         (  1,   9): 1.20
+         (  5,   8): 1.70
+         (  5,  17): 18.00
+         (  9,  11): 0.70
+         (  9,  13): 1.70
+         ( 13,  15): 1.10
+         ( 13,  17): 15.60
+         ( 17,  19): 5.60
+
+=== Normal mode  19 ===
+Frequency          : 983.90
+Angle Bending   (A): 29.30
+Bond Stretching (R): 6.50
+Dihedral pairs  (D):
+         (  1,   3): 0.40
+         (  1,   8): 2.30
+         (  1,   9): 4.30
+         (  5,   8): 13.80
+         (  5,  17): 22.10
+         (  9,  11): 0.30
+         (  9,  13): 6.30
+         ( 13,  15): 2.30
+         ( 13,  17): 4.20
+         ( 17,  19): 2.20
+
+=== Normal mode  20 ===
+Frequency          : 1017.68
+Angle Bending   (A): 27.50
+Bond Stretching (R): 13.50
+Dihedral pairs  (D):
+         (  1,   3): 0.50
+         (  1,   8): 1.90
+         (  1,   9): 8.80
+         (  5,   8): 6.00
+         (  5,  17): 10.80
+         (  9,  11): 2.50
+         (  9,  13): 10.50
+         ( 13,  15): 4.10
+         ( 13,  17): 7.40
+         ( 17,  19): 2.00
+
+=== Normal mode  21 ===
+Frequency          : 1083.19
+Angle Bending   (A): 32.40
+Bond Stretching (R): 10.90
+Dihedral pairs  (D):
+         (  1,   3): 2.30
+         (  1,   8): 1.30
+         (  1,   9): 6.20
+         (  5,  17): 6.30
+         (  9,  11): 3.00
+         (  9,  13): 5.80
+         ( 13,  15): 2.10
+         ( 13,  17): 16.70
+         ( 17,  19): 7.90
+
+=== Normal mode  22 ===
+Frequency          : 1115.84
+Angle Bending   (A): 30.00
+Bond Stretching (R): 12.00
+Dihedral pairs  (D):
+         (  1,   3): 3.20
+         (  1,   8): 2.60
+         (  1,   9): 10.70
+         (  5,   8): 3.10
+         (  5,  17): 7.00
+         (  9,  11): 2.30
+         (  9,  13): 9.50
+         ( 13,  15): 2.80
+         ( 13,  17): 8.70
+         ( 17,  19): 3.60
+
+=== Normal mode  23 ===
+Frequency          : 1181.47
+Angle Bending   (A): 31.90
+Bond Stretching (R): 7.10
+Dihedral pairs  (D):
+         (  1,   3): 1.80
+         (  1,   8): 1.30
+         (  1,   9): 1.60
+         (  5,   8): 0.50
+         (  5,  17): 4.70
+         (  9,  11): 2.50
+         (  9,  13): 13.60
+         ( 13,  15): 7.40
+         ( 13,  17): 17.80
+         ( 17,  19): 3.50
+
+=== Normal mode  24 ===
+Frequency          : 1188.31
+Angle Bending   (A): 34.10
+Bond Stretching (R): 9.90
+Dihedral pairs  (D):
+         (  1,   3): 5.60
+         (  1,   8): 3.30
+         (  1,   9): 6.10
+         (  5,   8): 1.30
+         (  5,  17): 16.90
+         (  9,  11): 3.10
+         (  9,  13): 6.70
+         ( 13,  15): 0.70
+         ( 13,  17): 5.40
+         ( 17,  19): 3.50
+
+=== Normal mode  25 ===
+Frequency          : 1224.52
+Angle Bending   (A): 30.70
+Bond Stretching (R): 6.60
+Dihedral pairs  (D):
+         (  1,   3): 5.20
+         (  1,   8): 2.90
+         (  1,   9): 7.80
+         (  5,   8): 1.10
+         (  5,  17): 27.90
+         (  9,  11): 1.20
+         (  9,  13): 4.10
+         ( 13,  17): 5.00
+
+=== Normal mode  26 ===
+Frequency          : 1236.75
+Angle Bending   (A): 32.20
+Bond Stretching (R): 5.70
+Dihedral pairs  (D):
+         (  1,   3): 0.30
+         (  1,   8): 2.40
+         (  1,   9): 17.40
+         (  5,  17): 3.00
+         (  9,  11): 7.00
+         (  9,  13): 12.60
+         ( 13,  15): 1.30
+         ( 13,  17): 10.70
+         ( 17,  19): 0.90
+
+=== Normal mode  27 ===
+Frequency          : 1260.57
+Angle Bending   (A): 28.60
+Bond Stretching (R): 9.80
+Dihedral pairs  (D):
+         (  1,   3): 2.60
+         (  1,   8): 5.60
+         (  1,   9): 22.10
+         (  5,   8): 0.40
+         (  5,  17): 6.20
+         (  9,  11): 0.40
+         (  9,  13): 5.40
+         ( 13,  15): 2.30
+         ( 13,  17): 10.00
+         ( 17,  19): 1.20
+
+=== Normal mode  28 ===
+Frequency          : 1266.71
+Angle Bending   (A): 30.30
+Bond Stretching (R): 9.20
+Dihedral pairs  (D):
+         (  1,   9): 3.20
+         (  5,   8): 0.30
+         (  5,  17): 4.70
+         (  9,  11): 2.80
+         (  9,  13): 15.40
+         ( 13,  15): 2.40
+         ( 13,  17): 22.00
+         ( 17,  19): 2.00
+
+=== Normal mode  29 ===
+Frequency          : 1270.46
+Angle Bending   (A): 28.60
+Bond Stretching (R): 7.70
+Dihedral pairs  (D):
+         (  1,   3): 0.80
+         (  1,   8): 2.60
+         (  1,   9): 6.60
+         (  5,  17): 15.00
+         (  9,  11): 1.30
+         (  9,  13): 12.70
+         ( 13,  15): 1.50
+         ( 13,  17): 15.30
+         ( 17,  19): 0.50
+
+=== Normal mode  30 ===
+Frequency          : 1292.36
+Angle Bending   (A): 28.20
+Bond Stretching (R): 10.40
+Dihedral pairs  (D):
+         (  1,   3): 0.30
+         (  1,   9): 10.90
+         (  5,   8): 0.90
+         (  5,  17): 12.10
+         (  9,  13): 16.30
+         ( 13,  15): 3.90
+         ( 13,  17): 10.20
+         ( 17,  19): 1.30
+
+=== Normal mode  31 ===
+Frequency          : 1304.54
+Angle Bending   (A): 32.50
+Bond Stretching (R): 6.00
+Dihedral pairs  (D):
+         (  1,   3): 2.70
+         (  1,   8): 2.60
+         (  1,   9): 13.80
+         (  5,   8): 1.70
+         (  5,  17): 11.90
+         (  9,  11): 0.90
+         (  9,  13): 17.60
+         ( 13,  15): 1.20
+         ( 13,  17): 2.00
+         ( 17,  19): 1.30
+
+=== Normal mode  32 ===
+Frequency          : 1319.00
+Angle Bending   (A): 30.70
+Bond Stretching (R): 9.20
+Dihedral pairs  (D):
+         (  1,   3): 0.40
+         (  1,   8): 0.70
+         (  1,   9): 6.10
+         (  5,   8): 2.60
+         (  5,  17): 15.30
+         (  9,  11): 1.10
+         (  9,  13): 11.90
+         ( 13,  15): 2.20
+         ( 13,  17): 8.00
+         ( 17,  19): 6.70
+
+=== Normal mode  33 ===
+Frequency          : 1326.66
+Angle Bending   (A): 37.00
+Bond Stretching (R): 10.30
+Dihedral pairs  (D):
+         (  1,   3): 4.90
+         (  1,   8): 4.20
+         (  1,   9): 9.80
+         (  5,   8): 5.30
+         (  5,  17): 9.30
+         (  9,  11): 1.40
+         (  9,  13): 10.90
+         ( 13,  15): 1.30
+         ( 13,  17): 1.50
+         ( 17,  19): 0.40
+
+=== Normal mode  34 ===
+Frequency          : 1372.90
+Angle Bending   (A): 30.30
+Bond Stretching (R): 10.30
+Dihedral pairs  (D):
+         (  1,   3): 0.50
+         (  1,   8): 0.80
+         (  1,   9): 7.50
+         (  5,   8): 11.40
+         (  5,  17): 24.80
+         (  9,  11): 1.30
+         (  9,  13): 2.60
+         ( 13,  17): 3.30
+         ( 17,  19): 1.50
+
+=== Normal mode  35 ===
+Frequency          : 1389.04
+Angle Bending   (A): 35.10
+Bond Stretching (R): 15.90
+Dihedral pairs  (D):
+         (  1,   3): 3.10
+         (  1,   8): 3.80
+         (  1,   9): 5.30
+         (  5,   8): 7.50
+         (  5,  17): 11.10
+         (  9,  11): 1.80
+         (  9,  13): 2.70
+         ( 13,  15): 1.30
+         ( 13,  17): 7.40
+         ( 17,  19): 0.90
+
+=== Normal mode  36 ===
+Frequency          : 1402.15
+Angle Bending   (A): 32.70
+Bond Stretching (R): 16.50
+Dihedral pairs  (D):
+         (  1,   8): 3.20
+         (  1,   9): 9.00
+         (  5,   8): 2.20
+         (  5,  17): 2.90
+         (  9,  11): 3.20
+         (  9,  13): 9.20
+         ( 13,  15): 1.70
+         ( 13,  17): 10.50
+         ( 17,  19): 3.20
+
+=== Normal mode  37 ===
+Frequency          : 1409.56
+Angle Bending   (A): 29.60
+Bond Stretching (R): 14.70
+Dihedral pairs  (D):
+         (  1,   3): 3.50
+         (  1,   8): 0.70
+         (  1,   9): 16.80
+         (  5,   8): 0.40
+         (  5,  17): 1.90
+         (  9,  11): 0.70
+         (  9,  13): 16.90
+         ( 13,  15): 4.10
+         ( 13,  17): 3.70
+
+=== Normal mode  38 ===
+Frequency          : 1415.25
+Angle Bending   (A): 29.70
+Bond Stretching (R): 18.30
+Dihedral pairs  (D):
+         (  1,   3): 0.30
+         (  1,   8): 4.60
+         (  1,   9): 13.30
+         (  5,   8): 2.60
+         (  5,  17): 5.60
+         (  9,  11): 1.30
+         (  9,  13): 6.30
+         ( 13,  15): 3.50
+         ( 13,  17): 8.20
+         ( 17,  19): 1.60
+
+=== Normal mode  39 ===
+Frequency          : 1433.46
+Angle Bending   (A): 34.00
+Bond Stretching (R): 11.70
+Dihedral pairs  (D):
+         (  1,   3): 1.50
+         (  1,   8): 1.50
+         (  1,   9): 1.80
+         (  5,   8): 1.00
+         (  5,  17): 19.60
+         (  9,  11): 1.50
+         (  9,  13): 10.40
+         ( 13,  15): 1.20
+         ( 13,  17): 9.00
+         ( 17,  19): 1.90
+
+=== Normal mode  40 ===
+Frequency          : 1435.94
+Angle Bending   (A): 31.80
+Bond Stretching (R): 10.20
+Dihedral pairs  (D):
+         (  1,   3): 0.60
+         (  1,   8): 0.70
+         (  1,   9): 4.00
+         (  5,   8): 1.00
+         (  5,  17): 21.80
+         (  9,  11): 0.90
+         (  9,  13): 8.50
+         ( 13,  15): 0.80
+         ( 13,  17): 12.90
+         ( 17,  19): 0.90
+
+=== Normal mode  41 ===
+Frequency          : 1528.59
+Angle Bending   (A): 39.50
+Bond Stretching (R): 5.30
+Dihedral pairs  (D):
+         (  1,   8): 1.30
+         (  1,   9): 12.70
+         (  5,  17): 2.10
+         (  9,  11): 3.40
+         (  9,  13): 14.20
+         ( 13,  15): 1.60
+         ( 13,  17): 15.30
+
+=== Normal mode  42 ===
+Frequency          : 1547.48
+Angle Bending   (A): 37.70
+Bond Stretching (R): 7.50
+Dihedral pairs  (D):
+         (  1,   8): 0.50
+         (  1,   9): 4.50
+         (  5,   8): 0.50
+         (  5,  17): 15.10
+         (  9,  11): 1.30
+         (  9,  13): 2.70
+         ( 13,  15): 1.40
+         ( 13,  17): 19.90
+         ( 17,  19): 2.70
+
+=== Normal mode  43 ===
+Frequency          : 1548.89
+Angle Bending   (A): 38.20
+Bond Stretching (R): 9.70
+Dihedral pairs  (D):
+         (  1,   8): 1.10
+         (  1,   9): 11.30
+         (  5,  17): 6.90
+         (  9,  11): 3.00
+         (  9,  13): 9.70
+         ( 13,  15): 1.20
+         ( 13,  17): 11.60
+         ( 17,  19): 0.70
+
+=== Normal mode  44 ===
+Frequency          : 1595.60
+Angle Bending   (A): 38.20
+Bond Stretching (R): 10.80
+Dihedral pairs  (D):
+         (  1,   3): 5.90
+         (  1,   8): 1.30
+         (  1,   9): 19.60
+         (  5,   8): 0.70
+         (  5,  17): 10.20
+         (  9,  13): 6.40
+         ( 13,  17): 0.30
+
+=== Normal mode  45 ===
+Frequency          : 3021.46
+Angle Bending   (A): 9.90
+Bond Stretching (R): 58.40
+Dihedral pairs  (D):
+         (  1,   3): 0.70
+         (  1,   8): 1.10
+         (  1,   9): 8.00
+         (  9,  11): 2.10
+         (  9,  13): 8.10
+         ( 13,  15): 0.90
+         ( 13,  17): 3.90
+
+=== Normal mode  46 ===
+Frequency          : 3048.08
+Angle Bending   (A): 7.20
+Bond Stretching (R): 63.30
+Dihedral pairs  (D):
+         (  1,   8): 0.50
+         (  1,   9): 1.90
+         (  5,  17): 3.20
+         (  9,  11): 0.40
+         (  9,  13): 6.50
+         ( 13,  15): 1.50
+         ( 13,  17): 6.10
+         ( 17,  19): 0.40
+
+=== Normal mode  47 ===
+Frequency          : 3050.72
+Angle Bending   (A): 7.60
+Bond Stretching (R): 70.80
+Dihedral pairs  (D):
+         (  1,   8): 2.80
+         (  5,   8): 2.00
+         (  5,  17): 6.90
+         ( 13,  17): 2.40
+
+=== Normal mode  48 ===
+Frequency          : 3056.12
+Angle Bending   (A): 9.70
+Bond Stretching (R): 62.60
+Dihedral pairs  (D):
+         (  1,   8): 0.30
+         (  1,   9): 0.40
+         (  5,  17): 6.80
+         (  9,  13): 1.50
+         ( 13,  15): 1.10
+         ( 13,  17): 7.30
+         ( 17,  19): 2.30
+
+=== Normal mode  49 ===
+Frequency          : 3061.38
+Angle Bending   (A): 7.20
+Bond Stretching (R): 69.00
+Dihedral pairs  (D):
+         (  1,   3): 2.60
+         (  1,   8): 1.90
+         (  1,   9): 6.30
+         (  5,   8): 2.60
+         (  9,  13): 2.10
+
+=== Normal mode  50 ===
+Frequency          : 3104.56
+Angle Bending   (A): 4.80
+Bond Stretching (R): 75.80
+Dihedral pairs  (D):
+         (  5,   8): 1.30
+         (  5,  17): 7.50
+         ( 17,  19): 0.70
+
+=== Normal mode  51 ===
+Frequency          : 3460.49
+Angle Bending   (A): 2.60
+Bond Stretching (R): 83.40
+Dihedral pairs  (D):
+         (  1,   9): 4.50
+
+=== Normal mode  52 ===
+Frequency          : 3463.84
+Angle Bending   (A): 2.20
+Bond Stretching (R): 86.50
+Dihedral pairs  (D):
+         (  1,   9): 3.70
+
+=== Normal mode  53 ===
+Frequency          : 3467.00
+Angle Bending   (A): 2.50
+Bond Stretching (R): 81.20
+Dihedral pairs  (D):
+         (  5,  17): 3.50
+         ( 13,  17): 4.30
+
+=== Normal mode  54 ===
+Frequency          : 3485.17
+Angle Bending   (A): 2.50
+Bond Stretching (R): 80.70
+Dihedral pairs  (D):
+         (  9,  13): 3.80
+         ( 13,  17): 4.30
