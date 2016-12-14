@@ -37,7 +37,7 @@ setup(
     entry_points={
         'console_scripts': ['cp_params=qm_utils.cp_params:main',
                             'coord_to_com=qm_utils.coord_to_com:main',
-                            'xyz_cluster=qm_utils.xyz_cluster:main'
+                            'xyz_cluster=qm_utils.xyz_cluster:main',
                             'norm_analysis=qm_utils.norm_analysis:main'
                             ]
     },
