@@ -10,8 +10,9 @@ import logging
 import os
 import unittest
 
-from qm_utils.norm_analysis import read_puckering_information, create_dihedral, split_ring_index, \
-    identifying_ring_pucker_di, id_key_structures
+from qm_utils.norm_analysis import read_puckering_information, analyze_first_normal_mode, split_ring_index, main
+
+from qm_utils.qm_common import diff_lines, silent_remove, capture_stderr, capture_stdout
 
 __author__ = 'SPVicchio'
 
@@ -35,18 +36,39 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'norm_analysis')
 # Input Files #
 
 NORM_SAMPLE_FILE = os.path.join(SUB_DATA_DIR, 'bxyl_1e_32-TS_am1_norm-norm.txt')
+BAD_SAMPLE_FILE = os.path.join(SUB_DATA_DIR, 'bxyl_not_TS_structure.txt')
 NORM_SAMPLE_FILE_ONE = os.path.join(SUB_DATA_DIR, 'bxyl_eo_64-TS_am1_norm-norm.txt')
+INPUT_MAIN_NORM_FILE = os.path.join(SUB_DATA_DIR, 'z_hartree_norm_analysis_am1.txt')
 
 # Output Files #
-GOOD_OUTPUT_NORM_READ_TABLE = ['(  1,   3) |   7  | 62.70 | 309.41', '(  1,   8) |   1  | 15.40 | -159.64', '(  1,   9) |   2  | 26.00 | 50.34', '(  5,   8) |   1  | 19.60 | -159.64', '(  5,  17) |   1  | 33.80 | -159.64', '(  9,  11) |   6  | 46.30 | 269.30', '(  9,  13) |   3  | 22.60 | 131.52', '( 13,  15) |  10  | 49.20 | 410.93', '( 13,  17) |   2  | 23.00 | 50.34', '( 17,  19) |  13  | 51.80 | 514.55']
-GOOD_OUTPUT_NORM_READ_FILENAME_BOTH = 'bxyl_1e_32-TS_am1_norm.log'
-GOOD_OUTPUT_FIRST_MODE_DATA_BOTH = [['(  1,   8) ', 1, ' 15.40 ', -159.64], ['(  5,   8) ', 1, ' 19.60 ', -159.64], ['(  5,  17) ', 1, ' 33.80 ', -159.64]]
-GOOD_OUTPUT_RING_ATOMS_INDEX = [1, 5, 8, 9, 13, 17]
-GOOD_OUTPUT_RING_TS_STATUS_BOTH = [['(  1,   8) ', 'Both'], ['(  5,   8) ', 'Both'], ['(  5,  17) ', 'Both']]
-GOOD_OUTPUT_RING_TS_STATUS_ONE = [['( 17,  19) ', 'First']]
 
+GOOD_OUTPUT_NORM_READ_TABLE = ['         (  1,   3): 1.50', '         (  1,   8): 15.40', '         (  1,   9): 12.40', '         (  5,   8): 19.60', '         (  5,  17): 33.80']
+GOOD_OUTPUT_NORM_READ_FILENAME_BOTH = 'bxyl_1e_32-TS_am1_norm.log'
+GOOD_OUTPUT_RING_ATOMS_INDEX = [1, 5, 8, 9, 13, 17]
+GOOD_OUTPUT_RING_TS_STATUS_BOTH = 'yes'
+GOOD_OUTPUT_RING_TS_STATUS_ONE = 'no'
+GOOD_OUTPUT_PERCENTAGE = 81.2
+GOOD_OUTPUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1-good.txt')
+GOOD_OUTPUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_ring_puckers_z_hartree_norm_analysis_am1-good.txt')
+OUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_ring_puckers_z_hartree_norm_analysis_am1.txt')
+OUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1.txt')
 
 # Tests #
+class TestFailWell(unittest.TestCase):
+    def testHelp(self):
+        test_input = ['-h']
+        if logger.isEnabledFor(logging.DEBUG):
+            main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertFalse(output)
+        with capture_stdout(main, test_input) as output:
+            self.assertTrue("optional arguments" in output)
+
+    def testNoSuchFile(self):
+        test_input = ["-s", "ghost"]
+        with capture_stderr(main, test_input) as output:
+            self.assertTrue("Could not find" in output)
+
 
 class TestNORMFunctions(unittest.TestCase):
     def testReadNormTxtFile(self):
@@ -54,29 +76,22 @@ class TestNORMFunctions(unittest.TestCase):
         self.assertEquals(GOOD_OUTPUT_NORM_READ_FILENAME_BOTH, out_filename)
         self.assertEquals(GOOD_OUTPUT_NORM_READ_TABLE, dihedral_table)
 
-    def testCreateDihedralLines(self):
-        out_filename, first_mode_information =\
-            create_dihedral(GOOD_OUTPUT_NORM_READ_FILENAME_BOTH, GOOD_OUTPUT_NORM_READ_TABLE)
-        self.assertEquals(GOOD_OUTPUT_FIRST_MODE_DATA_BOTH, first_mode_information)
-        self.assertEquals(GOOD_OUTPUT_NORM_READ_FILENAME_BOTH, out_filename)
+    def testAnalyzeFirstNormalMode(self):
+        filename, out_percent = analyze_first_normal_mode(NORM_SAMPLE_FILE, GOOD_OUTPUT_NORM_READ_TABLE, GOOD_OUTPUT_RING_ATOMS_INDEX)
+        self.assertEquals(out_percent, GOOD_OUTPUT_PERCENTAGE)
 
     def testRingIndexSplit(self):
         sorted_ring_atoms_index = split_ring_index(DEF_RING_ORDER)
         self.assertEquals(GOOD_OUTPUT_RING_ATOMS_INDEX,sorted_ring_atoms_index)
 
-    def testIdentifyingRingPuckerDiBoth(self):
-        out_filename, status_ring_puckering = identifying_ring_pucker_di(GOOD_OUTPUT_NORM_READ_FILENAME_BOTH, GOOD_OUTPUT_FIRST_MODE_DATA_BOTH,
-                                   GOOD_OUTPUT_RING_ATOMS_INDEX)
-        self.assertEquals(GOOD_OUTPUT_RING_TS_STATUS_BOTH, status_ring_puckering)
-        self.assertEquals(GOOD_OUTPUT_NORM_READ_FILENAME_BOTH, out_filename)
-
-    def testIdentifyingRingPuckerDiOne(self):
-        out_filename, dihedral_table = read_puckering_information(NORM_SAMPLE_FILE_ONE, SUB_DATA_DIR)
-        out_filename, first_mode_information =\
-            create_dihedral(out_filename, dihedral_table)
-        out_filename, status_ring_puckering = identifying_ring_pucker_di(out_filename, first_mode_information,
-                                   GOOD_OUTPUT_RING_ATOMS_INDEX)
-        self.assertEquals(GOOD_OUTPUT_RING_TS_STATUS_ONE, status_ring_puckering)
-
-    def testIdentifyingKeyStructures(self):
-        id_key_structures(GOOD_OUTPUT_NORM_READ_FILENAME_BOTH,GOOD_OUTPUT_RING_TS_STATUS_BOTH)
+class TestMain(unittest.TestCase):
+    def testMain(self):
+        try:
+            test_input = ["-s", INPUT_MAIN_NORM_FILE, "-r", DEF_RING_ORDER]
+            main(test_input)
+            self.assertFalse(diff_lines(OUT_FILE_LIST_PUCK, GOOD_OUTPUT_FILE_LIST_PUCK))
+            self.assertFalse(diff_lines(OUT_FILE_LIST_EXO, GOOD_OUTPUT_FILE_LIST_EXO))
+        finally:
+            pass
+            silent_remove(OUT_FILE_LIST_PUCK)
+            silent_remove(OUT_FILE_LIST_EXO)

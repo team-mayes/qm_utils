@@ -4,21 +4,19 @@
 """
 The purpose of this python script to analyze hartree norm output files for TS structures.
 The output txt files from hartree contain meaningful information on the dihedral angles and can be used
-to ID meaningful ring puckering TS structures and less significant exocyclic TS strctures. The output is a list
+to ID meaningful ring puckering TS structures and less significant encyclical TS structures. The output is a list
 of meaningful TS structures that should have IRC calculations performed on them.
 """
 
 from __future__ import print_function
 
 import argparse
+import itertools
 import os
 import sys
-from shutil import copyfile
 
-import itertools
-import numpy as np
-from qm_common import (GOOD_RET, list_to_dict, create_out_fname, write_csv, list_to_file, warning, IO_ERROR,
-                       InvalidDataError, INVALID_DATA, read_csv_to_dict, get_csv_fieldnames, INPUT_ERROR)
+from qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
+                       InvalidDataError, INVALID_DATA, INPUT_ERROR)
 
 try:
     # noinspection PyCompatibility
@@ -29,13 +27,11 @@ except ImportError:
 
 __author__ = 'SPVicchio'
 
-
-
-
 # Constants #
 
 DEF_RING_ORDER = '8,1,9,13,17,5'
 FIRST_NORMAL_MODE = '   1  '
+RING_PUCKER_TOL = 25.0
 
 # Field Headers
 NORM_FILE_END = '=== Normal mode   2 ==='
@@ -55,36 +51,17 @@ def read_puckering_information(filename, norm_dir):
     highest_dihedral_table = []
     norm_file_path = create_out_fname(filename, base_dir=norm_dir, ext='.txt')
     with open(norm_file_path, mode='r') as file_reading:
-        log_file_information = file_reading.next().strip('\n').replace(REMOVE_BEGINNING_STRING,'')
-        for lines in itertools.islice(file_reading,4,14):
+        log_file_information = file_reading.next().strip('\n').replace(REMOVE_BEGINNING_STRING, '')
+        for lines in itertools.islice(file_reading, 20, 25):
             lines = lines.strip('\n')
-            highest_dihedral_table.append(lines)
+            if not lines:
+                break
+            else:
+                highest_dihedral_table.append(lines)
     file_reading.close()
 
     return log_file_information, highest_dihedral_table
 
-def create_dihedral(log_file_information, highest_dihedral_table):
-    """ Parses the dihedral table to capture only the normal mode 1 information. Mode 1 corresponds to the first normal
-        mode (which for TS structures is negative).
-
-    :param log_file_information: the name of the log file that the orginal normal mode analysis was performed
-    :param highest_dihedral_table: the highest DoF dihedral table
-    :return: The name of the Gaussian Log File and the information corresponding to the first normal mode.
-    """
-    ts_first_modes_dihedral_info = []
-    for table_line in highest_dihedral_table:
-        table_split = table_line.split("|")
-        pair = table_split[0]
-        mode = int(table_split[1])
-        percent = table_split[2]
-        freq = float(table_split[3])
-        if mode == 1:
-            if freq > 0:
-                print("The 1st normal mode has a frequency greater than 0! "
-                      "Please files to make sure that these structures are TS.")
-            elif freq < 0:
-                ts_first_modes_dihedral_info.append([pair, mode, percent, freq])
-    return log_file_information, ts_first_modes_dihedral_info
 
 def split_ring_index(ring_order):
     """ Takes a list of strings, and converts them into a list of integers that are sorted.
@@ -97,45 +74,19 @@ def split_ring_index(ring_order):
 
     return sorted_ring_atom_index
 
-def identifying_ring_pucker_di(filename, first_mode_di_info, sorted_ring_atom_index):
 
-    status_first_normal = []
+def analyze_first_normal_mode(filename, first_di_normal_mode_info, sorted_ring_atom_index):
+    total_di_percent = 0.00
+    for line in first_di_normal_mode_info:
+        split_info = line.split(":")
+        percent_line = float(split_info[1])
+        ordered_pair = split_info[0].split(',')
+        first_di_atom_in_pair = int(ordered_pair[0].strip('         ('))
+        second_di_atom_in_pair = int(ordered_pair[1].strip(')'))
+        if first_di_atom_in_pair in sorted_ring_atom_index and second_di_atom_in_pair in sorted_ring_atom_index:
+            total_di_percent += percent_line
 
-    for line in first_mode_di_info:
-        pair_1 = line[0].strip("(")
-        pair_2 = pair_1.strip(") ")
-        first_di_atom = map(int, pair_2.split(','))[0]
-        second_di_atom = map(int, pair_2.split(','))[1]
-
-        if first_di_atom in sorted_ring_atom_index:
-            if second_di_atom in sorted_ring_atom_index:
-                status_first_normal.append([line[0], 'Both'])
-            else:
-                print("For {}, the second atom ({}) is not located in the ring."
-                      .format(filename, second_di_atom))
-                status_first_normal.append([line[0], 'First'])
-        else:
-            print("For {}, the first atom {} is not located in the ring.".
-                  format(filename, first_di_atom))
-            status_first_normal.append([line[0], 'Neither'])
-
-    return filename, status_first_normal
-
-def id_key_structures(filename, mode_status):
-    number_TS_dihedrals = len(mode_status)
-    match_count = 0
-    for line in mode_status:
-        if line[1] == 'Both':
-            match_count = match_count + 1
-
-    if match_count == number_TS_dihedrals:
-        ring_pucker = 'yes'
-    elif (number_TS_dihedrals-match_count) == 1:
-        ring_pucker = 'yes'
-    else:
-        ring_pucker = 'no'
-
-    return filename, ring_pucker
+    return filename, total_di_percent
 
 
 def parse_cmdline(argv):
@@ -150,9 +101,11 @@ def parse_cmdline(argv):
     parser = argparse.ArgumentParser(description="norm_analysis.py parses through the hartree output files based on "
                                                  "running Gaussian's normal analysis. Gaussian is able to identify the "
                                                  "contributions for each imaginary and normal frequencies with respect"
-                                                 "bonds, angles, and most important dihedrals. In order to differentiate "
+                                                 "bonds, angles, and most important dihedrals. In order to "
+                                                 "differentiate "
                                                  "ring pucker and exocyclic group TS, large contributions to the "
-                                                 "imaginery frequency must come from dihedral angles with the ring atoms"
+                                                 "imaginery frequency must come from dihedral angles with the ring "
+                                                 "atoms "
                                                  "at the middle pair.")
 
     parser.add_argument('-d', "--dir_norm", help="The directory where the hartree norm files can be found.",
@@ -160,8 +113,8 @@ def parse_cmdline(argv):
     parser.add_argument('-s', "--sum_file", help="List of the files complete in Hartree norm.",
                         default=None)
     parser.add_argument('-r', "--ring_order", help="List of the atom ids in any order.")
-
-
+    parser.add_argument('-t', "--tol", help="The percentage tolerance for deciding if the dihedral percentage is"
+                                            " sufficient or not.")
 
     args = None
     try:
@@ -171,11 +124,11 @@ def parse_cmdline(argv):
         elif not os.path.isfile(args.sum_file):
             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
         # Finally, if the summary file is there, and there is no dir_xyz provided
-        if args.dir_xyz is None:
-            args.dir_xyz = os.path.dirname(args.sum_file)
+        if args.dir_norm is None:
+            args.dir_norm = os.path.dirname(args.sum_file)
         # if a  dir_xyz is provided, ensure valid
-        elif not os.path.isdir(args.dir_xyz):
-            raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
+        elif not os.path.isdir(args.dir_norm):
+            raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_norm', args.dir_norm))
 
     except (KeyError, InvalidDataError) as e:
         warning(e)
@@ -194,6 +147,7 @@ def parse_cmdline(argv):
 
     return args, GOOD_RET
 
+
 def main(argv=None):
     """
     Runs the main program
@@ -205,14 +159,33 @@ def main(argv=None):
         return ret
     try:
 
-        list_of_gaussian_norm = read_csv_to_dict(args.sum_file, mode='r')
+        sorted_ring_order = split_ring_index(args.ring_order)
 
+        ring_pucker_ts_list = []
+        exo_pucker_ts_list = []
+
+        with open(args.sum_file) as f:
+            list_of_gaussian_norm = f.read().splitlines()
         for hartree_filename in list_of_gaussian_norm:
-            out_filename, dihedral_table = read_puckering_information(hartree_filename, args.dir_norm)
-            out_filename, first_mode_information = create_dihedral(out_filename, dihedral_table)
-            out_filename, status_ring_puckering = identifying_ring_pucker_di(out_filename,
-                                                        first_mode_information,args.ring_order)
-            out_filename, ring_pucker_status =
+            out_filename, first_mode_di_info = read_puckering_information(hartree_filename, args.dir_norm)
+            out_filename, file_percentage = analyze_first_normal_mode(out_filename, first_mode_di_info,
+                                                                      sorted_ring_order)
+
+            if file_percentage > RING_PUCKER_TOL:
+                ring_pucker_ts_list.append([out_filename, file_percentage])
+            elif file_percentage < RING_PUCKER_TOL:
+                exo_pucker_ts_list.append([out_filename, file_percentage])
+
+        filename_ring_TS = create_out_fname(args.sum_file, prefix='z_norm-analysis_TS_ring_puckers_',
+                                            base_dir=args.dir_norm, ext='.txt')
+
+        filename_exo_TS = create_out_fname(args.sum_file, prefix='z_norm-analysis_TS_exo_puckers_',
+                                           base_dir=args.dir_norm, ext='.txt')
+
+        list_to_file(ring_pucker_ts_list, filename_ring_TS, list_format=None, delimiter=' ', mode='w',
+                     print_message=True)
+
+        list_to_file(exo_pucker_ts_list, filename_exo_TS, list_format=None, delimiter=' ', mode='w', print_message=True)
 
     except IOError as e:
         warning(e)
