@@ -16,7 +16,7 @@ bxyl_e2_66-TS_am1_norm.log 90.3
 bxyl_e3_13-TS_am1_norm.log 86.8
 bxyl_e3_22-TS_am1_norm.log 91.8
 bxyl_e4_23-TS_am1_norm.log 83.6
-bxyl_e4_34-TS_am1_norm.log 83.5
+bxyl_e4_34-TS_am1_norm.log 83.5z
 bxyl_e4_35-TS_am1_norm.log 83.6
 bxyl_e5_27-TS_am1_norm.log 89.5
 bxyl_oh5_29-TS_am1_norm.log 96.1

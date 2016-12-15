@@ -6,8 +6,9 @@ Uses cp_snap and vmd clustering output to create a list of unique conformations
 """
 
 from __future__ import print_function
-from qm_common import (read_csv_old, conv_map_old, write_csv_old, GOOD_RET, warning, IO_ERROR, InvalidDataError,
-                       INVALID_DATA)
+from qm_utils.qm_common import (read_csv_old, conv_map_old, write_csv_old, GOOD_RET, warning, IO_ERROR,
+                                InvalidDataError,
+                                INVALID_DATA)
 import operator
 from optparse import OptionParser
 import sys
@@ -126,7 +127,8 @@ def parse_cmdline(sysargs):
         argv = sys.argv[1:]
 
     # initialize the parser object:
-    parser = argparse.ArgumentParser(description='Combines outputReads in best output file and generates new input files.')
+    parser = argparse.ArgumentParser(
+        description='Combines outputReads in best output file and generates new input files.')
     parser.add_argument("-f", "--file", help="The fitevb output file to read, if some values are to be obtained from "
                                              "a previous fitEVB run.",
                         default=None)

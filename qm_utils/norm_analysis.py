@@ -15,7 +15,7 @@ import itertools
 import os
 import sys
 
-from .qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
+from qm_utils.qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
                         InvalidDataError, INVALID_DATA, INPUT_ERROR)
 
 try:
