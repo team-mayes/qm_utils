@@ -113,8 +113,6 @@ def parse_cmdline(argv):
     parser.add_argument('-s', "--sum_file", help="List of the files complete in Hartree norm.",
                         default=None)
     parser.add_argument('-r', "--ring_order", help="List of the atom ids in any order.")
-    parser.add_argument('-t', "--tol", help="The percentage tolerance for deciding if the dihedral percentage is"
-                                            " sufficient or not.")
 
     args = None
     try:
