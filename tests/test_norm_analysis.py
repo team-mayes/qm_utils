@@ -16,7 +16,6 @@ from qm_utils.qm_common import diff_lines, silent_remove, capture_stderr, captur
 
 __author__ = 'SPVicchio'
 
-
 # Constants #
 
 DEF_RING_ORDER = '8,1,9,13,17,5'
@@ -25,7 +24,6 @@ DEF_RING_ORDER = '8,1,9,13,17,5'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
-
 
 # Directories #
 
@@ -42,16 +40,20 @@ INPUT_MAIN_NORM_FILE = os.path.join(SUB_DATA_DIR, 'z_hartree_norm_analysis_am1.t
 
 # Output Files #
 
-GOOD_OUTPUT_NORM_READ_TABLE = ['         (  1,   3): 1.50', '         (  1,   8): 15.40', '         (  1,   9): 12.40', '         (  5,   8): 19.60', '         (  5,  17): 33.80']
+GOOD_OUTPUT_NORM_READ_TABLE = ['         (  1,   3): 1.50', '         (  1,   8): 15.40', '         (  1,   9): 12.40',
+                               '         (  5,   8): 19.60', '         (  5,  17): 33.80']
 GOOD_OUTPUT_NORM_READ_FILENAME_BOTH = 'bxyl_1e_32-TS_am1_norm.log'
 GOOD_OUTPUT_RING_ATOMS_INDEX = [1, 5, 8, 9, 13, 17]
 GOOD_OUTPUT_RING_TS_STATUS_BOTH = 'yes'
 GOOD_OUTPUT_RING_TS_STATUS_ONE = 'no'
 GOOD_OUTPUT_PERCENTAGE = 81.2
-GOOD_OUTPUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1-good.txt')
-GOOD_OUTPUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_ring_puckers_z_hartree_norm_analysis_am1-good.txt')
-OUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_ring_puckers_z_hartree_norm_analysis_am1.txt')
-OUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR,'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1.txt')
+GOOD_OUTPUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR,
+                                         'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1-good.txt')
+GOOD_OUTPUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR,
+                                          'z_norm-analysis_TS_ring_puckers_z_hartree_norm_analysis_am1-good.txt')
+OUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR, 'z_norm-analysis_TS_ring_puckers_z_hartree_norm_analysis_am1.txt')
+OUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR, 'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1.txt')
+
 
 # Tests #
 class TestFailWell(unittest.TestCase):
@@ -77,12 +79,14 @@ class TestNORMFunctions(unittest.TestCase):
         self.assertEquals(GOOD_OUTPUT_NORM_READ_TABLE, dihedral_table)
 
     def testAnalyzeFirstNormalMode(self):
-        filename, out_percent = analyze_first_normal_mode(NORM_SAMPLE_FILE, GOOD_OUTPUT_NORM_READ_TABLE, GOOD_OUTPUT_RING_ATOMS_INDEX)
+        filename, out_percent = analyze_first_normal_mode(NORM_SAMPLE_FILE, GOOD_OUTPUT_NORM_READ_TABLE,
+                                                          GOOD_OUTPUT_RING_ATOMS_INDEX)
         self.assertEquals(out_percent, GOOD_OUTPUT_PERCENTAGE)
 
     def testRingIndexSplit(self):
         sorted_ring_atoms_index = split_ring_index(DEF_RING_ORDER)
-        self.assertEquals(GOOD_OUTPUT_RING_ATOMS_INDEX,sorted_ring_atoms_index)
+        self.assertEquals(GOOD_OUTPUT_RING_ATOMS_INDEX, sorted_ring_atoms_index)
+
 
 class TestMain(unittest.TestCase):
     def testMain(self):
