@@ -176,16 +176,16 @@ def main(argv=None):
             elif file_percentage < RING_PUCKER_TOL:
                 exo_pucker_ts_list.append([out_filename, file_percentage])
 
-        filename_ring_TS = create_out_fname(args.sum_file, prefix='z_norm-analysis_TS_ring_puckers_',
+        filename_ring_ts = create_out_fname(args.sum_file, prefix='z_norm-analysis_TS_ring_puckers_',
                                             base_dir=args.dir_norm, ext='.txt')
 
-        filename_exo_TS = create_out_fname(args.sum_file, prefix='z_norm-analysis_TS_exo_puckers_',
+        filename_exo_ts = create_out_fname(args.sum_file, prefix='z_norm-analysis_TS_exo_puckers_',
                                            base_dir=args.dir_norm, ext='.txt')
 
-        list_to_file(ring_pucker_ts_list, filename_ring_TS, list_format=None, delimiter=' ', mode='w',
+        list_to_file(ring_pucker_ts_list, filename_ring_ts, list_format=None, delimiter=' ', mode='w',
                      print_message=True)
 
-        list_to_file(exo_pucker_ts_list, filename_exo_TS, list_format=None, delimiter=' ', mode='w', print_message=True)
+        list_to_file(exo_pucker_ts_list, filename_exo_ts, list_format=None, delimiter=' ', mode='w', print_message=True)
 
     except IOError as e:
         warning(e)
