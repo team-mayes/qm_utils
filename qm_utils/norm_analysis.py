@@ -15,8 +15,8 @@ import itertools
 import os
 import sys
 
-from qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
-                       InvalidDataError, INVALID_DATA, INPUT_ERROR)
+from .qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
+                        InvalidDataError, INVALID_DATA, INPUT_ERROR)
 
 try:
     # noinspection PyCompatibility
@@ -31,7 +31,7 @@ __author__ = 'SPVicchio'
 
 DEF_RING_ORDER = '8,1,9,13,17,5'
 FIRST_NORMAL_MODE = '   1  '
-RING_PUCKER_TOL = 25.0
+RING_PUCKER_TOL = 75.0
 
 # Field Headers
 NORM_FILE_END = '=== Normal mode   2 ==='
@@ -52,7 +52,7 @@ def read_puckering_information(filename, norm_dir):
     norm_file_path = create_out_fname(filename, base_dir=norm_dir, ext='.txt')
     with open(norm_file_path, mode='r') as file_reading:
         log_file_information = file_reading.next().strip('\n').replace(REMOVE_BEGINNING_STRING, '')
-        for lines in itertools.islice(file_reading, 20, 25):
+        for lines in itertools.islice(file_reading, 20, 35):
             lines = lines.strip('\n')
             if not lines:
                 break

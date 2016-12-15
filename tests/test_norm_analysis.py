@@ -41,12 +41,13 @@ INPUT_MAIN_NORM_FILE = os.path.join(SUB_DATA_DIR, 'z_hartree_norm_analysis_am1.t
 # Output Files #
 
 GOOD_OUTPUT_NORM_READ_TABLE = ['         (  1,   3): 1.50', '         (  1,   8): 15.40', '         (  1,   9): 12.40',
-                               '         (  5,   8): 19.60', '         (  5,  17): 33.80']
+                               '         (  5,   8): 19.60', '         (  5,  17): 33.80', '         (  9,  11): 2.30',
+                               '         ( 13,  17): 6.90']
 GOOD_OUTPUT_NORM_READ_FILENAME_BOTH = 'bxyl_1e_32-TS_am1_norm.log'
 GOOD_OUTPUT_RING_ATOMS_INDEX = [1, 5, 8, 9, 13, 17]
 GOOD_OUTPUT_RING_TS_STATUS_BOTH = 'yes'
 GOOD_OUTPUT_RING_TS_STATUS_ONE = 'no'
-GOOD_OUTPUT_PERCENTAGE = 81.2
+GOOD_OUTPUT_PERCENTAGE = 88.1
 GOOD_OUTPUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR,
                                          'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1-good.txt')
 GOOD_OUTPUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR,
@@ -81,7 +82,7 @@ class TestNORMFunctions(unittest.TestCase):
     def testAnalyzeFirstNormalMode(self):
         filename, out_percent = analyze_first_normal_mode(NORM_SAMPLE_FILE, GOOD_OUTPUT_NORM_READ_TABLE,
                                                           GOOD_OUTPUT_RING_ATOMS_INDEX)
-        self.assertEquals(out_percent, GOOD_OUTPUT_PERCENTAGE)
+        self.assertEquals(round(out_percent, ndigits=3), GOOD_OUTPUT_PERCENTAGE)
 
     def testRingIndexSplit(self):
         sorted_ring_atoms_index = split_ring_index(DEF_RING_ORDER)
@@ -96,6 +97,5 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(OUT_FILE_LIST_PUCK, GOOD_OUTPUT_FILE_LIST_PUCK))
             self.assertFalse(diff_lines(OUT_FILE_LIST_EXO, GOOD_OUTPUT_FILE_LIST_EXO))
         finally:
-            pass
             silent_remove(OUT_FILE_LIST_PUCK)
             silent_remove(OUT_FILE_LIST_EXO)
