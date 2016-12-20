@@ -1,12 +1,12 @@
 from __future__ import print_function
 
-#!/usr/bin/env python
 from collections import OrderedDict
+from collections import defaultdict
 
 import pandas as pd
 
 from qm_utils.hartree_valid import verify_local_minimum, verify_transition_state
-from qm_utils.qm_common import warning, create_out_fname
+from qm_utils.qm_common import warning, create_out_fname, InvalidDataError
 
 """
 Groups output from Hartree by pucker (for local minima) or path (for transition states).
@@ -25,8 +25,15 @@ DATA_NAMES = {DT_TS: "transition state", DT_LM: "local minima"}
 GROUP_PUCKER = 'pucker'
 GROUP_PATH = 'path'
 GROUP_COL = 'group_name'
+# Boltzmann Constant in kcal/mol K
+K_B = 0.001985877534
 
-# Logic
+# Defaults #
+
+DEFAULT_TEMPERATURE = 298.15
+
+
+# Logic #
 
 
 def create_dframes(inputs):
@@ -53,11 +60,12 @@ def parse_cmdline(argv):
     #                     default=DEF_IRATE_FILE, type=read_input_rates)
     parser.add_argument("type", help="The type of data to group", choices=DATA_NAMES.keys())
     parser.add_argument("input", help="The input files to process", nargs='+')
-    parser.add_argument("-g", "--group_type", help="The type of grouping to perform",
-                        default=GROUP_PUCKER, choices=[GROUP_PUCKER, GROUP_PATH])
     parser.add_argument("-o", "--out_file", help="The name of the out file.  Defaults "
                                                  "to the first input file name with the "
                                                  "suffix of the data type")
+    parser.add_argument("-t", "--temperature", help="The temperature to use for the KBT "
+                                                    "calculation (defaults to {})".format(DEFAULT_TEMPERATURE),
+                        default=DEFAULT_TEMPERATURE)
 
     args = None
     try:
@@ -86,6 +94,23 @@ def get_out_file_name(out_file, first_in_file, group_type):
     return create_out_fname(first_in_file, suffix="_" + group_type)
 
 
+def bin_dframes_by_type(dframes):
+    binned_frames = defaultdict(list)
+    for dframe in dframes:
+        if (verify_local_minimum(dframe)):
+            binned_frames[DT_LM].append(dframe)
+        elif (verify_transition_state(dframe)):
+            binned_frames[DT_TS].append(dframe)
+        else:
+            raise InvalidDataError("Data frame is neither a local minimum nor a transition state")
+    return binned_frames
+
+
+def calc_boltz(dframes):
+
+    pass
+
+
 def main(argv=None):
     args, ret = parse_cmdline(argv)
 
@@ -94,35 +119,21 @@ def main(argv=None):
 
     dframes = create_dframes(args.input)
 
-    invalids = []
-    if args.type == DT_LM:
-        for dname, dframe in dframes.items():
-            if not verify_local_minimum(dframe):
-                invalids.append(dname)
-    elif args.type == DT_TS:
-        for dname, dframe in dframes.items():
-            if not verify_transition_state(dframe):
-                invalids.append(dname)
-    else:
-        warning("Unhandled data type '", args.type, "'")
-        exit(1)
+    try:
+        binned_dframes = bin_dframes_by_type(dframes)
+    except InvalidDataError as e:
+        warning("Invalid input: ", e)
+        return 6
 
-    if len(invalids) > 0:
-        warning("File(s) do not match criteria for", DATA_NAMES[args.type], ":", " ,".join(invalids))
-        exit(3)
+    if len(binned_dframes[DT_LM]) == 0:
+        warning("You must specify at least one local minimum file")
+        return 7
 
-    if args.group_type == GROUP_PUCKER:
-        grouped_dframe = group_by_pucker(dframes)
-    elif args.group_type == GROUP_PATH:
-        # TODO: Verify TS && multiple
-        if args.type != DT_TS or len(dframes) < 2:
-            warning("Cannot group by path without multiple transition state files")
-            exit(5)
+    if args.type == DT_TS and len(binned_dframes[DT_TS]) == 0:
+        warning("Type", DT_TS, "requires at least one transition state file")
+        return 8
 
-        grouped_dframe = group_by_path(dframes)
-    else:
-        warning("Unhandled group type '", args.group_type, "'")
-        exit(4)
+    calc_boltz(dframes)
 
     # TODO: create a better outfile name
     grouped_dframe.to_csv(get_out_file_name(args.out_file, dframes.keys()[0], args.group_type), index=False)

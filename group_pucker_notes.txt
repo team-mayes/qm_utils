@@ -1,0 +1,9 @@
+New columns:
+Path for ts (ts_path):
+- look for basename +
+-- ircropt.log (lm)
+-- ircfopt.log (lm)
+- get puckering ID
+- Output is sorted by pucker name (lm1-ts-lm2) (sort lm alphabetically)
+Boltzmann Factor(boltz_factor):
+- exponent (negative gibbs free energy(G298 (Hartrees))/kbt (calculated from provided temperature 298.15 default))
