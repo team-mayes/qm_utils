@@ -32,7 +32,7 @@ __author__ = 'SPVicchio'
 DEF_RING_ORDER = '8,1,9,13,17,5'
 FIRST_NORMAL_MODE = '   1  '
 RING_PUCKER_TOL = 45.0
-# Testing to see is this works?
+# Testing to see is this works??
 
 # Field Headers
 NORM_FILE_END = '=== Normal mode   2 ==='
