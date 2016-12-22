@@ -15,7 +15,6 @@ import itertools
 import os
 import sys
 import csv
-
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
                         InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
 
@@ -71,9 +70,6 @@ def create_pucker_gibbs_dict(dict, job_type, qm_method):
     for row in dict:
         pucker = row[PUCKER]
         gibbs = float(row[GIBBS])*HARTREE_TO_KCALMOL
-
-        puckering_dict[PUCKER]=pucker
-
         puckering_dict[pucker] = gibbs
 
     #TODO: need to have a Boltzmann function for when multiple local minimum structures are present
