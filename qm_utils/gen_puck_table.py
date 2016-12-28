@@ -51,17 +51,20 @@ def read_hartree_files(filename, hartree_dir):
     job_type = split_info[0]
 
     if job_type == 'optall':
-        job_type = 'Local Min'
+        job_type = '-lm'
+    elif job_type == 'TS':
+        job_type = '-ts'
+    else:
+        print('Job Type is not in the system!!!!!!')
 
     if hartree_dict[0][FUNCTIONAL] == MISSING_FUNCTIONAL:
-        qm_method = split_info[2].split('.')[0]
+        qm_method = split_info[2].split('.')[0] + job_type
         print('Collected level of theory from filename: {} level matches {}?'
                                 .format(qm_method,base_filename))
     else:
-        qm_method = hartree_dict[0][FUNCTIONAL]
+        qm_method = hartree_dict[0][FUNCTIONAL] + job_type
 
     return hartree_headers, hartree_dict, job_type ,qm_method
-
 
 def create_pucker_gibbs_dict(dict, job_type, qm_method):
 
@@ -108,6 +111,11 @@ def creating_level_dict_of_dict(lowest_energy_dict, qm_method):
 
     return level_of_theory_dict
 
+
+#def compare_ts_and_lm_energies(level_of_theory_dict):
+
+#    for keys in level_of_theory_dict.keys:
+#        print(keys.split('-')[0])
 
 def find_files_by_dir(tgt_dir, pat):
     """Recursively searches the target directory tree for files matching the given pattern.

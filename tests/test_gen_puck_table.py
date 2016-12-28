@@ -44,23 +44,32 @@ GOOD_PUCKERING_DICT = {'4c1': -170479.2753145665, '1s3': -170473.791509046, '1c4
                        '2so': -170473.81786444498, 'os2': -170473.80719678348}
 GOOD_REL_PUCKERING_DICT = {'5s1': 6.1, '1s5': 6.1, '1s3': 5.5, '3s1': 5.5,
                            'os2': 5.5, '2so': 5.5, '4c1': 0.0, '1c4': 0.0}
-GOOD_QM_METHOD = 'B3LYP'
-GOOD_DICT_OF_DICTS = {'B3LYP': {'2so': 5.5, 'os2': 5.5, '1s5': 6.1, '5s1': 6.1, '1s3': 5.5,
+GOOD_QM_METHOD = 'B3LYP-lm'
+GOOD_DICT_OF_DICTS = {'B3LYP-lm': {'2so': 5.5, 'os2': 5.5, '1s5': 6.1, '5s1': 6.1, '1s3': 5.5,
                                 '1c4': 0.0, '4c1': 0.0, '3s1': 5.5}}
+GOOD_DICT_OF_DICTS_AM1_TS = {'am1-ts': {'14b': 10.929960471, 'e5': 12.4830464835, 'o3b': 10.887917334499999,
+                                        '5e': 12.4830464835, 'b14': 10.929960471, '25b': 10.929960471,
+                                        '1e': 12.4830464835, 'bo3': 10.887917334499999, 'e1': 12.4830464835,
+                                        'b25': 10.929960471}}
+
+GOOD_DICT_OF_DICTS_AM1_LM = {'am1-lm': {'os2': 9.8700969255, '1c4': 7.927955023, '2so': 9.8763720205,
+                                        '4c1': 7.927955023, '1s5': 9.966105879, '1s3': 9.870724435000001,
+                                        '5s1': 9.966105879, '3s1': 9.8700969255}}
+
 
 class TestGenPuckerTableFunctions(unittest.TestCase):
     def testReadHartreeFiles(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE, SUB_DATA_DIR)
-        self.assertEquals(qm_method,'B3LYP')
+        self.assertEquals(qm_method,'B3LYP-lm')
 
     def testReadHartreeFilesMissing(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_MISSING, SUB_DATA_DIR)
-        self.assertEquals(qm_method,'am1')
-        self.assertEquals(job_type,'Local Min')
+        self.assertEquals(qm_method,'am1-lm')
+        self.assertEquals(job_type,'-lm')
 
     def testReadHartreeFilesTS(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_TS, SUB_DATA_DIR)
-        self.assertEquals(job_type,'TS')
+        self.assertEquals(job_type,'-ts')
 
     def testCreatingPuckerGibbsDict(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE, SUB_DATA_DIR)
@@ -74,6 +83,16 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
     def testCreatingLevelDictOfDicts(self):
         level_of_theory_dict = creating_level_dict_of_dict(GOOD_REL_PUCKERING_DICT, GOOD_QM_METHOD)
         self.assertEquals(level_of_theory_dict,GOOD_DICT_OF_DICTS)
+        print(level_of_theory_dict)
+
+    def testCompareTsAndLmEnergies(self):
+        hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_TS, SUB_DATA_DIR)
+        puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
+        level_of_theory_dict = creating_level_dict_of_dict(puckering_dict, qm_method_n)
+
+        print(level_of_theory_dict)
+#        compare_ts_and_lm_energies(level_of_theory_dict)
+
 
 
 #    def testMain(self):
