@@ -84,22 +84,31 @@ def create_pucker_gibbs_dict(dict, job_type, qm_method):
     return puckering_dict, qm_method
 
 
-def rel_energy_values(pucker_dict):
+def rel_energy_values(pucker_dict1, pucker_dict2):
 
     lowest_energy_value = 0
     lowest_energy_puck = []
     lowest_energy_puckering = {}
 
-    for check_puck in pucker_dict:
-        if pucker_dict[check_puck] < lowest_energy_value:
-            lowest_energy_value = pucker_dict[check_puck]
+    for check_puck in pucker_dict1:
+        if pucker_dict1[check_puck] < lowest_energy_value:
+            lowest_energy_value = pucker_dict1[check_puck]
+            lowest_energy_puck = check_puck
+
+    for check_puck in pucker_dict2:
+        if pucker_dict2[check_puck] < lowest_energy_value:
+            lowest_energy_value = pucker_dict2[check_puck]
             lowest_energy_puck = check_puck
 
     print('The lowest energy pucker was {} ({})'.format(lowest_energy_puck, lowest_energy_value))
 
-    for pucker in pucker_dict:
-        lowest_energy_puckering[pucker] = round((pucker_dict[pucker] - lowest_energy_value),1)
-#        print(pucker, lowest_energy_puckering[pucker])
+    for pucker in pucker_dict1:
+        lowest_energy_puckering[pucker] = round((pucker_dict1[pucker] - lowest_energy_value), 1)
+        #print(pucker, lowest_energy_puckering[pucker])
+
+    for pucker in pucker_dict2:
+        lowest_energy_puckering[pucker] = round((pucker_dict2[pucker] - lowest_energy_value), 1)
+        #print(pucker, lowest_energy_puckering[pucker])
 
     return lowest_energy_puckering
 
@@ -112,10 +121,6 @@ def creating_level_dict_of_dict(lowest_energy_dict, qm_method):
     return level_of_theory_dict
 
 
-#def compare_ts_and_lm_energies(level_of_theory_dict):
-
-#    for keys in level_of_theory_dict.keys:
-#        print(keys.split('-')[0])
 
 def find_files_by_dir(tgt_dir, pat):
     """Recursively searches the target directory tree for files matching the given pattern.
@@ -199,15 +204,30 @@ def main(argv=None):
         return ret
     try:
 
+        level_of_theory_dict = {}
+
         with open(args.sum_file) as f:
+            for csv_file_read_newline in f:
+                csv_file_read = csv_file_read_newline.strip("\n")
+                hartree_headers, hartree_dict, job_type, qm_method =\
+                    read_hartree_files(csv_file_read, args.dir_hartree)
+                puckering_dict, qm_method = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
+                level_of_theory_dict[qm_method] = puckering_dict
 
-            for csv_file_read in f:
-                hartree_headers, hartree_dict, qm_method= read_hartree_files(csv_file_read, args.dir_hartree)
-                puckering_dict, qm_method = create_pucker_gibbs_dict(hartree_headers, hartree_dict, qm_method)
-                level_of_theory_dict = creating_level_dict_of_dict(puckering_dict, qm_method)
 
-        print(level_of_theory_dict)
+ #TODO make this a specific function below
+        finished_keys = []
 
+        for level_keys_1 in level_of_theory_dict.keys():
+            level_keys_1_info = level_keys_1.split("-")
+            if level_keys_1_info[0] not in finished_keys:
+                finished_keys.append(level_keys_1_info[0])
+                for level_keys_2 in level_of_theory_dict.keys():
+                    level_keys_2_info = level_keys_2.split("-")
+                    if (level_keys_1_info[0] == level_keys_2_info[0] and level_keys_1_info[1] != level_keys_2_info[1]):
+                        rel_energy_values(level_of_theory_dict[level_keys_1],level_of_theory_dict[level_keys_2])
+
+#TODO split the information from these dicts into two separate lists again... and remake the final dict of information
 
     except IOError as e:
         warning(e)

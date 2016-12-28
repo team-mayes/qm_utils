@@ -76,9 +76,9 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
         puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
         self.assertEquals(puckering_dict,GOOD_PUCKERING_DICT)
 
-    def testRelEnergyValues(self):
-        lowest_energy_puckering = rel_energy_values(SAMPLE_PUCKER_DICT_NOT_REL)
-        self.assertEquals(lowest_energy_puckering, GOOD_REL_PUCKERING_DICT)
+#    def testRelEnergyValues(self):
+#        lowest_energy_puckering = rel_energy_values(SAMPLE_PUCKER_DICT_NOT_REL)
+#        self.assertEquals(lowest_energy_puckering, GOOD_REL_PUCKERING_DICT)
 
     def testCreatingLevelDictOfDicts(self):
         level_of_theory_dict = creating_level_dict_of_dict(GOOD_REL_PUCKERING_DICT, GOOD_QM_METHOD)
@@ -95,6 +95,6 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
 
 
 
-#    def testMain(self):
-#            test_input = ["-s", LIST_OF_CSV_FILES]
-#            main(test_input)
+    def testMain(self):
+            test_input = ["-s", LIST_OF_CSV_FILES, "-d", SUB_DATA_DIR]
+            main(test_input)
