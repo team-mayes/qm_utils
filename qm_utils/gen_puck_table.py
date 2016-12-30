@@ -84,11 +84,12 @@ def create_pucker_gibbs_dict(dict, job_type, qm_method):
     return puckering_dict, qm_method
 
 
-def rel_energy_values(pucker_dict1, pucker_dict2):
+def rel_energy_values(pucker_dict1, method_1, pucker_dict2, method_2):
 
-    lowest_energy_value = 0
+    lowest_energy_value = 1000000
     lowest_energy_puck = []
-    lowest_energy_puckering = {}
+    lowest_energy_puckering_1 = {}
+    lowest_energy_puckering_2 = {}
 
     for check_puck in pucker_dict1:
         if pucker_dict1[check_puck] < lowest_energy_value:
@@ -103,24 +104,47 @@ def rel_energy_values(pucker_dict1, pucker_dict2):
     print('The lowest energy pucker was {} ({})'.format(lowest_energy_puck, lowest_energy_value))
 
     for pucker in pucker_dict1:
-        lowest_energy_puckering[pucker] = round((pucker_dict1[pucker] - lowest_energy_value), 1)
+        lowest_energy_puckering_1[pucker] = round((pucker_dict1[pucker] - lowest_energy_value), 1)
         #print(pucker, lowest_energy_puckering[pucker])
 
     for pucker in pucker_dict2:
-        lowest_energy_puckering[pucker] = round((pucker_dict2[pucker] - lowest_energy_value), 1)
+        lowest_energy_puckering_2[pucker] = round((pucker_dict2[pucker] - lowest_energy_value), 1)
         #print(pucker, lowest_energy_puckering[pucker])
 
-    return lowest_energy_puckering
+        #level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_1, method_1)
+        #level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_2, method_2)
+
+        #print(level_of_theory_dict)
+    return lowest_energy_puckering_1, lowest_energy_puckering_2
 
 
-def creating_level_dict_of_dict(lowest_energy_dict, qm_method):
+def creating_level_dict_of_dict(energy_dict, qm_method):
 
     level_of_theory_dict = {}
-    level_of_theory_dict[qm_method] = lowest_energy_dict
+    level_of_theory_dict[qm_method] = energy_dict
 
     return level_of_theory_dict
 
+def creating_lowest_energy_dict_of_dict(level_of_theory_dict):
 
+    finished_keys = []
+    level_theory_lowest_energy_dict = {}
+
+    for level_keys_1 in level_of_theory_dict.keys():
+        level_keys_1_info = level_keys_1.split("-")
+        if level_keys_1_info[0] not in finished_keys:
+            finished_keys.append(level_keys_1_info[0])
+            for level_keys_2 in level_of_theory_dict.keys():
+                level_keys_2_info = level_keys_2.split("-")
+                if (level_keys_1_info[0] == level_keys_2_info[0] and level_keys_1_info[1] != level_keys_2_info[1]):
+                    lowest_energy_pucker_dict_1, lowest_energy_pucker_dict_2 = \
+                                          rel_energy_values(level_of_theory_dict[level_keys_1], level_keys_1,
+                                                            level_of_theory_dict[level_keys_2], level_keys_2)
+
+                    level_theory_lowest_energy_dict[level_keys_1] = lowest_energy_pucker_dict_1
+                    level_theory_lowest_energy_dict[level_keys_2] = lowest_energy_pucker_dict_2
+
+    return level_theory_lowest_energy_dict
 
 def find_files_by_dir(tgt_dir, pat):
     """Recursively searches the target directory tree for files matching the given pattern.
@@ -214,20 +238,9 @@ def main(argv=None):
                 puckering_dict, qm_method = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
                 level_of_theory_dict[qm_method] = puckering_dict
 
+        level_of_theory_dict_final = creating_lowest_energy_dict_of_dict(level_of_theory_dict)
 
- #TODO make this a specific function below
-        finished_keys = []
-
-        for level_keys_1 in level_of_theory_dict.keys():
-            level_keys_1_info = level_keys_1.split("-")
-            if level_keys_1_info[0] not in finished_keys:
-                finished_keys.append(level_keys_1_info[0])
-                for level_keys_2 in level_of_theory_dict.keys():
-                    level_keys_2_info = level_keys_2.split("-")
-                    if (level_keys_1_info[0] == level_keys_2_info[0] and level_keys_1_info[1] != level_keys_2_info[1]):
-                        rel_energy_values(level_of_theory_dict[level_keys_1],level_of_theory_dict[level_keys_2])
-
-#TODO split the information from these dicts into two separate lists again... and remake the final dict of information
+        print(level_of_theory_dict_final)
 
     except IOError as e:
         warning(e)
