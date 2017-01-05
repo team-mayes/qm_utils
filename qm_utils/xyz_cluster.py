@@ -543,7 +543,9 @@ def main(argv=None):
         list_puckers_missing = check_before_after_sorting(args.sum_file, out_f_name)
 
         if list_puckers_missing != []:
+            print('')
             print('Warning! The following puckers have been dropped: {}.'.format(list_puckers_missing))
+            print('')
 
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
