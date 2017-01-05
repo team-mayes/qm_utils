@@ -27,7 +27,7 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'xyz_cluster')
-SUB_DATA_TS_DIR = os.path.join(SUB_DATA_DIR, 'ts-data')
+TS_DATA_DIR = os.path.join(SUB_DATA_DIR, 'TS_data')
 
 # Input files #
 
@@ -92,6 +92,10 @@ GOOD_25b_TO_2so = os.path.join(SUB_DATA_DIR, 'oxane-25b-freeze_B3LYP-relax_B3LYP
 GOOD_b25_TO_os2 = os.path.join(SUB_DATA_DIR, 'oxane-b25-freeze_B3LYP-relax_B3LYP-newpuck_os2_good.log')
 GOOD_e5_TO_4c1 = os.path.join(SUB_DATA_DIR, 'oxane-e5-freeze_B3LYP-relax_B3LYP-newpuck_4c1_good.log')
 GOOD_NEW_PUCKER_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_new_puck_B3LYP_hartree_sum-cpsnap_good.txt')
+
+
+OXANE_HARTREE_SUM_TS_B3LYP_FILE = os.path.join(TS_DATA_DIR, 'z_hartree_out-unsorted-oxane-b3lyp.csv')
+
 
 # Good output
 XYZ_TOL = 1.0e-12
@@ -213,7 +217,7 @@ class TestXYZFunctions(unittest.TestCase):
             file_sorted = BAD_OUT_FILE
             list_pucker_missing = check_before_after_sorting(file_unsorted, file_sorted)
         finally:
-            self.assertEquals(list_pucker_missing, ['4c4'])
+            self.assertEquals(list_pucker_missing, ['4c1'])
 
 
 class TestMain(unittest.TestCase):
@@ -240,7 +244,6 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5))
             self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1))
         finally:
-            print('hi')
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
@@ -262,3 +265,10 @@ class TestMain(unittest.TestCase):
         finally:
             silent_remove(OUT_FILE)
             silent_remove(FILE_NEW_PUCK_LIST)
+
+    def testTranstionStateMainScript(self):
+        try:
+            test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.1']
+            main(test_input)
+        finally:
+            print('I did it')

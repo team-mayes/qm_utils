@@ -435,13 +435,15 @@ def check_before_after_sorting(hartree_unsorted, hartree_sorted):
 
     for row_unsorted in hartree_dict_unsorted:
         list_puckers_unsorted.append(row_unsorted[PUCKER])
+    list_no_duplicates_unsorted = list(set(list_puckers_unsorted))
 
     for row_sorted in hartree_dict_sorted:
         list_puckers_sorted.append(row_sorted[PUCKER])
+    list_no_duplicates_sorted = list(set(list_puckers_sorted))
 
     list_puckers_both = list(set(list_puckers_sorted).intersection(set(list_puckers_unsorted)))
 
-    for pucker_sorted in list_puckers_sorted:
+    for pucker_sorted in list_no_duplicates_unsorted:
         if pucker_sorted not in list_puckers_both:
             list_puck_missing.append(pucker_sorted)
             print('Something is not right! Puckers before and after are not the same.')
@@ -541,7 +543,8 @@ def main(argv=None):
 
         list_puckers_missing = check_before_after_sorting(args.sum_file, out_f_name)
 
-        if not list_puckers_missing:
+
+        if list_puckers_missing != []:
             print('Warning! The following puckers have been dropped: {}.'.format(list_puckers_missing))
 
         if args.xyz_print == 'true':
