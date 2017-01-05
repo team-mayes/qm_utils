@@ -447,7 +447,7 @@ def check_before_after_sorting(hartree_unsorted, hartree_sorted):
         if pucker_sorted not in list_puckers_both:
             list_puck_missing.append(pucker_sorted)
             print('Something is not right! Puckers before and after are not the same.')
-            print('The following puckers have been lost {}.'.format(pucker_sorted))
+            print('The following puckers have been lost: {}.'.format(pucker_sorted))
 
     return list_puck_missing
 
@@ -543,6 +543,7 @@ def main(argv=None):
 
         list_puckers_missing = check_before_after_sorting(args.sum_file, out_f_name)
 
+        print('THIS IS FOUND IN MY NEW SCRIPT!')
 
         if list_puckers_missing != []:
             print('Warning! The following puckers have been dropped: {}.'.format(list_puckers_missing))
