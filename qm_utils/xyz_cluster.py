@@ -37,7 +37,6 @@ ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 HARTREE_TO_KCALMOL = 627.5095
 STRUCTURE_COMPARE_TOL = 5.0
 TRIGGER_WARN_TOL = 2.50
-TESTING_TOL = 10
 
 # Hartree field headers
 FILE_NAME = 'File Name'
@@ -440,7 +439,6 @@ def check_before_after_sorting(hartree_unsorted, hartree_sorted):
 
     for row_sorted in hartree_dict_sorted:
         list_puckers_sorted.append(row_sorted[PUCKER])
-    list_no_duplicates_sorted = list(set(list_puckers_sorted))
 
     list_puckers_both = list(set(list_puckers_sorted).intersection(set(list_puckers_unsorted)))
 
@@ -543,8 +541,6 @@ def main(argv=None):
                      print_message=True)
 
         list_puckers_missing = check_before_after_sorting(args.sum_file, out_f_name)
-
-        print('THIS IS FOUND IN MY NEW SCRIPT!')
 
         if list_puckers_missing != []:
             print('Warning! The following puckers have been dropped: {}.'.format(list_puckers_missing))
