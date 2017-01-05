@@ -16,7 +16,7 @@ import numpy as np
 import sys
 
 from qm_utils.qm_common import (GOOD_RET, list_to_dict, create_out_fname, write_csv, list_to_file, warning, IO_ERROR,
-                       InvalidDataError, INVALID_DATA, read_csv_to_dict, get_csv_fieldnames, INPUT_ERROR)
+                                InvalidDataError, INVALID_DATA, read_csv_to_dict, get_csv_fieldnames, INPUT_ERROR)
 
 try:
     # noinspection PyCompatibility
@@ -401,6 +401,7 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
 
     return low_e_per_cluster, low_e_per_cluster_filename_list
 
+
 def read_ring_atom_ids(atom_str):
     """
     Read entry for the list of atom numbers and convert to a list of ints
@@ -414,6 +415,39 @@ def read_ring_atom_ids(atom_str):
     except ValueError:
         raise ValueError("Expected a comma-separated list of 6 integers. Read: {}".format(atom_str))
     return int_list
+
+
+def check_before_after_sorting(hartree_unsorted, hartree_sorted):
+    """ Function checks to make sure that there is no information lose before and after the sorting process. For a TS
+    hartree run, there was an issue where not all of the puckers before sorting were found after sorting."
+
+    :param hartree_unsorted: hartree output of the unsorted puckers
+    :param hartree_sorted: xyz_cluster output (in a hartree format) of the sorted puckers
+    :return:
+    """
+
+    hartree_dict_unsorted = read_csv_to_dict(hartree_unsorted, mode='rU')
+    hartree_dict_sorted = read_csv_to_dict(hartree_sorted, mode='rU')
+
+    list_puckers_unsorted = []
+    list_puckers_sorted = []
+    list_puck_missing = []
+
+    for row_unsorted in hartree_dict_unsorted:
+        list_puckers_unsorted.append(row_unsorted[PUCKER])
+
+    for row_sorted in hartree_dict_sorted:
+        list_puckers_sorted.append(row_sorted[PUCKER])
+
+    list_puckers_both = list(set(list_puckers_sorted).intersection(set(list_puckers_unsorted)))
+
+    for pucker_sorted in list_puckers_sorted:
+        if pucker_sorted not in list_puckers_both:
+            list_puck_missing.append(pucker_sorted)
+            print('Something is not right! Puckers before and after are not the same.')
+            print('The following puckers have been lost {}.'.format(pucker_sorted))
+
+    return list_puck_missing
 
 
 def parse_cmdline(argv):
@@ -499,14 +533,16 @@ def main(argv=None):
         out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
 
-
-
         list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=args.dir_xyz,
                                        ext='.txt')
 
         list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
                      print_message=True)
 
+        list_puckers_missing = check_before_after_sorting(args.sum_file, out_f_name)
+
+        if list_puckers_missing:
+            print('Warning! The following puckers have been dropped: {}.'.format(list_puckers_missing))
 
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
@@ -517,6 +553,8 @@ def main(argv=None):
                                                        suffix="-xyz_updated", base_dir=args.dir_xyz,
                                                        ext=".xyz")
                 print_xyz_coords(coords_need_writing, atom_order, filename_xyz_coords)
+
+
     except IOError as e:
         warning(e)
         return IO_ERROR

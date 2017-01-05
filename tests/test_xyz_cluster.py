@@ -13,7 +13,7 @@ import unittest
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
-    check_ring_ordering, read_ring_atom_ids
+    check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
 __author__ = 'SPVicchio'
 
@@ -22,12 +22,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 
-
 # Directories #
 
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'xyz_cluster')
+SUB_DATA_TS_DIR = os.path.join(SUB_DATA_DIR, 'ts-data')
 
 # Input files #
 
@@ -39,7 +39,7 @@ OXANE_HARTREE_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'xyz_cluster-sampleout.t
 OXANE_HARTREE_SUM_B3LYP_FILE = os.path.join(SUB_DATA_DIR, 'B3LYP_hartree_sum-cpsnap.csv')
 OXANE_HARTREE_DICT_CLUSTER_FILE = os.path.join(SUB_DATA_DIR, 'oxane_hartree_sum_B3LYP_hartree_dict_good.csv')
 OXANE_XYZ_COORDS_WRITE_FILE_1s3 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s3-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
-OXANE_XYZ_COORDS_WRITE_FILE_3s1 =os.path.join(SUB_DATA_DIR, 'xyz_oxane-3s1-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
+OXANE_XYZ_COORDS_WRITE_FILE_3s1 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-3s1-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
 OXANE_XYZ_COORDS_WRITE_FILE_5e = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5e-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
 OXANE_XYZ_COORDS_WRITE_FILE_25b = os.path.join(SUB_DATA_DIR, 'xyz_oxane-25b-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
 OXANE_XYZ_COORDS_WRITE_FILE_b25 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-b25-freeze_B3LYP-relax_B3LYP-xyz_updated.xyz')
@@ -51,39 +51,47 @@ GLUCOSE_XYZ_COORDS_HEATHER_03b_2 = os.path.join(SUB_DATA_DIR, 'bglc_03b_2.log.xy
 FILE_1s3_TO_1s3 = os.path.join(SUB_DATA_DIR, 'oxane-1s3-freeze_B3LYP-relax_B3LYP.log')
 FILE_1s5_TO_1s5 = os.path.join(SUB_DATA_DIR, 'oxane-1s5-freeze_B3LYP-relax_B3LYP.log')
 FILE_3s1_TO_3s1 = os.path.join(SUB_DATA_DIR, 'oxane-3s1-freeze_B3LYP-relax_B3LYP.log')
-FILE_5e_TO_1c4  = os.path.join(SUB_DATA_DIR, 'oxane-5e-freeze_B3LYP-relax_B3LYP.log')
+FILE_5e_TO_1c4 = os.path.join(SUB_DATA_DIR, 'oxane-5e-freeze_B3LYP-relax_B3LYP.log')
 FILE_5s1_TO_5s1 = os.path.join(SUB_DATA_DIR, 'oxane-5s1-freeze_B3LYP-relax_B3LYP.log')
 FILE_25b_TO_2so = os.path.join(SUB_DATA_DIR, 'oxane-25b-freeze_B3LYP-relax_B3LYP.log')
 FILE_b25_TO_os2 = os.path.join(SUB_DATA_DIR, 'oxane-b25-freeze_B3LYP-relax_B3LYP.log')
-FILE_e5_TO_4c1  = os.path.join(SUB_DATA_DIR, 'oxane-e5-freeze_B3LYP-relax_B3LYP.log')
-FILE_NEW_PUCK_LIST = os.path.join(SUB_DATA_DIR,'z_files_list_new_puck_B3LYP_hartree_sum-cpsnap.txt')
-ATOMS_RING_ORDER2 =  ['1', '6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1']
-ATOMS_RING_ORDER1 =  ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
-ATOMS_RING_ORDER3 =  ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+FILE_e5_TO_4c1 = os.path.join(SUB_DATA_DIR, 'oxane-e5-freeze_B3LYP-relax_B3LYP.log')
+FILE_NEW_PUCK_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_new_puck_B3LYP_hartree_sum-cpsnap.txt')
+ATOMS_RING_ORDER2 = ['1', '6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+ATOMS_RING_ORDER1 = ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+ATOMS_RING_ORDER3 = ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
 OXANE_RING_ATOM_ORDER = '5,0,1,2,3,4'
-
 
 OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap.csv')
 OUT_FILE_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsB3LYP_hartree_sum-cpsnap.txt')
 GOOD_OUT_FILE_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsB3LYP_hartree_sum-cpsnap_good.txt')
 GOOD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap_good.csv')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s3-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1 =os.path.join(SUB_DATA_DIR, 'xyz_oxane-3s1-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5e-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b = os.path.join(SUB_DATA_DIR, 'xyz_oxane-25b-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-b25-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-e5-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-1s5-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1 = os.path.join(SUB_DATA_DIR, 'xyz_oxane-5s1-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
-GOOD_1s3_TO_1s3 = os.path.join(SUB_DATA_DIR, 'oxane-1s3-freeze_B3LYP-relax_B3LYP-newpuck_1s3_good.log')
+BAD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_B3LYP_hartree_sum-cpsnap_bad.csv')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3 = os.path.join(SUB_DATA_DIR,
+                                                    'xyz_oxane-1s3-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1 = os.path.join(SUB_DATA_DIR,
+                                                    'xyz_oxane-3s1-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e = os.path.join(SUB_DATA_DIR,
+                                                   'xyz_oxane-5e-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b = os.path.join(SUB_DATA_DIR,
+                                                    'xyz_oxane-25b-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25 = os.path.join(SUB_DATA_DIR,
+                                                    'xyz_oxane-b25-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5 = os.path.join(SUB_DATA_DIR,
+                                                   'xyz_oxane-e5-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5 = os.path.join(SUB_DATA_DIR,
+                                                    'xyz_oxane-1s5-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1 = os.path.join(SUB_DATA_DIR,
+                                                    'xyz_oxane-5s1-freeze_B3LYP-relax_B3LYP-xyz_updated_good.xyz')
+GOOD_1s3_TO_1s3 = os.path.join(SUB_DATA_DIR, 'oxane-1s3-freeze_B3LYP-relax_B3LYP.log')
 GOOD_1s5_TO_1s5 = os.path.join(SUB_DATA_DIR, 'oxane-1s5-freeze_B3LYP-relax_B3LYP-newpuck_1s5_good.log')
 GOOD_3s1_TO_3s1 = os.path.join(SUB_DATA_DIR, 'oxane-3s1-freeze_B3LYP-relax_B3LYP-newpuck_3s1_good.log')
-GOOD_5e_TO_1c4  = os.path.join(SUB_DATA_DIR, 'oxane-5e-freeze_B3LYP-relax_B3LYP-newpuck_1c4_good.log')
+GOOD_5e_TO_1c4 = os.path.join(SUB_DATA_DIR, 'oxane-5e-freeze_B3LYP-relax_B3LYP-newpuck_1c4_good.log')
 GOOD_5s1_TO_5s1 = os.path.join(SUB_DATA_DIR, 'oxane-5s1-freeze_B3LYP-relax_B3LYP-newpuck_5s1_good.log')
 GOOD_25b_TO_2so = os.path.join(SUB_DATA_DIR, 'oxane-25b-freeze_B3LYP-relax_B3LYP-newpuck_2so_good.log')
 GOOD_b25_TO_os2 = os.path.join(SUB_DATA_DIR, 'oxane-b25-freeze_B3LYP-relax_B3LYP-newpuck_os2_good.log')
-GOOD_e5_TO_4c1  = os.path.join(SUB_DATA_DIR, 'oxane-e5-freeze_B3LYP-relax_B3LYP-newpuck_4c1_good.log')
-GOOD_NEW_PUCKER_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_new_puck_B3LYP_hartree_sum-cpsnap_good.txt' )
+GOOD_e5_TO_4c1 = os.path.join(SUB_DATA_DIR, 'oxane-e5-freeze_B3LYP-relax_B3LYP-newpuck_4c1_good.log')
+GOOD_NEW_PUCKER_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_new_puck_B3LYP_hartree_sum-cpsnap_good.txt')
 
 # Good output
 XYZ_TOL = 1.0e-12
@@ -113,58 +121,58 @@ class TestFailWell(unittest.TestCase):
             self.assertTrue("Could not find" in output)
 
 
+# noinspection PyUnboundLocalVariable
 class TestXYZFunctions(unittest.TestCase):
-
     def testAtomRingOrderingWrong(self):
         status = check_ring_ordering(ATOMS_RING_ORDER1, ATOMS_RING_ORDER2)
-        #self.assertEqual(status, 0)
-        self.assertEqual(status,1)
+        # self.assertEqual(status, 0)
+        self.assertEqual(status, 1)
 
     def testAtomRingOrderingCorrect(self):
         status = check_ring_ordering(ATOMS_RING_ORDER1, ATOMS_RING_ORDER3)
-        self.assertEqual(status,0)
+        self.assertEqual(status, 0)
 
     def testReadHartreeSummary(self):
-        hartree_dict, pucker_filename_dict,\
-            hartree_headers = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_HEATHER_FILE)
+        hartree_dict, pucker_filename_dict, \
+        hartree_headers = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_HEATHER_FILE)
         self.assertTrue(pucker_filename_dict[PUCK_2SO], PUCK_2SO_FILES)
 
     def testTwoFiles_similar(self):
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
-        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar,\
-                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE,
-                                                      SUB_DATA_DIR, atoms_order)
+        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar, \
+        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE,
+                                      SUB_DATA_DIR, atoms_order)
         self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_GOOD[0]) < XYZ_TOL)
 
     def testTwoFiles_1c4to4c1(self):
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
-        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar,\
-                        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_4c1_INPUT_FILE,
-                                                      SUB_DATA_DIR, atoms_order)
+        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar, \
+        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_4c1_INPUT_FILE,
+                                      SUB_DATA_DIR, atoms_order)
         self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_1c4to4c1[0]) < XYZ_TOL)
 
     def testTwoFiles_PrintFeature(self):
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         with capture_stdout(compare_rmsd_xyz, OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, SUB_DATA_DIR, atoms_order,
-                                                                                        print_option='on') as output:
+                            print_option='on') as output:
             self.assertTrue("Rmsd" in output)
             self.assertTrue(len(output) > 100)
 
     def testHartreeSumPuckerCluster(self):
         try:
-            hartree_list, pucker_filename_dict, hartree_headers\
+            hartree_list, pucker_filename_dict, hartree_headers \
                 = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
             out_f_name = create_out_fname(SUB_DATA_DIR, prefix='hartree_list_', suffix='_output',
-                                                    ext='.csv')
+                                          ext='.csv')
             write_csv(hartree_list, out_f_name, hartree_headers, extrasaction="ignore")
-            self.assertFalse(diff_lines(out_f_name,OXANE_HARTREE_SUM_B3LYP_FILE))
+            self.assertFalse(diff_lines(out_f_name, OXANE_HARTREE_SUM_B3LYP_FILE))
         finally:
             silent_remove(out_f_name)
 
     def testListToDict(self):
         hartree_list, pucker_filename_dict, hartree_headers \
-              = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
-        hartree_dict = list_to_dict(hartree_list,FILE_NAME)
+            = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+        hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         len(hartree_dict)
         if len(hartree_dict) == len(hartree_list):
             pass
@@ -174,47 +182,38 @@ class TestXYZFunctions(unittest.TestCase):
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
-        hartree_dict = list_to_dict(hartree_list,FILE_NAME)
-        process_cluster_dict, xyz_coords_dict, atom_order\
+        hartree_dict = list_to_dict(hartree_list, FILE_NAME)
+        process_cluster_dict, xyz_coords_dict, atom_order \
             = test_clusters(pucker_filename_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
-        self.assertEquals(len(process_cluster_dict),len(hartree_dict))
+        self.assertEquals(len(process_cluster_dict), len(hartree_dict))
 
     def testTestClustersHighTol(self):
         high_tol = 100
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
-        hartree_dict = list_to_dict(hartree_list,FILE_NAME)
-        process_cluster_dict, xyz_coords_dict, atom_order\
+        hartree_dict = list_to_dict(hartree_list, FILE_NAME)
+        process_cluster_dict, xyz_coords_dict, atom_order \
             = test_clusters(pucker_filename_dict, SUB_DATA_DIR, high_tol, atoms_order, print_option='off')
 
-        self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS,len(process_cluster_dict))
-        self.assertEqual(TOTAL_NUM_OXANE_CLUSTER,len(hartree_dict))
+        self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS, len(process_cluster_dict))
+        self.assertEqual(TOTAL_NUM_OXANE_CLUSTER, len(hartree_dict))
 
-    def testUpdateLowestEnergyListFiles(self):
+    def testCheckBeforeAfterSortingGood(self):
         try:
-            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
-            main(test_input)
-            self.assertFalse(diff_lines(FILE_1s3_TO_1s3, GOOD_1s3_TO_1s3))
-            self.assertFalse(diff_lines(FILE_1s5_TO_1s5, GOOD_1s5_TO_1s5))
-            self.assertFalse(diff_lines(FILE_3s1_TO_3s1, GOOD_3s1_TO_3s1))
-            self.assertFalse(diff_lines(FILE_5e_TO_1c4, GOOD_5e_TO_1c4))
-            self.assertFalse(diff_lines(FILE_5s1_TO_5s1, GOOD_5s1_TO_5s1))
-            self.assertFalse(diff_lines(FILE_25b_TO_2so, GOOD_25b_TO_2so))
-            self.assertFalse(diff_lines(FILE_b25_TO_os2, GOOD_b25_TO_os2))
-            self.assertTrue(diff_lines(FILE_e5_TO_4c1,GOOD_OUT_FILE))
-
+            file_unsorted = OXANE_HARTREE_SUM_B3LYP_FILE
+            file_sorted = GOOD_OUT_FILE
+            list_pucker_missing = check_before_after_sorting(file_unsorted, file_sorted)
         finally:
-            silent_remove(OUT_FILE)
-            silent_remove(OUT_FILE_LIST)
-            silent_remove(FILE_1s3_TO_1s3)
-            silent_remove(FILE_1s5_TO_1s5)
-            silent_remove(FILE_3s1_TO_3s1)
-            silent_remove(FILE_5e_TO_1c4)
-            silent_remove(FILE_5s1_TO_5s1)
-            silent_remove(FILE_25b_TO_2so)
-            silent_remove(FILE_b25_TO_os2)
-            silent_remove(FILE_e5_TO_4c1)
+            self.assertEquals(list_pucker_missing, [])
+
+    def testCheckBeforeAfterSortingBad(self):
+        try:
+            file_unsorted = OXANE_HARTREE_SUM_B3LYP_FILE
+            file_sorted = BAD_OUT_FILE
+            list_pucker_missing = check_before_after_sorting(file_unsorted, file_sorted)
+        finally:
+            self.assertEquals(list_pucker_missing, ['4c4'])
 
 
 class TestMain(unittest.TestCase):
@@ -222,7 +221,7 @@ class TestMain(unittest.TestCase):
         try:
             test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
             main(test_input)
-            self.assertFalse(diff_lines(GOOD_OUT_FILE,OUT_FILE))
+            self.assertFalse(diff_lines(GOOD_OUT_FILE, OUT_FILE))
         finally:
             silent_remove(OUT_FILE)
             silent_remove(OUT_FILE_LIST)
@@ -230,17 +229,18 @@ class TestMain(unittest.TestCase):
 
     def testMainPrintXYZCoords(self):
         try:
-            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1',"-p","true"]
+            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1', "-p", "true"]
             main(test_input)
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s3,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_3s1,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5e,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_25b,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_b25,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_e5,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s5,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5s1,GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s3, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_3s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5e, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_25b, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_b25, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_e5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5))
+            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1))
         finally:
+            print('hi')
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)

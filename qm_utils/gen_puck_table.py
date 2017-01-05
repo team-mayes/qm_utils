@@ -15,6 +15,7 @@ import itertools
 import os
 import sys
 import csv
+import pandas as pd
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
                         InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
 
@@ -241,6 +242,11 @@ def main(argv=None):
         level_of_theory_dict_final = creating_lowest_energy_dict_of_dict(level_of_theory_dict)
 
         print(level_of_theory_dict_final)
+
+        df = pd.DataFrame(level_of_theory_dict_final)
+        list_f_name = create_out_fname(args.sum_file, prefix='aaaaaa', base_dir=args.dir_hartree,
+                                       ext='.txt')
+        df.to_csv(list_f_name)
 
     except IOError as e:
         warning(e)
