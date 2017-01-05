@@ -541,7 +541,7 @@ def main(argv=None):
 
         list_puckers_missing = check_before_after_sorting(args.sum_file, out_f_name)
 
-        if list_puckers_missing:
+        if not list_puckers_missing:
             print('Warning! The following puckers have been dropped: {}.'.format(list_puckers_missing))
 
         if args.xyz_print == 'true':
