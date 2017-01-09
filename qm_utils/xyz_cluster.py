@@ -549,7 +549,6 @@ def main(argv=None):
 
         if args.xyz_print == 'true':
             for row in filtered_cluster_list:
-                # noinspection PyTypeChecker
                 filename_written_coords = row[FILE_NAME]
                 coords_need_writing = xyz_coords_dict[filename_written_coords]
                 filename_xyz_coords = create_out_fname(filename_written_coords, prefix="xyz_",

@@ -267,8 +267,6 @@ class TestMain(unittest.TestCase):
             silent_remove(FILE_NEW_PUCK_LIST)
 
     def testTranstionStateMainScript(self):
-        try:
             test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.1']
-            main(test_input)
-        finally:
-            print('I did it')
+            with capture_stdout(main, test_input) as output:
+                self.assertTrue("Warning! The following puckers have been dropped: ['eo']." in output)
