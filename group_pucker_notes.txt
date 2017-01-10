@@ -7,3 +7,8 @@ Path for ts (ts_path):
 - Output is sorted by pucker name (lm1-ts-lm2) (sort lm alphabetically)
 Boltzmann Factor(boltz_factor):
 - exponent (negative gibbs free energy(G298 (Hartrees))/kbt (calculated from provided temperature 298.15 default))
+
+Use pandas for data processing: http://pandas.pydata.org/
+
+Project dev guidelines: https://jeffknupp.com/blog/2013/08/16/open-sourcing-a-python-project-the-right-way/
+

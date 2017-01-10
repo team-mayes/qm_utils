@@ -97,9 +97,9 @@ def get_out_file_name(out_file, first_in_file, group_type):
 def bin_dframes_by_type(dframes):
     binned_frames = defaultdict(list)
     for dframe in dframes:
-        if (verify_local_minimum(dframe)):
+        if verify_local_minimum(dframe):
             binned_frames[DT_LM].append(dframe)
-        elif (verify_transition_state(dframe)):
+        elif verify_transition_state(dframe):
             binned_frames[DT_TS].append(dframe)
         else:
             raise InvalidDataError("Data frame is neither a local minimum nor a transition state")
@@ -136,7 +136,7 @@ def main(argv=None):
     calc_boltz(dframes)
 
     # TODO: create a better outfile name
-    grouped_dframe.to_csv(get_out_file_name(args.out_file, dframes.keys()[0], args.group_type), index=False)
+    #grouped_dframe.to_csv(get_out_file_name(args.out_file, dframes.keys()[0], args.group_type), index=False)
 
     return 0  # success
 
