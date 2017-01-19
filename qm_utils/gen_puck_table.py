@@ -16,6 +16,7 @@ import os
 import sys
 import csv
 import pandas as pd
+import numpy as np
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
                         InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
 
@@ -37,7 +38,44 @@ MISSING_FUNCTIONAL = 'N/A'
 PUCKER = 'Pucker'
 GIBBS = 'G298 (Hartrees)'
 JOB_TYPE = 'Pucker Status'
-
+LIST_PUCKER = [ '4c1',
+                '14b',
+                '25b',
+                'o3b',
+                '1h2',
+                '2h3',
+                '3h4',
+                '4h5',
+                '5ho',
+                'oh1',
+                '1s3',
+                '1s5',
+                '2so',
+                '1e',
+                '2e',
+                '3e',
+                '4e',
+                '5e',
+                'oe',
+                '1c4',
+                'b14',
+                'b25',
+                'bo3',
+                '2h1',
+                '3h2',
+                '4h3',
+                '5h4',
+                'oh5',
+                '1ho',
+                '3s1',
+                '5s1',
+                'os2',
+                'e1',
+                'e2',
+                'e3',
+                'e4',
+                'e5',
+                'eo']
 
 # Functions #
 
@@ -164,6 +202,31 @@ def find_files_by_dir(tgt_dir, pat):
     return match_dirs
 
 
+def creating_puckering_tables(level_theory_dict):
+    ''''''
+
+    lm_table_dict = {}
+    ts_table_dict = {}
+
+    for method_keys in level_theory_dict.keys():
+        current_information = np.full((len(LIST_PUCKER), 1), np.nan)
+        level_keys_info = method_keys.split("-")
+        pucker_data = level_theory_dict[method_keys]
+        if level_keys_info[1] == 'lm':
+            for pucker_keys in pucker_data.keys():
+                for pucker_list in LIST_PUCKER:
+                    if pucker_keys == pucker_list:
+                       pucker_energy = pucker_data[pucker_keys]
+                       current_information[pucker_keys] = pucker_energy
+                    elif pucker_keys != pucker_list:
+                        current_information[pucker_keys] = 'NaN'
+                    else:
+                        print('SOMETHNG IS REALLY WRONG')
+
+                print(pucker_keys)
+        elif level_keys_info[1] =='ts':
+            print(level_keys_info[1])
+    return
 
 def parse_cmdline(argv):
     """
@@ -242,6 +305,8 @@ def main(argv=None):
         level_of_theory_dict_final = creating_lowest_energy_dict_of_dict(level_of_theory_dict)
 
         print(level_of_theory_dict_final)
+
+        creating_puckering_tables(level_of_theory_dict_final)
 
         df = pd.DataFrame(level_of_theory_dict_final)
         list_f_name = create_out_fname(args.sum_file, prefix='aaaaaa', base_dir=args.dir_hartree,

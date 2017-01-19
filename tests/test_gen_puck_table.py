@@ -82,6 +82,8 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
         self.assertEquals(level_of_theory_dict,GOOD_DICT_OF_DICTS)
         print(level_of_theory_dict)
 
+
+#TODO: make a test for the function below
     def testCompareTsAndLmEnergies(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_TS, SUB_DATA_DIR)
         puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
@@ -89,6 +91,12 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
 
         print(level_of_theory_dict)
 #        compare_ts_and_lm_energies(level_of_theory_dict)
+
+#    def testCreatingPuckeringTable(self):
+
+
+
+
 
     def testMain(self):
             test_input = ["-s", LIST_OF_CSV_FILES, "-d", SUB_DATA_DIR]
