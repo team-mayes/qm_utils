@@ -345,23 +345,27 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
 
             xyz_coords_dict[file_name] = xyz_coords_all_translate
 
-        for file_id in range(1, raw_cluster_len):
-            file_name = file_list[file_id]
-            not_assigned = True
+        else:
 
-            for assigned_cluster_name in process_cluster_dict:
-                (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
-                    compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir, ring_num_list)
-                xyz_coords_dict[file_name] = ctr_ring_all_xyz1
-                xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
-                if rmsd_kabsch < ok_tol:
-                    process_cluster_dict[assigned_cluster_name].append(file_name)
-                    not_assigned = False
-                    break
-            if not_assigned:
-                pucker_cluster += 1
-                cluster_name = pucker + "_" + str(pucker_cluster)
-                process_cluster_dict[cluster_name] = [file_name]
+            for file_id in range(1, raw_cluster_len):
+                file_name = file_list[file_id]
+                not_assigned = True
+
+    #TODO create a check to see if the puckers, when being compared to other puckers are very similar.
+
+                for assigned_cluster_name in process_cluster_dict:
+                    (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
+                        compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir, ring_num_list)
+                    xyz_coords_dict[file_name] = ctr_ring_all_xyz1
+                    xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
+                    if rmsd_kabsch < ok_tol:
+                        process_cluster_dict[assigned_cluster_name].append(file_name)
+                        not_assigned = False
+                        break
+                if not_assigned:
+                    pucker_cluster += 1
+                    cluster_name = pucker + "_" + str(pucker_cluster)
+                    process_cluster_dict[cluster_name] = [file_name]
 
     if print_option != 'off':
         for cluster_key, cluster_values in process_cluster_dict.items():

@@ -270,3 +270,8 @@ class TestMain(unittest.TestCase):
             test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.1']
             with capture_stdout(main, test_input) as output:
                 self.assertTrue("Warning! The following puckers have been dropped: ['eo']." in output)
+
+    def testTranstionStateMainScript2(self):
+            test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.005']
+            with capture_stdout(main, test_input) as output:
+                self.assertFalse("Warning! The following puckers have been dropped:" in output)

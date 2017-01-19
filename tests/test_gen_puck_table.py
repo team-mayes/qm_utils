@@ -60,7 +60,7 @@ GOOD_DICT_OF_DICTS_AM1_LM = {'am1-lm': {'os2': 9.8700969255, '1c4': 7.927955023,
 class TestGenPuckerTableFunctions(unittest.TestCase):
     def testReadHartreeFiles(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE, SUB_DATA_DIR)
-        self.assertEquals(qm_method,'B3LYP-lm')
+        self.assertEquals(qm_method,'b3lyp-lm')
 
     def testReadHartreeFilesMissing(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_MISSING, SUB_DATA_DIR)
@@ -76,9 +76,6 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
         puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
         self.assertEquals(puckering_dict,GOOD_PUCKERING_DICT)
 
-#    def testRelEnergyValues(self):
-#        lowest_energy_puckering = rel_energy_values(SAMPLE_PUCKER_DICT_NOT_REL)
-#        self.assertEquals(lowest_energy_puckering, GOOD_REL_PUCKERING_DICT)
 
     def testCreatingLevelDictOfDicts(self):
         level_of_theory_dict = creating_level_dict_of_dict(GOOD_REL_PUCKERING_DICT, GOOD_QM_METHOD)
@@ -92,8 +89,6 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
 
         print(level_of_theory_dict)
 #        compare_ts_and_lm_energies(level_of_theory_dict)
-
-
 
     def testMain(self):
             test_input = ["-s", LIST_OF_CSV_FILES, "-d", SUB_DATA_DIR]
