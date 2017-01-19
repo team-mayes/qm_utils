@@ -6,7 +6,7 @@ from collections import defaultdict
 import pandas as pd
 
 from qm_utils.hartree_valid import verify_local_minimum, verify_transition_state
-from qm_utils.qm_common import warning, create_out_fname, InvalidDataError
+from qm_utils.qm_common import warning, create_out_fname, InvalidDataError, write_csv
 
 """
 Groups output from Hartree by pucker (for local minima) or path (for transition states).
@@ -110,6 +110,114 @@ def calc_boltz(dframes):
 
     pass
 
+#REQUIRES: A DataFrame object that corresponds to a single input CSV file
+#RETURNS: an array that contains "TS_Storage" objects - each correspond to a line in the CSV file
+#ASSUMPTIONS: Ethalpy is held in column 11, Pucker is held in column 18
+#EFFECTS: Reads in the "minimum" CSV file and returns all of the minimums that were found and what the name ("string")
+#of the corresponding transition state should be (along with the pucker and enthalpy - for future use)
+def find_TS_for_each_min(binned_frames):
+    TS_points = []
+    for ir in binned_frames.itertuples():
+        name = ir[1]
+        forward = "_norm-ircf_am1-minIRC_am1.log"
+        reverse = "_norm-ircr_am1-minIRC_am1.log"
+        reverse_index = name.find(reverse)
+        forward_index = name.find(forward)
+        if reverse_index != -1:
+            ts_name = name[:reverse_index]
+            new = TS_storage(ts_name, 0 , 1,ir[11],ir[18])
+            TS_points.append(new)
+            continue
+        elif forward_index != -1:
+            ts_name = name[:forward_index]
+            new = TS_storage(ts_name, 1, 0, ir[11], ir[18])
+            TS_points.append(new)
+            continue
+    return TS_points
+
+
+
+def finding_H_and_pairing(TS_points,binned_frames):
+    all_paths = []
+    for value in TS_points:
+        for ir in binned_frames.itertuples():
+            already_done = False
+            if value.return_name() in ir[1]:
+                #print("found matching words " + ir[1] + " " + value.return_name())
+                for thing in all_paths:
+                    if ir[1] == thing.return_name():
+                        #print("appending double word"+ ir[1] + " " + thing.return_name())
+                        thing.add_minimum(value.forward,value.reverse, value.H, value.minimum)
+                        already_done= True
+
+
+                if(not already_done):
+                    #print("appendeding first " + " " + ir[1])
+                    all_paths.append(TS_final(ir[1],ir[11],ir[18]))
+                    all_paths[-1].add_minimum(value.forward,value.reverse, value.H, value.minimum)
+
+    return all_paths
+
+class TS_storage:
+    def __init__(self,name, forward,reverse,H, minimum):
+        self.name = name
+        self.forward = forward
+        self.reverse = reverse
+        self.H = H
+        self.minimum = minimum
+
+    def return_name(self):
+         return self.name
+    def return_min(self):
+         return self.minimum
+    def return_H(self):
+         return self.H
+
+def make_dict(TS_final):
+    new_dictionary = {}
+    minimums = TS_final.return_mins()
+    new_dictionary["File name"] = TS_final.return_name()
+    new_dictionary["Minimum1"] = minimums[0]["pucker"]
+    new_dictionary["Delta H1"] = (-minimums[0]["enthalpy"] + TS_final.return_H())*627.5095
+    new_dictionary["Transition Pucker"] = TS_final.return_pucker()
+    new_dictionary["Minimum2"] = minimums[1]["pucker"]
+    new_dictionary["Delta H2"] = (-TS_final.return_H()+ minimums[1]["enthalpy"])*627.5095
+
+    return new_dictionary
+
+
+
+
+class TS_final:
+    def __init__(self,name,enthalpy,pucker):
+        self.name = name
+        self.forward = 0
+        self.H = enthalpy
+        self.reverse = 0
+        self.pucker = pucker
+        self.minimums = []
+
+    def return_name(self):
+        return self.name
+
+    def return_H(self):
+        return self.H
+
+    def return_pucker(self):
+        return self.pucker
+
+
+    def return_mins(self):
+        return self.minimums
+
+    def add_minimum(self, forward, reverse, H, pucker):
+        if forward:
+            self.forward = 1
+        else:
+            self.reverse = 1
+        min = {'pucker': pucker, "enthalpy": H}
+        (self.minimums).append(min)
+
 
 def main(argv=None):
     args, ret = parse_cmdline(argv)
@@ -138,6 +246,15 @@ def main(argv=None):
     # TODO: create a better outfile name
     #grouped_dframe.to_csv(get_out_file_name(args.out_file, dframes.keys()[0], args.group_type), index=False)
 
+    ts_points = []
+    states = []
+    ts_points = find_TS_for_each_min(min)
+    states = finding_H_and_pairing(ts_points, ts)
+    list_of_dicts = []
+    for all in states:
+        list_of_dicts.append(make_dict(all))
+    headers = ["File name", "Minimum1", "Delta H1", "Transition Pucker", "Delta H2", "Minimum2"]
+    write_csv(list_of_dicts, "/Users/SteveJobs/Desktop/research/TESTS/sam_output.csv", headers)
     return 0  # success
 
 
