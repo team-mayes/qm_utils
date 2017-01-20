@@ -94,10 +94,6 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
 
 #    def testCreatingPuckeringTable(self):
 
-
-
-
-
     def testMain(self):
             test_input = ["-s", LIST_OF_CSV_FILES, "-d", SUB_DATA_DIR]
             main(test_input)

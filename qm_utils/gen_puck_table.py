@@ -209,23 +209,67 @@ def creating_puckering_tables(level_theory_dict):
     ts_table_dict = {}
 
     for method_keys in level_theory_dict.keys():
-        current_information = np.full((len(LIST_PUCKER), 1), np.nan)
+        lm_individual_dict = {}
+        ts_individual_dict = {}
         level_keys_info = method_keys.split("-")
         pucker_data = level_theory_dict[method_keys]
         if level_keys_info[1] == 'lm':
             for pucker_keys in pucker_data.keys():
                 for pucker_list in LIST_PUCKER:
                     if pucker_keys == pucker_list:
-                       pucker_energy = pucker_data[pucker_keys]
-                       current_information[pucker_keys] = pucker_energy
-                    elif pucker_keys != pucker_list:
-                        current_information[pucker_keys] = 'NaN'
-                    else:
-                        print('SOMETHNG IS REALLY WRONG')
+                        pucker_energy = str(pucker_data[pucker_keys])
+                        lm_individual_dict[pucker_list] = pucker_energy
 
-                print(pucker_keys)
+            for list_pucker_keys in LIST_PUCKER:
+                if list_pucker_keys not in lm_individual_dict.keys():
+                    lm_individual_dict[list_pucker_keys] = ''
+
+            lm_table_dict[level_keys_info[0]] = lm_individual_dict
+
         elif level_keys_info[1] =='ts':
-            print(level_keys_info[1])
+            for pucker_keys in pucker_data.keys():
+                for pucker_list in LIST_PUCKER:
+                    if pucker_keys == pucker_list:
+                        pucker_energy = str(pucker_data[pucker_keys])
+                        ts_individual_dict[pucker_list] = pucker_energy
+
+            for list_pucker_keys in LIST_PUCKER:
+                if list_pucker_keys not in ts_individual_dict.keys():
+                    ts_individual_dict[list_pucker_keys] = ''
+
+            ts_table_dict[level_keys_info[0]] = ts_individual_dict
+
+    return lm_table_dict, ts_table_dict
+
+
+def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
+    ''''''
+
+    df_lm = pd.DataFrame(lm_table_dict, index=LIST_PUCKER)
+    df_ts = pd.DataFrame(ts_table_dict, index=LIST_PUCKER)
+    writer = pd.ExcelWriter(output_filename, engine='xlsxwriter')
+    df_lm.to_excel(writer, sheet_name='local min')
+    df_ts.to_excel(writer, sheet_name='transition state')
+
+
+    workbook = writer.book
+
+    format_lm = workbook.add_format({'font_color': '#008000'})
+    format_ts = workbook.add_format({'font_color': '#4F81BD'})
+
+    worksheet_lm = writer.sheets['local min']
+    worksheet_ts = writer.sheets['transition state']
+    #worksheet_testing = writer.sheets['testing']
+
+    worksheet_lm.conditional_format('B2:P39', {'type': 'cell',
+                                               'criteria': '>=',
+                                               'value': 50,
+                                               'format': format_lm})
+    worksheet_ts.conditional_format('B2:P39', {'type': 'cell',
+                                               'criteria': '>=',
+                                               'value': 50,
+                                               'format': format_ts})
+
     return
 
 def parse_cmdline(argv):
@@ -303,15 +347,13 @@ def main(argv=None):
                 level_of_theory_dict[qm_method] = puckering_dict
 
         level_of_theory_dict_final = creating_lowest_energy_dict_of_dict(level_of_theory_dict)
+        lm_table_dict, ts_table_dict = creating_puckering_tables(level_of_theory_dict_final)
 
-        print(level_of_theory_dict_final)
+        list_f_name = create_out_fname(args.sum_file, prefix='z_oxane_table', base_dir=args.dir_hartree, ext='.xlsx')
 
-        creating_puckering_tables(level_of_theory_dict_final)
+        writing_xlsx_files(lm_table_dict, ts_table_dict, list_f_name)
 
-        df = pd.DataFrame(level_of_theory_dict_final)
-        list_f_name = create_out_fname(args.sum_file, prefix='aaaaaa', base_dir=args.dir_hartree,
-                                       ext='.txt')
-        df.to_csv(list_f_name)
+
 
     except IOError as e:
         warning(e)
