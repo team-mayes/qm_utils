@@ -9,9 +9,11 @@ test_xyz_cluster
 import logging
 import os
 import unittest
+import pandas as pd
 
 from qm_utils.gen_puck_table import read_hartree_files, create_pucker_gibbs_dict, rel_energy_values, \
     creating_level_dict_of_dict, main
+from qm_utils.qm_common import diff_lines, silent_remove
 
 __author__ = 'SPVicchio'
 
@@ -55,7 +57,9 @@ GOOD_DICT_OF_DICTS_AM1_TS = {'am1-ts': {'14b': 10.929960471, 'e5': 12.4830464835
 GOOD_DICT_OF_DICTS_AM1_LM = {'am1-lm': {'os2': 9.8700969255, '1c4': 7.927955023, '2so': 9.8763720205,
                                         '4c1': 7.927955023, '1s5': 9.966105879, '1s3': 9.870724435000001,
                                         '5s1': 9.966105879, '3s1': 9.8700969255}}
-
+GOOD_TABLE_LM_TS = os.path.join(SUB_DATA_DIR, 'a_table_lm-ts_oxane_good.xlsx')
+GOOD_CSV_LM = os.path.join(SUB_DATA_DIR, 'a_csv_lm_oxane_good.csv')
+GOOD_CSV_TS = os.path.join(SUB_DATA_DIR, 'a_csv_ts_oxane_good.csv')
 
 class TestGenPuckerTableFunctions(unittest.TestCase):
     def testReadHartreeFiles(self):
@@ -73,27 +77,28 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
 
     def testCreatingPuckerGibbsDict(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE, SUB_DATA_DIR)
-        puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
+        puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, qm_method)
         self.assertEquals(puckering_dict,GOOD_PUCKERING_DICT)
-
 
     def testCreatingLevelDictOfDicts(self):
         level_of_theory_dict = creating_level_dict_of_dict(GOOD_REL_PUCKERING_DICT, GOOD_QM_METHOD)
         self.assertEquals(level_of_theory_dict,GOOD_DICT_OF_DICTS)
-        print(level_of_theory_dict)
 
-
-#TODO: make a test for the function below
     def testCompareTsAndLmEnergies(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_TS, SUB_DATA_DIR)
-        puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
+        puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, qm_method)
         level_of_theory_dict = creating_level_dict_of_dict(puckering_dict, qm_method_n)
-
-        print(level_of_theory_dict)
-#        compare_ts_and_lm_energies(level_of_theory_dict)
-
-#    def testCreatingPuckeringTable(self):
+        self.assertEquals(level_of_theory_dict,GOOD_DICT_OF_DICTS_AM1_TS)
 
     def testMain(self):
-            test_input = ["-s", LIST_OF_CSV_FILES, "-d", SUB_DATA_DIR]
+        try:
+            output_file_lm = os.path.join(SUB_DATA_DIR, 'a_csv_lm_oxane.csv')
+            output_file_ts = os.path.join(SUB_DATA_DIR, 'a_csv_ts_oxane.csv')
+            test_input = ["-s", LIST_OF_CSV_FILES, "-d", SUB_DATA_DIR, "-m", 'oxane']
             main(test_input)
+            self.assertFalse(diff_lines(output_file_lm, GOOD_CSV_LM))
+            self.assertFalse(diff_lines(output_file_ts, GOOD_CSV_TS))
+        finally:
+            silent_remove(output_file_lm)
+            silent_remove(output_file_ts)
+            silent_remove(os.path.join(SUB_DATA_DIR,'a_table_lm-ts_oxane.xlsx'))

@@ -11,14 +11,12 @@ from __future__ import print_function
 
 import argparse
 import fnmatch
-import itertools
 import os
 import sys
-import csv
 import pandas as pd
-import numpy as np
-from qm_utils.qm_common import (GOOD_RET, create_out_fname, list_to_file, warning, IO_ERROR,
-                        InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
+
+from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR,
+                                InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
 
 try:
     # noinspection PyCompatibility
@@ -38,50 +36,50 @@ MISSING_FUNCTIONAL = 'N/A'
 PUCKER = 'Pucker'
 GIBBS = 'G298 (Hartrees)'
 JOB_TYPE = 'Pucker Status'
-LIST_PUCKER = [ '4c1',
-                '14b',
-                '25b',
-                'o3b',
-                '1h2',
-                '2h3',
-                '3h4',
-                '4h5',
-                '5ho',
-                'oh1',
-                '1s3',
-                '1s5',
-                '2so',
-                '1e',
-                '2e',
-                '3e',
-                '4e',
-                '5e',
-                'oe',
-                '1c4',
-                'b14',
-                'b25',
-                'bo3',
-                '2h1',
-                '3h2',
-                '4h3',
-                '5h4',
-                'oh5',
-                '1ho',
-                '3s1',
-                '5s1',
-                'os2',
-                'e1',
-                'e2',
-                'e3',
-                'e4',
-                'e5',
-                'eo']
+LIST_PUCKER = ['4c1',
+               '14b',
+               '25b',
+               'o3b',
+               '1h2',
+               '2h3',
+               '3h4',
+               '4h5',
+               '5ho',
+               'oh1',
+               '1s3',
+               '1s5',
+               '2so',
+               '1e',
+               '2e',
+               '3e',
+               '4e',
+               '5e',
+               'oe',
+               '1c4',
+               'b14',
+               'b25',
+               'bo3',
+               '2h1',
+               '3h2',
+               '4h3',
+               '5h4',
+               'oh5',
+               '1ho',
+               '3s1',
+               '5s1',
+               'os2',
+               'e1',
+               'e2',
+               'e3',
+               'e4',
+               'e5',
+               'eo']
+
 
 # Functions #
 
 
 def read_hartree_files(filename, hartree_dir):
-
     hartree_file_path = create_out_fname(filename, base_dir=hartree_dir, ext='.csv')
     hartree_dict = read_csv_to_dict(hartree_file_path, mode='rU')
     hartree_headers = get_csv_fieldnames(hartree_file_path, mode='rU')
@@ -99,32 +97,30 @@ def read_hartree_files(filename, hartree_dir):
     if hartree_dict[0][FUNCTIONAL] == MISSING_FUNCTIONAL:
         qm_method = split_info[2].split('.')[0] + job_type
         print('Collected level of theory from filename: {} level matches {}?'
-                                .format(qm_method,base_filename))
+              .format(qm_method, base_filename))
     else:
         qm_method = hartree_dict[0][FUNCTIONAL] + job_type
 
-    return hartree_headers, hartree_dict, job_type ,qm_method
+    return hartree_headers, hartree_dict, job_type, qm_method
 
-def create_pucker_gibbs_dict(dict, job_type, qm_method):
 
+def create_pucker_gibbs_dict(dict_input, qm_method):
     puckering_dict = {}
-    #puckering_dict[JOB_TYPE] = job_type
-    for row in dict:
+    # puckering_dict[JOB_TYPE] = job_type
+    for row in dict_input:
         pucker = row[PUCKER]
-        gibbs = float(row[GIBBS])*HARTREE_TO_KCALMOL
+        gibbs = float(row[GIBBS]) * HARTREE_TO_KCALMOL
         puckering_dict[pucker] = gibbs
 
-    #TODO: need to have a Boltzmann function for when multiple local minimum structures are present
+    # TODO: need to have a Boltzmann function for when multiple local minimum structures are present
 
-    #TODO: brainstorm a way to organize the information so that it is meaninful.... need to have all structures ID as local min or TS structures...
-
-    puckering_dict
+    # TODO: brainstorm a way to organize the information so that it is meaninful.... need to have all structures ID
+    # as local min or TS structures...
 
     return puckering_dict, qm_method
 
 
 def rel_energy_values(pucker_dict1, method_1, pucker_dict2, method_2):
-
     lowest_energy_value = 1000000
     lowest_energy_puck = []
     lowest_energy_puckering_1 = {}
@@ -144,27 +140,40 @@ def rel_energy_values(pucker_dict1, method_1, pucker_dict2, method_2):
 
     for pucker in pucker_dict1:
         lowest_energy_puckering_1[pucker] = round((pucker_dict1[pucker] - lowest_energy_value), 1)
-        #print(pucker, lowest_energy_puckering[pucker])
+        # print(pucker, lowest_energy_puckering[pucker])
 
     for pucker in pucker_dict2:
         lowest_energy_puckering_2[pucker] = round((pucker_dict2[pucker] - lowest_energy_value), 1)
-        #print(pucker, lowest_energy_puckering[pucker])
+        # print(pucker, lowest_energy_puckering[pucker])
 
-        #level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_1, method_1)
-        #level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_2, method_2)
+        # level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_1, method_1)
+        # level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_2, method_2)
 
-        #print(level_of_theory_dict)
+        # print(level_of_theory_dict)
     return lowest_energy_puckering_1, lowest_energy_puckering_2
 
 
 def creating_level_dict_of_dict(energy_dict, qm_method):
+    """ creates a dict of dict based on the level of theory-type of job that is currently being processed
 
+    :param energy_dict:
+    :param qm_method:
+    :return:
+    """
     level_of_theory_dict = {}
     level_of_theory_dict[qm_method] = energy_dict
 
     return level_of_theory_dict
 
+
 def creating_lowest_energy_dict_of_dict(level_of_theory_dict):
+    """ takes the level of theory dict and IDs the lowest energy structures to modify the dictionary so that everything
+        is compared to the lowest energy structure.
+
+    :param level_of_theory_dict: dict of dicts containing all of the necessary information on the lm and TS structure
+    :return: level_theory_lowest_energy_dict: dict of dicts that has been modified to be comapred to the lowest energy
+                structure for each method.
+    """
 
     finished_keys = []
     level_theory_lowest_energy_dict = {}
@@ -175,15 +184,16 @@ def creating_lowest_energy_dict_of_dict(level_of_theory_dict):
             finished_keys.append(level_keys_1_info[0])
             for level_keys_2 in level_of_theory_dict.keys():
                 level_keys_2_info = level_keys_2.split("-")
-                if (level_keys_1_info[0] == level_keys_2_info[0] and level_keys_1_info[1] != level_keys_2_info[1]):
+                if level_keys_1_info[0] == level_keys_2_info[0] and level_keys_1_info[1] != level_keys_2_info[1]:
                     lowest_energy_pucker_dict_1, lowest_energy_pucker_dict_2 = \
-                                          rel_energy_values(level_of_theory_dict[level_keys_1], level_keys_1,
-                                                            level_of_theory_dict[level_keys_2], level_keys_2)
+                        rel_energy_values(level_of_theory_dict[level_keys_1], level_keys_1,
+                                          level_of_theory_dict[level_keys_2], level_keys_2)
 
                     level_theory_lowest_energy_dict[level_keys_1] = lowest_energy_pucker_dict_1
                     level_theory_lowest_energy_dict[level_keys_2] = lowest_energy_pucker_dict_2
 
     return level_theory_lowest_energy_dict
+
 
 def find_files_by_dir(tgt_dir, pat):
     """Recursively searches the target directory tree for files matching the given pattern.
@@ -203,7 +213,13 @@ def find_files_by_dir(tgt_dir, pat):
 
 
 def creating_puckering_tables(level_theory_dict):
-    ''''''
+    """ takes the dict of dict that contains both information on the local min and transition states structure
+        and separates them.
+
+    :param level_theory_dict: dict of dicts containing both the local min and transition state information
+    :return: lm_table_dict: dict of dicts just for the local min
+    :return: ts_table_dict: dict of dicts just for the transition state information
+    """
 
     lm_table_dict = {}
     ts_table_dict = {}
@@ -226,7 +242,7 @@ def creating_puckering_tables(level_theory_dict):
 
             lm_table_dict[level_keys_info[0]] = lm_individual_dict
 
-        elif level_keys_info[1] =='ts':
+        elif level_keys_info[1] == 'ts':
             for pucker_keys in pucker_data.keys():
                 for pucker_list in LIST_PUCKER:
                     if pucker_keys == pucker_list:
@@ -243,14 +259,19 @@ def creating_puckering_tables(level_theory_dict):
 
 
 def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
-    ''''''
+    """ utilizes panda dataframes to write the local min and transition state dict of dicts
+
+    :param lm_table_dict: dictionary corresponding to the local mins
+    :param ts_table_dict: dictional corresponding to the transition state structures
+    :param output_filename: output filename for the excel file
+    :return: excel file with the required information
+    """
 
     df_lm = pd.DataFrame(lm_table_dict, index=LIST_PUCKER)
     df_ts = pd.DataFrame(ts_table_dict, index=LIST_PUCKER)
     writer = pd.ExcelWriter(output_filename, engine='xlsxwriter')
     df_lm.to_excel(writer, sheet_name='local min')
     df_ts.to_excel(writer, sheet_name='transition state')
-
 
     workbook = writer.book
 
@@ -259,7 +280,6 @@ def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
 
     worksheet_lm = writer.sheets['local min']
     worksheet_ts = writer.sheets['transition state']
-    #worksheet_testing = writer.sheets['testing']
 
     worksheet_lm.conditional_format('B2:P39', {'type': 'cell',
                                                'criteria': '>=',
@@ -271,6 +291,23 @@ def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
                                                'format': format_ts})
 
     return
+
+
+def writing_csv_files(lm_table_dict, ts_table_dict, molecule, sum_file_location):
+    """"""
+
+    prefix_lm = 'a_csv_lm_' + str(molecule)
+    prefix_ts = 'a_csv_ts_' + str(molecule)
+
+    path_lm = create_out_fname(sum_file_location, prefix=prefix_lm, remove_prefix='a_list_csv_files', ext='.csv')
+    path_ts = create_out_fname(sum_file_location, prefix=prefix_ts, remove_prefix='a_list_csv_files', ext='.csv')
+
+    df_lm = pd.DataFrame(lm_table_dict, index=LIST_PUCKER)
+    df_ts = pd.DataFrame(ts_table_dict, index=LIST_PUCKER)
+
+    df_lm.to_csv(path_lm, index=LIST_PUCKER)
+    df_ts.to_csv(path_ts, index=LIST_PUCKER)
+
 
 def parse_cmdline(argv):
     """
@@ -291,7 +328,7 @@ def parse_cmdline(argv):
                         default=None)
     parser.add_argument('-p', "--pattern", help="The file pattern you are looking for (example: '.csv').",
                         default=None)
-
+    parser.add_argument('-m', "--molecule", help="The type of molecule that is currently being studied")
 
     args = None
     try:
@@ -341,19 +378,21 @@ def main(argv=None):
         with open(args.sum_file) as f:
             for csv_file_read_newline in f:
                 csv_file_read = csv_file_read_newline.strip("\n")
-                hartree_headers, hartree_dict, job_type, qm_method =\
+                hartree_headers, hartree_dict, job_type, qm_method = \
                     read_hartree_files(csv_file_read, args.dir_hartree)
-                puckering_dict, qm_method = create_pucker_gibbs_dict(hartree_dict, job_type, qm_method)
+                puckering_dict, qm_method = create_pucker_gibbs_dict(hartree_dict, qm_method)
                 level_of_theory_dict[qm_method] = puckering_dict
 
         level_of_theory_dict_final = creating_lowest_energy_dict_of_dict(level_of_theory_dict)
         lm_table_dict, ts_table_dict = creating_puckering_tables(level_of_theory_dict_final)
 
-        list_f_name = create_out_fname(args.sum_file, prefix='z_oxane_table', base_dir=args.dir_hartree, ext='.xlsx')
+        prefix = 'a_table_lm-ts_' + str(args.molecule)
+
+        list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
+                        base_dir=args.dir_hartree, ext='.xlsx')
 
         writing_xlsx_files(lm_table_dict, ts_table_dict, list_f_name)
-
-
+        writing_csv_files(lm_table_dict, ts_table_dict, args.molecule, args.sum_file)
 
     except IOError as e:
         warning(e)
