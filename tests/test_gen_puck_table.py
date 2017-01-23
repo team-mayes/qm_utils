@@ -99,4 +99,4 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
         finally:
             silent_remove(output_file_lm)
             silent_remove(output_file_ts)
-            #silent_remove(os.path.join(SUB_DATA_DIR,'a_table_lm-ts_oxane.xlsx'))
+            silent_remove(os.path.join(SUB_DATA_DIR,'a_table_lm-ts_oxane.xlsx'))
