@@ -9,8 +9,6 @@ test_xyz_cluster
 import logging
 import os
 import unittest
-import pandas as pd
-
 from qm_utils.gen_puck_table import read_hartree_files, create_pucker_gibbs_dict, rel_energy_values, \
     creating_level_dict_of_dict, main
 from qm_utils.qm_common import diff_lines, silent_remove
@@ -101,4 +99,4 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
         finally:
             silent_remove(output_file_lm)
             silent_remove(output_file_ts)
-            silent_remove(os.path.join(SUB_DATA_DIR,'a_table_lm-ts_oxane.xlsx'))
+            #silent_remove(os.path.join(SUB_DATA_DIR,'a_table_lm-ts_oxane.xlsx'))

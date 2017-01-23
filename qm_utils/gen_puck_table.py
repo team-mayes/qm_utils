@@ -14,7 +14,6 @@ import fnmatch
 import os
 import sys
 import pandas as pd
-
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR,
                                 InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
 
@@ -114,13 +113,10 @@ def create_pucker_gibbs_dict(dict_input, qm_method):
 
     # TODO: need to have a Boltzmann function for when multiple local minimum structures are present
 
-    # TODO: brainstorm a way to organize the information so that it is meaninful.... need to have all structures ID
-    # as local min or TS structures...
-
     return puckering_dict, qm_method
 
 
-def rel_energy_values(pucker_dict1, method_1, pucker_dict2, method_2):
+def rel_energy_values(pucker_dict1, pucker_dict2):
     lowest_energy_value = 1000000
     lowest_energy_puck = []
     lowest_energy_puckering_1 = {}
@@ -186,8 +182,7 @@ def creating_lowest_energy_dict_of_dict(level_of_theory_dict):
                 level_keys_2_info = level_keys_2.split("-")
                 if level_keys_1_info[0] == level_keys_2_info[0] and level_keys_1_info[1] != level_keys_2_info[1]:
                     lowest_energy_pucker_dict_1, lowest_energy_pucker_dict_2 = \
-                        rel_energy_values(level_of_theory_dict[level_keys_1], level_keys_1,
-                                          level_of_theory_dict[level_keys_2], level_keys_2)
+                        rel_energy_values(level_of_theory_dict[level_keys_1], level_of_theory_dict[level_keys_2])
 
                     level_theory_lowest_energy_dict[level_keys_1] = lowest_energy_pucker_dict_1
                     level_theory_lowest_energy_dict[level_keys_2] = lowest_energy_pucker_dict_2
@@ -389,7 +384,7 @@ def main(argv=None):
         prefix = 'a_table_lm-ts_' + str(args.molecule)
 
         list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
-                        base_dir=args.dir_hartree, ext='.xlsx')
+                                       base_dir=args.dir_hartree, ext='.xlsx')
 
         writing_xlsx_files(lm_table_dict, ts_table_dict, list_f_name)
         writing_csv_files(lm_table_dict, ts_table_dict, args.molecule, args.sum_file)

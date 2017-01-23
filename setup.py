@@ -12,7 +12,7 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'six',
     'seaborn',
-    'numpy', 'pandas', 'pandas',
+    'numpy', 'pandas', 'pandas', 'xlsxwriter',
 ]
 
 test_requirements = [
