@@ -62,7 +62,7 @@ ATOMS_RING_ORDER1 = ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1',
 ATOMS_RING_ORDER3 = ['6', '6', '6', '6', '6', '8', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
 OXANE_RING_ATOM_ORDER = '5,0,1,2,3,4'
 
-OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_b3lyp_hartree_sum_cpsnap_good.csv')
+OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_z_hartree_out-unsorted-oxane-b3lyp.csv')
 OUT_FILE_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsb3lyp_hartree_sum-cpsnap.txt')
 GOOD_OUT_FILE_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsb3lyp_hartree_sum-cpsnap_good.txt')
 GOOD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_sorted-oxane-b3lyp.csv')
@@ -182,6 +182,16 @@ class TestXYZFunctions(unittest.TestCase):
         if len(hartree_dict) == len(hartree_list):
             pass
 
+    def testTestClustersLowTol(self):
+        low_tol = 0.00001
+        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
+        hartree_list, pucker_filename_dict, hartree_headers \
+            = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
+        hartree_dict = list_to_dict(hartree_list, FILE_NAME)
+        process_cluster_dict, xyz_coords_dict, atom_order \
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
+        self.assertEquals(len(process_cluster_dict), len(hartree_dict))
+
     def testTestClustersHighTol(self):
         high_tol = 100
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
@@ -216,37 +226,37 @@ class TestMain(unittest.TestCase):
         try:
             test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
             main(test_input)
-            self.assertFalse(diff_lines(GOOD_OUT_FILE2, OUT_FILE))
+            self.assertFalse(diff_lines(OUT_FILE,GOOD_OUT_FILE2))
         finally:
             print('hi!')
             #silent_remove(OUT_FILE)
             #silent_remove(OUT_FILE_LIST)
             #silent_remove(FILE_NEW_PUCK_LIST)
 
-    def testMainPrintXYZCoords(self):
-        try:
-            test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1', "-p", "true"]
-            main(test_input)
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s3, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_3s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5e, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_25b, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_b25, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_e5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5))
-            self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1))
-        finally:
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_b25)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_e5)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s5)
-            silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5s1)
-            silent_remove(OUT_FILE)
-            silent_remove(OUT_FILE_LIST)
-            silent_remove(FILE_NEW_PUCK_LIST)
+    # def testMainPrintXYZCoords(self):
+    #     try:
+    #         test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1', "-p", "true"]
+    #         main(test_input)
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s3, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3))
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_3s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1))
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5e, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e))
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_25b, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b))
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_b25, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25))
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_e5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5))
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5))
+    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1))
+    #     finally:
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_b25)
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_e5)
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s5)
+    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5s1)
+    #         silent_remove(OUT_FILE)
+    #         silent_remove(OUT_FILE_LIST)
+    #         silent_remove(FILE_NEW_PUCK_LIST)
 
     def testMainNotPrintXYZCoords(self):
         try:
