@@ -62,38 +62,46 @@ def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
     xyz_file_path = create_out_fname(filename, base_dir=xyz_dir, ext='.xyz')
 
     f = open(xyz_file_path, mode='r')
+    file_info = f.readlines()
 
     xyz_atoms = []
     atoms_ring_order = [None] * 6
     total_num_atoms = 0
     atom_num = 0
+    index = 0
+
     # Read the first line to obtain the number of atoms read
-    try:
-        total_num_atoms = int(f.next())
-    except ValueError:
-        exit("Could not obtain the number of atoms in the .xyz file.")
-    # Skip the title line
-    f.next()
 
-    xyz_coords_ring = np.full((num_atoms_ring, 3), np.nan)
-    # creates an array that will be populated later with xyz coordinates
-    xyz_coords = np.full((total_num_atoms, 3), np.nan)
+    for line in file_info:
+        index = index + 1
+        coord_floats = []
+        if index == 1:
+            try:
+                total_num_atoms = int(line)
+            except ValueError:
+                exit("Could not obtain the number of atoms in the .xyz file.")
+        elif index == 2:
+            xyz_coords_ring = np.full((num_atoms_ring, 3), np.nan)
+            # creates an array that will be populated later with xyz coordinates
+            xyz_coords = np.full((total_num_atoms, 3), np.nan)
+        else:
+            if atom_num == total_num_atoms:
+                break
+            atom_type, coor_x, coor_y, coor_z = line.split()
+            # map to take all of the coordinates and turn them into xyz_coords using float option
+            coords_list = list([coor_x, coor_y, coor_z])
+            for item in coords_list:
+                coord_floats.append(float(item))
 
-    for line in f:
-        if atom_num == total_num_atoms:
-            break
-        atom_type, coor_x, coor_y, coor_z = line.split()
-        # map to take all of the coordinates and turn them into xyz_coords using float option
-        coord_floats = map(float, [coor_x, coor_y, coor_z])
-        if len(coord_floats) == 3:
-            xyz_coords[atom_num] = coord_floats
-            xyz_atoms.append(atom_type)
+            if len(coord_floats) == 3:
+                xyz_coords[atom_num] = coord_floats
+                xyz_atoms.append(atom_type)
 
-        if atom_num in ring_atom_order:
-            ring_index = ring_atom_order.index(atom_num)
-            xyz_coords_ring[ring_index] = coord_floats
-            atoms_ring_order[ring_index] = atom_type
-        atom_num += 1
+            if atom_num in ring_atom_order:
+                ring_index = ring_atom_order.index(atom_num)
+                xyz_coords_ring[ring_index] = coord_floats
+                atoms_ring_order[ring_index] = atom_type
+            atom_num += 1
     f.close()
 
     list_atoms = xyz_atoms
