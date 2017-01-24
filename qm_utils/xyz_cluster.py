@@ -350,9 +350,6 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
             for file_id in range(1, raw_cluster_len):
                 file_name = file_list[file_id]
                 not_assigned = True
-
-    #TODO create a check to see if the puckers, when being compared to other puckers are very similar.
-
                 for assigned_cluster_name in process_cluster_dict:
                     (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
                         compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir, ring_num_list)
