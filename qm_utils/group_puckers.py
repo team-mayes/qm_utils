@@ -46,36 +46,7 @@ def create_dframes(inputs):
 # Command Processing #
 
 
-def parse_cmdline(argv):
-    """
-    Returns the parsed argument list and return code.
-    `argv` is a list of arguments, or `None` for ``sys.argv[1:]``.
-    """
-    if argv is None:
-        argv = sys.argv[1:]
 
-    # initialize the parser object:
-    parser = argparse.ArgumentParser()
-    # parser.add_argument("-i", "--input_rates", help="The location of the input rates file",
-    #                     default=DEF_IRATE_FILE, type=read_input_rates)
-    parser.add_argument("type", help="The type of data to group", choices=DATA_NAMES.keys())
-    parser.add_argument("input", help="The input files to process", nargs='+')
-    parser.add_argument("-o", "--out_file", help="The name of the out file.  Defaults "
-                                                 "to the first input file name with the "
-                                                 "suffix of the data type")
-    parser.add_argument("-t", "--temperature", help="The temperature to use for the KBT "
-                                                    "calculation (defaults to {})".format(DEFAULT_TEMPERATURE),
-                        default=DEFAULT_TEMPERATURE)
-
-    args = None
-    try:
-        args = parser.parse_args(argv)
-    except IOError as e:
-        warning("Problems reading file:", e)
-        parser.print_help()
-        return args, 2
-
-    return args, 0
 
 
 def group_by_pucker(dframes):
@@ -112,7 +83,7 @@ def calc_boltz(dframes):
 
 #REQUIRES: A DataFrame object that corresponds to a single input CSV file
 #RETURNS: an array that contains "TS_Storage" objects - each correspond to a line in the CSV file
-#ASSUMPTIONS: Ethalpy is held in column 11, Pucker is held in column 18
+#ASSUMPTIONS: Ethalpy is held in column 11, Pucker is held in column 18, stephen's naming is being used
 #EFFECTS: Reads in the "minimum" CSV file and returns all of the minimums that were found and what the name ("string")
 #of the corresponding transition state should be (along with the pucker and enthalpy - for future use)
 def find_TS_for_each_min(binned_frames):
@@ -136,28 +107,28 @@ def find_TS_for_each_min(binned_frames):
     return TS_points
 
 
-
+#REQUIRES: A DataFrame object that corresponds to a single input CSV file, and a string of "TS_Storage" objects
+#RETURNS: an array that contains "TS_final" objects that contain the information for a single pathway
+#ASSUMPTIONS: Ethalpy is held in column 11, Pucker is held in column 18
+#EFFECTS: Reads in the "TS" CSV file and returns all of the minimums that were matched with each transition state.
 def finding_H_and_pairing(TS_points,binned_frames):
     all_paths = []
     for value in TS_points:
         for ir in binned_frames.itertuples():
             already_done = False
             if value.return_name() in ir[1]:
-                #print("found matching words " + ir[1] + " " + value.return_name())
                 for thing in all_paths:
                     if ir[1] == thing.return_name():
-                        #print("appending double word"+ ir[1] + " " + thing.return_name())
                         thing.add_minimum(value.forward,value.reverse, value.H, value.minimum)
                         already_done= True
 
 
                 if(not already_done):
-                    #print("appendeding first " + " " + ir[1])
                     all_paths.append(TS_final(ir[1],ir[11],ir[18]))
                     all_paths[-1].add_minimum(value.forward,value.reverse, value.H, value.minimum)
 
     return all_paths
-
+#Class that hold information about each minimum
 class TS_storage:
     def __init__(self,name, forward,reverse,H, minimum):
         self.name = name
@@ -173,6 +144,9 @@ class TS_storage:
     def return_H(self):
          return self.H
 
+#This function takes a single instance of the "TS_final" class and returns a dictionary
+#with the correct keys and values in each pathway.
+#In here the change in enthalpy is multiplied by 627.5095 to give the correct units.
 def make_dict(TS_final):
     new_dictionary = {}
     minimums = TS_final.return_mins()
@@ -187,7 +161,7 @@ def make_dict(TS_final):
 
 
 
-
+# Class that holds information about each "pathway"
 class TS_final:
     def __init__(self,name,enthalpy,pucker):
         self.name = name
@@ -219,42 +193,76 @@ class TS_final:
         (self.minimums).append(min)
 
 
+def parse_cmdline(argv):
+    """
+    Returns the parsed argument list and return code.
+    `argv` is a list of arguments, or `None` for ``sys.argv[1:]``.
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # initialize the parser object:
+    parser = argparse.ArgumentParser(description='INSERT DESCRIPTION')
+
+    parser.add_argument('-m', "--file_min", help='testing')
+    parser.add_argument('-s',"--file_ts", help="testing")
+    parser.add_argument('-o', "--out_file", help = "testing")
+
+    # parser.add_argument("-i", "--input_rates", help="The location of the input rates file",
+    #                     default=DEF_IRATE_FILE, type=read_input_rates)
+
+    args = None
+    try:
+        args = parser.parse_args(argv)
+    except IOError as e:
+        warning("Problems reading file:", e)
+        parser.print_help()
+        return args, 2
+    print(args)
+    return args, 0
+
+
 def main(argv=None):
     args, ret = parse_cmdline(argv)
 
     if ret != 0:
         return ret
 
-    dframes = create_dframes(args.input)
+  #dframes = create_dframes(args)
 
-    try:
-        binned_dframes = bin_dframes_by_type(dframes)
-    except InvalidDataError as e:
-        warning("Invalid input: ", e)
-        return 6
+    #try:
+    #    binned_dframes = bin_dframes_by_type(dframes)
+    #except InvalidDataError as e:
+     #   warning("Invalid input: ", e)
+      #  return 6
 
-    if len(binned_dframes[DT_LM]) == 0:
-        warning("You must specify at least one local minimum file")
-        return 7
+    #if len(binned_dframes[DT_LM]) == 0:
+     #   warning("You must specify at least one local minimum file")
+      #  return 7
 
-    if args.type == DT_TS and len(binned_dframes[DT_TS]) == 0:
-        warning("Type", DT_TS, "requires at least one transition state file")
-        return 8
+    #if args.type == DT_TS and len(binned_dframes[DT_TS]) == 0:
+     #   warning("Type", DT_TS, "requires at least one transition state file")
+      #  return 8
 
-    calc_boltz(dframes)
 
-    # TODO: create a better outfile name
-    #grouped_dframe.to_csv(get_out_file_name(args.out_file, dframes.keys()[0], args.group_type), index=False)
 
     ts_points = []
     states = []
+
+    #Read input CSV files
+    ts = pd.read_csv(args.file_ts)
+    min = pd.read_csv(args.file_min)
+
+    #create the arrays of objects
     ts_points = find_TS_for_each_min(min)
     states = finding_H_and_pairing(ts_points, ts)
+    # creates corresponding dictionaries for all of the TS_final objects
     list_of_dicts = []
     for all in states:
         list_of_dicts.append(make_dict(all))
     headers = ["File name", "Minimum1", "Delta H1", "Transition Pucker", "Delta H2", "Minimum2"]
-    write_csv(list_of_dicts, "/Users/SteveJobs/Desktop/research/TESTS/sam_output.csv", headers)
+    #writes new data to the out_file
+    write_csv(list_of_dicts,args.out_file, headers)
     return 0  # success
 
 
