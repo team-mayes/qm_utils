@@ -12,13 +12,23 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'six',
     'seaborn',
+<<<<<<< HEAD
     'numpy', 'pandas', 'pandas', 'xlsxwriter',
+=======
+    'pandas>=0.19.1',
+    'numpy>=1.11.2',
+>>>>>>> remotes/origin/group_puckers
 ]
 
 test_requirements = [
-    'seaborn',
     'six',
+<<<<<<< HEAD
     'numpy',
+=======
+    'seaborn',
+    'pandas>=0.19.1',
+    'numpy>=1.11.2',
+>>>>>>> remotes/origin/group_puckers
 ]
 
 setup(
