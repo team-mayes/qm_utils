@@ -229,9 +229,9 @@ class TestMain(unittest.TestCase):
             self.assertFalse(diff_lines(OUT_FILE,GOOD_OUT_FILE2))
         finally:
             print('hi!')
-            #silent_remove(OUT_FILE)
-            #silent_remove(OUT_FILE_LIST)
-            #silent_remove(FILE_NEW_PUCK_LIST)
+            silent_remove(OUT_FILE)
+            silent_remove(OUT_FILE_LIST)
+            silent_remove(FILE_NEW_PUCK_LIST)
 
     # def testMainPrintXYZCoords(self):
     #     try:
