@@ -12,23 +12,17 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'six',
     'seaborn',
-<<<<<<< HEAD
-    'numpy', 'pandas', 'pandas', 'xlsxwriter',
-=======
-    'pandas>=0.19.1',
-    'numpy>=1.11.2',
->>>>>>> remotes/origin/group_puckers
+    'numpy',
+    'pandas',
+    'pandas',
+    'xlsxwriter',
 ]
 
 test_requirements = [
     'six',
-<<<<<<< HEAD
-    'numpy',
-=======
     'seaborn',
     'pandas>=0.19.1',
     'numpy>=1.11.2',
->>>>>>> remotes/origin/group_puckers
 ]
 
 setup(
@@ -49,7 +43,8 @@ setup(
                             'coord_to_com=qm_utils.coord_to_com:main',
                             'xyz_cluster=qm_utils.xyz_cluster:main',
                             'norm_analysis=qm_utils.norm_analysis:main',
-                            'gen_pucker_table=qm_utils.gen_puck_table:main']
+                            'gen_pucker_table=qm_utils.gen_puck_table:main',
+                            'group_puckers=qm.utils.group_puckers:main']
     },
     include_package_data=True,
     package_data={'qm_utils': ['cfg/*.*', ], },
