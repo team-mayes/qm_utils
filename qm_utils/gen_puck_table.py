@@ -90,6 +90,7 @@ def read_hartree_files(filename, hartree_dir):
         job_type = '-lm'
     elif job_type == 'TS':
         job_type = '-ts'
+    elif
     else:
         print('Job Type is not in the system!!!!!!')
 
