@@ -90,7 +90,8 @@ def read_hartree_files(filename, hartree_dir):
         job_type = '-lm'
     elif job_type == 'TS':
         job_type = '-ts'
-    elif
+    elif job_type == 'lmirc':
+        job_type = '-lmirc'
     else:
         print('Job Type is not in the system!!!!!!')
 
@@ -143,10 +144,6 @@ def rel_energy_values(pucker_dict1, pucker_dict2):
         lowest_energy_puckering_2[pucker] = round((pucker_dict2[pucker] - lowest_energy_value), 1)
         # print(pucker, lowest_energy_puckering[pucker])
 
-        # level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_1, method_1)
-        # level_of_theory_dict = creating_level_dict_of_dict(lowest_energy_puckering_2, method_2)
-
-        # print(level_of_theory_dict)
     return lowest_energy_puckering_1, lowest_energy_puckering_2
 
 
@@ -190,6 +187,50 @@ def creating_lowest_energy_dict_of_dict(level_of_theory_dict):
 
     return level_theory_lowest_energy_dict
 
+def check_same_puckers_lmirc_and_lm(dict_1, job_type1, dict_2, job_type2):
+    ''''''
+
+    dict_1_puckers = []
+    dict_2_puckers = []
+
+    if job_type1.split("-")[0] == job_type2.split("-")[0] and job_type1.split("-")[1] != job_type2.split("-")[1]:
+        for dict_row1 in dict_1:
+            dict_1_puckers.append(dict_row1[PUCKER])
+        for dict_row2 in dict_2:
+            dict_2_puckers.append(dict_row2[PUCKER])
+
+
+        print(dict_1_puckers)
+        print(dict_2_puckers)
+
+        intersecting_puckers = set(dict_2_puckers).intersection(dict_1_puckers)
+
+        print(intersecting_puckers)
+
+        for intersect_puck in intersecting_puckers:
+            if intersect_puck == dict_1_puckers and intersect_puck == dict_2_puckers:
+                print ('mama we made it')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    return
+
 
 def find_files_by_dir(tgt_dir, pat):
     """Recursively searches the target directory tree for files matching the given pattern.
@@ -219,10 +260,12 @@ def creating_puckering_tables(level_theory_dict):
 
     lm_table_dict = {}
     ts_table_dict = {}
+    lmirc_table_dict = {}
 
     for method_keys in level_theory_dict.keys():
         lm_individual_dict = {}
         ts_individual_dict = {}
+        lmirc_individual_dict = {}
         level_keys_info = method_keys.split("-")
         pucker_data = level_theory_dict[method_keys]
         if level_keys_info[1] == 'lm':
@@ -250,6 +293,19 @@ def creating_puckering_tables(level_theory_dict):
                     ts_individual_dict[list_pucker_keys] = ''
 
             ts_table_dict[level_keys_info[0]] = ts_individual_dict
+
+        elif level_keys_info[1] == 'lmirc':
+            for pucker_keys in pucker_data.keys():
+                for pucker_list in LIST_PUCKER:
+                    if pucker_keys == pucker_list:
+                        pucker_energy = str(pucker_data[pucker_keys])
+                        lmirc_individual_dict[pucker_list] = pucker_energy
+
+                for list_pucker_keys in LIST_PUCKER:
+                    if list_pucker_keys not in lmirc_individual_dict.keys():
+                        lmirc_individual_dict[list_pucker_keys] = ''
+
+                lmirc_table_dict[level_keys_info[0]] = lmirc_individual_dict
 
     return lm_table_dict, ts_table_dict
 

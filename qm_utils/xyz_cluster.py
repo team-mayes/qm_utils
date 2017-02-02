@@ -73,7 +73,7 @@ def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
     # Read the first line to obtain the number of atoms read
 
     for line in file_info:
-        index = index + 1
+        index += 1
         coord_floats = []
         if index == 1:
             try:
@@ -360,7 +360,8 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
                 not_assigned = True
                 for assigned_cluster_name in process_cluster_dict:
                     (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
-                        compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir, ring_num_list)
+                        compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir,
+                                         ring_num_list)
                     xyz_coords_dict[file_name] = ctr_ring_all_xyz1
                     xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
                     if rmsd_kabsch < ok_tol:
