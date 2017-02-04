@@ -177,8 +177,25 @@ def parse_cmdline(argv):
 
     args = parser.parse_args(argv)
 
-    if args.dir is None:
-        args.dir = os.path.dirname(args.ts_file)
+    try:
+        if args.dir is None:
+            args.dir = os.path.dirname(args.ts_file)
+
+
+    except (KeyError, InvalidDataError) as e:
+        warning(e)
+        parser.print_help()
+        return args, INPUT_ERROR
+    except IOError as e:
+        warning(e)
+        parser.print_help()
+        return args, IO_ERROR
+    except (ValueError, SystemExit) as e:
+        if e.message == 0:
+            return args, GOOD_RET
+        warning(e)
+        parser.print_help()
+        return args, INPUT_ERROR
 
     return args, GOOD_RET
 
