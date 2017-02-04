@@ -40,7 +40,7 @@ PHI = 'phi'
 # Functions #
 
 
-def reading_all_csv_input_files(file_read, molecule='oxane'):
+def reading_all_csv_input_files(file_read, molecule):
     ''''''
 
     dict = {}
@@ -77,16 +77,16 @@ def reading_all_csv_input_files(file_read, molecule='oxane'):
     return method[0], job_type, sort_status, dict
 
 
-def creating_dict_of_dict(list_files):
+def creating_dict_of_dict(list_files, molecule):
     ''''''
 
     dict_of_dicts = {}
     for file in list_files:
-        method, job_type, sort_status, dict = reading_all_csv_input_files(file)
+        method, job_type, sort_status, dict = reading_all_csv_input_files(file, molecule)
         dict_id = method + '-' + job_type + '-' + sort_status
         dict_of_dicts[dict_id] = dict
 
-    return dict_of_dicts
+    return dict_of_dicts, method
 
 
 def sorting_dict_of_dict(dict_of_dicts):
@@ -115,6 +115,7 @@ def sorting_dict_of_dict(dict_of_dicts):
         data_dict[overwrite_theta] = theta_data
 
     return data_dict
+
 
 def write_file_data_dict(data_dict, out_filename):
 
@@ -170,7 +171,8 @@ def parse_cmdline(argv):
                         default=None)
     parser.add_argument('-d', "--dir", help="The directory where all hartree files are located.,",
                         default=None)
-    parser.add_argument('-m', "--mole", help="The molecule currently being studied.")
+    parser.add_argument('-m', "--mole", help="The molecule currently being studied.",
+                        default=None)
 
 
     args = parser.parse_args(argv)
@@ -192,13 +194,12 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return ret
 
-    list_files = [  args.ts_file, args.lm_file, args.raw_lm, args.raw_lmirc, args.raw_ts ]
+    list_files = [args.ts_file, args.lm_file, args.raw_lm, args.raw_lmirc, args.raw_ts]
 
-    dict_of_dicts = creating_dict_of_dict(list_files)
+    dict_of_dicts, method = creating_dict_of_dict(list_files, str(args.mole))
     data_dict = sorting_dict_of_dict(dict_of_dicts)
 
-    output_filename = create_out_fname('igor_df_oxane_am1_HIMOM', base_dir=args.dir, ext='.csv')
-    print(output_filename)
+    output_filename = create_out_fname('igor_df_' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.csv')
     write_file_data_dict(data_dict,output_filename)
 
 
