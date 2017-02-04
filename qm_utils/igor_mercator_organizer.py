@@ -175,27 +175,42 @@ def parse_cmdline(argv):
                         default=None)
 
 
+
+
+    # try:
+    #     args = parser.parse_args(argv)
+    # if args.sum_file is None:
+    #     raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
+    # elif not os.path.isfile(args.sum_file):
+    #     raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
+    # # Finally, if the summary file is there, and there is no dir_xyz provided
+    # if args.dir_xyz is None:
+    #     args.dir_xyz = os.path.dirname(args.sum_file)
+    # # if a  dir_xyz is provided, ensure valid
+    # elif not os.path.isdir(args.dir_xyz):
+    #     raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
+
+
+
     args = parser.parse_args(argv)
-
-    try:
-        if args.dir is None:
-            args.dir = os.path.dirname(args.ts_file)
+    if args.dir is None:
+        args.dir = os.path.dirname(args.ts_file)
 
 
-    except (KeyError, InvalidDataError) as e:
-        warning(e)
-        parser.print_help()
-        return args, INPUT_ERROR
-    except IOError as e:
-        warning(e)
-        parser.print_help()
-        return args, IO_ERROR
-    except (ValueError, SystemExit) as e:
-        if e.message == 0:
-            return args, GOOD_RET
-        warning(e)
-        parser.print_help()
-        return args, INPUT_ERROR
+    # except (KeyError, InvalidDataError) as e:
+    #     warning(e)
+    #     parser.print_help()
+    #     return args, INPUT_ERROR
+    # except IOError as e:
+    #     warning(e)
+    #     parser.print_help()
+    #     return args, IO_ERROR
+    # except (ValueError, SystemExit) as e:
+    #     if e.message == 0:
+    #         return args, GOOD_RET
+    #     warning(e)
+    #     parser.print_help()
+    #     return args, INPUT_ERROR
 
     return args, GOOD_RET
 
