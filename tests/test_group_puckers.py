@@ -10,7 +10,7 @@ Tests for `cp` module. (CP = Cremer-Pople)
 
 import unittest
 import os
-from  qm_utils.group_puckers import main, find_TS_for_each_min, finding_H_and_pairing, make_dict
+from qm_utils.group_puckers import main, find_TS_for_each_min, finding_H_and_pairing, make_dict
 from qm_utils.qm_common import diff_lines, silent_remove
 import logging
 import pandas as pd

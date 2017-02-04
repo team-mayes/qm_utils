@@ -26,13 +26,13 @@ in that order
 from __future__ import print_function
 
 import csv
+import math
 import os
 
 import numpy as np
 import argparse
 import sys
-import math
-from qm_common import (GOOD_RET, INVALID_DATA, warning, read_csv_to_dict, create_out_fname, write_csv, InvalidDataError,
+from qm_utils.qm_common import (GOOD_RET, INVALID_DATA, warning, read_csv_to_dict, create_out_fname, write_csv, InvalidDataError,
                        INPUT_ERROR)
 
 __author__ = 'hbmayes'

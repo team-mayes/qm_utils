@@ -10,7 +10,7 @@ import logging
 import os
 import unittest
 from qm_utils.gen_puck_table import read_hartree_files, create_pucker_gibbs_dict, rel_energy_values, \
-    creating_level_dict_of_dict, main
+    creating_level_dict_of_dict, main, check_same_puckers_lmirc_and_lm
 from qm_utils.qm_common import diff_lines, silent_remove
 
 __author__ = 'SPVicchio'
@@ -30,6 +30,8 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'gen_puck_table')
 # Sample Files#
 SAMPLE_HARTREE_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-optall-oxane-b3lyp.csv')
 SAMPLE_HARTREE_FILE_MISSING = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-optall-oxane-am1.csv')
+SAMPLE_HARTREE_FILE_LMIRC = os.path.join(SUB_DATA_DIR, 'z_notcluster-irc-lmirc-oxane-am1.csv')
+SAMPLE_HARTREE_FILE_LM = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-optall-oxane-am1.csv')
 SAMPLE_HARTREE_FILE_TS = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-TS-oxane-am1.csv')
 SAMPLE_PUCKER_DICT_NOT_REL = {'4c1': -170479.2753145665, '3s1': -170473.79213655548, 'os2': -170473.80719678348,
                               '5s1': -170473.176549736, '2so': -170473.81786444498, '1s3': -170473.791509046,
@@ -69,6 +71,11 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
         self.assertEquals(qm_method,'am1-lm')
         self.assertEquals(job_type,'-lm')
 
+    def testReadHartreeFilesMissing(self):
+        hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_LMIRC, SUB_DATA_DIR)
+        self.assertEquals(qm_method,'am1-lmirc')
+        self.assertEquals(job_type,'-lmirc')
+
     def testReadHartreeFilesTS(self):
         hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE_TS, SUB_DATA_DIR)
         self.assertEquals(job_type,'-ts')
@@ -87,6 +94,14 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
         puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, qm_method)
         level_of_theory_dict = creating_level_dict_of_dict(puckering_dict, qm_method_n)
         self.assertEquals(level_of_theory_dict,GOOD_DICT_OF_DICTS_AM1_TS)
+
+    def testPuckerLMandPuckerLMIRCSame(self):
+        hartree_headers_irc, hartree_dict_irc, job_type_irc, qm_method_irc\
+                    = read_hartree_files(SAMPLE_HARTREE_FILE_LMIRC, SUB_DATA_DIR)
+        hartree_headers_lm, hartree_dict_lm, job_type_lm, qm_method_lm\
+                    = read_hartree_files(SAMPLE_HARTREE_FILE_LM, SUB_DATA_DIR)
+
+        check_same_puckers_lmirc_and_lm (hartree_dict_irc, job_type_irc, hartree_dict_lm, job_type_lm)
 
     def testMain(self):
         try:

@@ -11,14 +11,14 @@ import os
 import unittest
 
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
-    write_csv, list_to_dict
+    write_csv, list_to_dict, read_csv_to_dict
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
 __author__ = 'SPVicchio'
 
-# logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 
@@ -226,16 +226,21 @@ class TestMain(unittest.TestCase):
         try:
             test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1']
             main(test_input)
-            self.assertFalse(diff_lines(OUT_FILE,GOOD_OUT_FILE2))
+            hartree_dict_test = read_csv_to_dict(OUT_FILE, mode='rU')
+            hartree_dict_good = read_csv_to_dict(GOOD_OUT_FILE2, mode='rU')
+
+            for row1 in hartree_dict_test:
+                for row2 in hartree_dict_good:
+                    if row1[FILE_NAME] == row2[FILE_NAME]:
+                        self.assertEqual(row1, row2)
         finally:
-            print('hi!')
             silent_remove(OUT_FILE)
             silent_remove(OUT_FILE_LIST)
             silent_remove(FILE_NEW_PUCK_LIST)
 
     # def testMainPrintXYZCoords(self):
     #     try:
-    #         test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FILE, "-t", '0.1', "-p", "true"]
+    #         test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FI LE, "-t", '0.1', "-p", "true"]
     #         main(test_input)
     #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s3, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3))
     #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_3s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1))
@@ -270,8 +275,10 @@ class TestMain(unittest.TestCase):
 
     def testTranstionStateMainScript(self):
             test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.1']
+            main(test_input)
             with capture_stdout(main, test_input) as output:
-                self.assertTrue("Warning! The following puckers have been dropped: ['eo']." in output)
+                self.assertFalse("Warning! The following puckers have been dropped: ['eo']." in output)
+
 
     def testTranstionStateMainScript2(self):
             test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.005']
