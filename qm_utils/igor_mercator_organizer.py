@@ -191,12 +191,24 @@ def parse_cmdline(argv):
     #     raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
 
 
-
     args = parser.parse_args(argv)
-    if args.dir is None:
-        args.dir = os.path.dirname(args.ts_file)
-    else:
-        parser.print_help()
+
+    # args = None
+    # try:
+    #     args = parser.parse_args(argv)
+    # except IOError as e:
+    #     warning("Problems reading file:", e)
+    #     parser.print_help()
+    #     return args, 2
+    # print(args)
+    # return args, 0
+    #
+    #
+    # args = parser.parse_args(argv)
+    # if args.dir is None:
+    #     args.dir = os.path.dirname(args.ts_file)
+    # else:
+    #     parser.print_help()
 
 
     # except (KeyError, InvalidDataError) as e:
