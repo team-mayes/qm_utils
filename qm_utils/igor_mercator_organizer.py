@@ -82,9 +82,10 @@ def creating_dict_of_dict(list_files, molecule):
 
     dict_of_dicts = {}
     for file in list_files:
-        method, job_type, sort_status, dict = reading_all_csv_input_files(file, molecule)
-        dict_id = method + '-' + job_type + '-' + sort_status
-        dict_of_dicts[dict_id] = dict
+        if file is not None:
+            method, job_type, sort_status, dict = reading_all_csv_input_files(file, molecule)
+            dict_id = method + '-' + job_type + '-' + sort_status
+            dict_of_dicts[dict_id] = dict
 
     return dict_of_dicts, method
 
@@ -175,56 +176,24 @@ def parse_cmdline(argv):
                         default=None)
 
 
-
-
-    # try:
-    #     args = parser.parse_args(argv)
-    # if args.sum_file is None:
-    #     raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
-    # elif not os.path.isfile(args.sum_file):
-    #     raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
-    # # Finally, if the summary file is there, and there is no dir_xyz provided
-    # if args.dir_xyz is None:
-    #     args.dir_xyz = os.path.dirname(args.sum_file)
-    # # if a  dir_xyz is provided, ensure valid
-    # elif not os.path.isdir(args.dir_xyz):
-    #     raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_xyz', args.dir_xyz))
-
-
+    args = None
     args = parser.parse_args(argv)
 
-    # args = None
-    # try:
-    #     args = parser.parse_args(argv)
-    # except IOError as e:
-    #     warning("Problems reading file:", e)
-    #     parser.print_help()
-    #     return args, 2
-    # print(args)
-    # return args, 0
-    #
-    #
-    # args = parser.parse_args(argv)
-    # if args.dir is None:
-    #     args.dir = os.path.dirname(args.ts_file)
-    # else:
-    #     parser.print_help()
-
-
-    # except (KeyError, InvalidDataError) as e:
-    #     warning(e)
-    #     parser.print_help()
-    #     return args, INPUT_ERROR
-    # except IOError as e:
-    #     warning(e)
-    #     parser.print_help()
-    #     return args, IO_ERROR
-    # except (ValueError, SystemExit) as e:
-    #     if e.message == 0:
-    #         return args, GOOD_RET
-    #     warning(e)
-    #     parser.print_help()
-    #     return args, INPUT_ERROR
+    if args.dir is None:
+        GOOD_RET = 'Okay'
+        if args.ts_file is not None:
+            args.dir = os.path.dirname(args.ts_file)
+        elif args.lm_file is not None:
+            args.dir = os.path.dirname(args.lm_file)
+        elif args.raw_lm is not None:
+            args.dir = os.path.dirname(args.raw_lm)
+        elif args.raw_ts is not None:
+            args.dir = os.path.dirname(args.raw_ts)
+        elif args.raw_lmirc is not None:
+            args.dir = os.path.dirname(args.raw_lmirc)
+        else:
+            parser.print_help()
+            GOOD_RET = 'No'
 
     return args, GOOD_RET
 
@@ -236,17 +205,18 @@ def main(argv=None):
     :param argv: The command line arguments.
     :return: The return code for the program's termination.
     """
+
     args, ret = parse_cmdline(argv)
-    if ret != GOOD_RET or args is None:
-        return ret
 
-    list_files = [args.ts_file, args.lm_file, args.raw_lm, args.raw_lmirc, args.raw_ts]
+    if ret != 'No':
 
-    dict_of_dicts, method = creating_dict_of_dict(list_files, str(args.mole))
-    data_dict = sorting_dict_of_dict(dict_of_dicts)
+        list_files = [args.ts_file, args.lm_file, args.raw_lm, args.raw_lmirc, args.raw_ts]
 
-    output_filename = create_out_fname('igor_df_' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.csv')
-    write_file_data_dict(data_dict,output_filename)
+        dict_of_dicts, method = creating_dict_of_dict(list_files, str(args.mole))
+        data_dict = sorting_dict_of_dict(dict_of_dicts)
+
+        output_filename = create_out_fname('igor_df_' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.csv')
+        write_file_data_dict(data_dict,output_filename)
 
 
 if __name__ == '__main__':

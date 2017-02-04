@@ -511,16 +511,16 @@ def parse_cmdline(argv):
         warning(e)
         parser.print_help()
         return args, INPUT_ERROR
-    except IOError as e:
-        warning(e)
-        parser.print_help()
-        return args, IO_ERROR
-    except (ValueError, SystemExit) as e:
-        if e.message == 0:
-            return args, GOOD_RET
-        warning(e)
-        parser.print_help()
-        return args, INPUT_ERROR
+    # except IOError as e:
+    #     warning(e)
+    #     parser.print_help()
+    #     return args, IO_ERROR
+    # except (ValueError, SystemExit) as e:
+    #     if e.message == 0:
+    #         return args, GOOD_RET
+    #     warning(e)
+    #     parser.print_help()
+    #     return args, INPUT_ERROR
 
     return args, GOOD_RET
 
