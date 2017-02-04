@@ -195,6 +195,8 @@ def parse_cmdline(argv):
     args = parser.parse_args(argv)
     if args.dir is None:
         args.dir = os.path.dirname(args.ts_file)
+    else:
+        parser.print_help()
 
 
     # except (KeyError, InvalidDataError) as e:
