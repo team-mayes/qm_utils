@@ -29,12 +29,14 @@ DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'group_puckers')
 
 # Input & corresponding output files #
-
+BXYLOSE_B3LYP_LOCAL_MIN_HARTREE = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-localmin-bxyl-am1.csv')
 BXYLOSE_B3LYP_MIN_HARTREE = os.path.join(SUB_DATA_DIR, 'z_hartree_raw_lmirc_am1.csv')
 BXYLOSE_B3LYP_TS_HARTREE = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-TS-bxyl-am1.csv')
 BXYLOSE_B3LYP_MIN_HARTREE_DIFF = os.path.join(SUB_DATA_DIR, 'bxylose_b3lyp_min_hartree_diff.csv')
 OUTPUT_EMPTY_PUCKER = os.path.join(SUB_DATA_DIR, 'group_puckers_output.csv')
-
+OXANE_MIN = os.path.join(SUB_DATA_DIR, 'z_hartree_out-unsorted-lmirc-oxane-am1.csv')
+OXANE_LOCAL_MIN = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-optall-oxane-am1.csv')
+OXANE_TS = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-TS-oxane-am1.csv')
 
 # Good Output
 
@@ -44,7 +46,7 @@ GOOD_OUTPUT_EMPTY_PUCKER = os.path.join(SUB_DATA_DIR, 'group_puckers_output_good
 class TestFunctions(unittest.TestCase):
     def testFindTSForEachMin(self):
         ts = pd.read_csv(BXYLOSE_B3LYP_MIN_HARTREE)
-        TS_point = find_TS_for_each_min(ts)
+        TS_point = find_TS_for_each_min(ts, "norm")
         self.assertEqual(TS_point[1].return_min(), '1c4')
         self.assertEqual(TS_point[1].return_H(), -0.222527)
         self.assertEqual(TS_point[1].return_name(), 'bxyl_1e_52-TS_am1')
@@ -52,7 +54,7 @@ class TestFunctions(unittest.TestCase):
     def testFinding_H_and_pairing(self):
         min = pd.read_csv(BXYLOSE_B3LYP_TS_HARTREE)
         ts = pd.read_csv(BXYLOSE_B3LYP_MIN_HARTREE)
-        TS_point = find_TS_for_each_min(ts)
+        TS_point = find_TS_for_each_min(ts,"norm")
         paths = finding_H_and_pairing(TS_point, min)
 
         self.assertEqual(paths[0].return_pucker(), '5ho')
@@ -62,7 +64,7 @@ class TestFunctions(unittest.TestCase):
     def testMake_Dict(self):
         min = pd.read_csv(BXYLOSE_B3LYP_TS_HARTREE)
         ts = pd.read_csv(BXYLOSE_B3LYP_MIN_HARTREE)
-        TS_point = find_TS_for_each_min(ts)
+        TS_point = find_TS_for_each_min(ts,"norm")
         paths = finding_H_and_pairing(TS_point, min)
         test_dict = make_dict(paths[0])
         self.assertEqual(test_dict["File name"], 'bxyl_1e_63-TS_am1.log')
@@ -76,8 +78,9 @@ class TestFunctions(unittest.TestCase):
 class TestMain(unittest.TestCase):
     def testMain(self):
         try:
-            test_input = ['-m', BXYLOSE_B3LYP_MIN_HARTREE, '-s', BXYLOSE_B3LYP_TS_HARTREE, '-o', OUTPUT_EMPTY_PUCKER]
+            test_input = ['-m', OXANE_MIN, '-s', OXANE_TS, '-o', OUTPUT_EMPTY_PUCKER, '-l',OXANE_LOCAL_MIN, "-n" "not-norm"]
             main(test_input)
             self.assertFalse(diff_lines(OUTPUT_EMPTY_PUCKER, GOOD_OUTPUT_EMPTY_PUCKER))
+
         finally:
             silent_remove(OUTPUT_EMPTY_PUCKER)
