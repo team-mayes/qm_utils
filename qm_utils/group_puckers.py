@@ -78,7 +78,7 @@ def bin_dframes_by_type(dframes):
 # 
 #     pass
 
-def find_TS_for_each_min(binned_frames):
+def find_TS_for_each_min(binned_frames, naming):
     """ Reads in the "minimum" CSV file and returns all of the minimums that were found and what the name ("string")
         of the corresponding transition state should be (along with the pucker and enthalpy - for future use). The
         function assumes that the enthalpy is held in column 11, pucker is held in column 18, and
@@ -90,8 +90,12 @@ def find_TS_for_each_min(binned_frames):
     TS_points = []
     for ir in binned_frames.itertuples():
         name = ir[1]
-        forward = "_norm-ircf_am1-minIRC_am1.log"
-        reverse = "_norm-ircr_am1-minIRC_am1.log"
+        if(naming == "norm"):
+            forward = "_norm-ircf_am1-minIRC_am1.log"
+            reverse = "_norm-ircr_am1-minIRC_am1.log"
+        else:
+            forward = "-ircf_am1-minIRC_am1.log"
+            reverse = "-ircr_am1-minIRC_am1.log"
         reverse_index = name.find(reverse)
         forward_index = name.find(forward)
         if reverse_index != -1:
@@ -152,6 +156,11 @@ class TS_storage:
     def return_H(self):
         return self.H
 
+def all_puckers(binned_frame):
+    puckers = []
+    for ir in binned_frame.itertuples():
+        puckers.append(ir[18])
+    return puckers
 
 def make_dict(TS_final):
     """ This function takes a single instance of the "TS_final" class and returns a dictionary with the
@@ -218,9 +227,11 @@ def parse_cmdline(argv):
     # initialize the parser object:
     parser = argparse.ArgumentParser(description='INSERT DESCRIPTION')
 
-    parser.add_argument('-m', "--file_min", help='testing')
-    parser.add_argument('-s', "--file_ts", help="testing")
+    parser.add_argument('-m', "--file_min", help='IRC min')
+    parser.add_argument('-l', "--file_local_min", help='OPT min')
+    parser.add_argument('-s', "--file_ts", help="TS states")
     parser.add_argument('-o', "--out_file", help="testing")
+    parser.add_argument('-n', "--naming", help="naming convention")
 
     # parser.add_argument("-i", "--input_rates", help="The location of the input rates file",
     #                     default=DEF_IRATE_FILE, type=read_input_rates)
@@ -250,13 +261,28 @@ def main(argv=None):
 
     ts_points = []
     states = []
-
+    all_local_min_puckers = []
     # Read input CSV files
     ts = pd.read_csv(args.file_ts)
     min = pd.read_csv(args.file_min)
+    local_min = pd.read_csv(args.file_local_min)
 
-    # create the arrays of objects
-    ts_points = find_TS_for_each_min(min)
+
+    all_local_min_puckers = all_puckers(local_min)
+
+    ts_points = find_TS_for_each_min(min,args.naming)
+    for points in ts_points:
+        found = False
+        pucker = points.return_min()
+        for local_min in all_local_min_puckers:
+            if pucker == local_min:
+                found = True
+        if(not found):
+            message = pucker + " was not found in local mins"
+            sys.exit(message)
+
+
+
     states = finding_H_and_pairing(ts_points, ts)
     # creates corresponding dictionaries for all of the TS_final objects
     list_of_dicts = []
