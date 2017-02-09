@@ -45,7 +45,8 @@ setup(
                             'norm_analysis=qm_utils.norm_analysis:main',
                             'gen_pucker_table=qm_utils.gen_puck_table:main',
                             'group_puckers=qm_utils.group_puckers:main',
-                            'igor_mercator=qm_utils.igor_mercator_organizer:main']
+                            'igor_mercator=qm_utils.igor_mercator_organizer:main',
+                            'break_up_file=qm_utils.break_up_file:main']
     },
     include_package_data=True,
     package_data={'qm_utils': ['cfg/*.*', ], },
