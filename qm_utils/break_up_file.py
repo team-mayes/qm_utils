@@ -72,7 +72,7 @@ def main(argv=None):
             new_array.insert(0, str(i-last-1)+'\n')
             hold_new_lines.append(new_array)
             string_name = hold_lines[last][:(len(hold_lines[last])-1)] + ".xyz"
-            string_name = string_name.replace(" ","")
+            string_name = string_name.replace(" \\$","")
             file_names.append(string_name)
             last = i+1;
         i = i+1
