@@ -1,8 +1,8 @@
-oxane-b25-freeze_b3lyp-optall_b3lyp.log
-oxane-5e-freeze_b3lyp-optall_b3lyp.log
 oxane-e5-freeze_b3lyp-optall_b3lyp.log
-oxane-1s3-freeze_b3lyp-optall_b3lyp.log
-oxane-5s1-freeze_b3lyp-optall_b3lyp.log
-oxane-1s5-freeze_b3lyp-optall_b3lyp.log
 oxane-25b-freeze_b3lyp-optall_b3lyp.log
 oxane-3s1-freeze_b3lyp-optall_b3lyp.log
+oxane-5s1-freeze_b3lyp-optall_b3lyp.log
+oxane-b25-freeze_b3lyp-optall_b3lyp.log
+oxane-1s5-freeze_b3lyp-optall_b3lyp.log
+oxane-5e-freeze_b3lyp-optall_b3lyp.log
+oxane-1s3-freeze_b3lyp-optall_b3lyp.log

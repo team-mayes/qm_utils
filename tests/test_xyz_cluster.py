@@ -116,7 +116,7 @@ class TestFailWell(unittest.TestCase):
         if logger.isEnabledFor(logging.DEBUG):
             main(test_input)
         with capture_stderr(main, test_input) as output:
-            self.assertFalse(output)
+            self.assertEquals(output,'WARNING:  0\n')
         with capture_stdout(main, test_input) as output:
             self.assertTrue("optional arguments" in output)
 

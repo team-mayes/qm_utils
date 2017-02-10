@@ -510,17 +510,23 @@ def parse_cmdline(argv):
     except (KeyError, InvalidDataError) as e:
         warning(e)
         parser.print_help()
+        status_check = e.args
         return args, INPUT_ERROR
-    # except IOError as e:
-    #     warning(e)
-    #     parser.print_help()
-    #     return args, IO_ERROR
-    # except (ValueError, SystemExit) as e:
-    #     if e.message == 0:
-    #         return args, GOOD_RET
-    #     warning(e)
-    #     parser.print_help()
-    #     return args, INPUT_ERROR
+    except IOError as e:
+        warning(e)
+        parser.print_help()
+        status_check = e.args
+        return args, IO_ERROR
+    except (ValueError, SystemExit) as e:
+        status_check = e.args
+
+        if e.args == 0:
+            status_check = e.args
+            return args, GOOD_RET
+        warning(e)
+        parser.print_help()
+        status_check = e.args
+        return args, INPUT_ERROR
 
     return args, GOOD_RET
 
