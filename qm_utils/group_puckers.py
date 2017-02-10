@@ -75,10 +75,10 @@ def bin_dframes_by_type(dframes):
 
 
 # def calc_boltz(dframes):
-# 
+#
 #     pass
 
-def find_TS_for_each_min(binned_frames, naming):
+def find_TS_for_each_min(binned_frames, namingf, namingr):
     """ Reads in the "minimum" CSV file and returns all of the minimums that were found and what the name ("string")
         of the corresponding transition state should be (along with the pucker and enthalpy - for future use). The
         function assumes that the enthalpy is held in column 11, pucker is held in column 18, and
@@ -90,12 +90,14 @@ def find_TS_for_each_min(binned_frames, naming):
     TS_points = []
     for ir in binned_frames.itertuples():
         name = ir[1]
-        if(naming == "norm"):
-            forward = "_norm-ircf_am1-minIRC_am1.log"
-            reverse = "_norm-ircr_am1-minIRC_am1.log"
-        else:
-            forward = "-ircf_am1-minIRC_am1.log"
-            reverse = "-ircr_am1-minIRC_am1.log"
+        forward = namingf
+        reverse = namingr
+        # if(naming == "norm"):
+        #     forward = "_norm-ircf_am1-minIRC_am1.log"
+        #     reverse = "_norm-ircr_am1-minIRC_am1.log"
+        # else:
+        #     forward = "-ircf_am1-minIRC_am1.log"
+        #     reverse = "-ircr_am1-minIRC_am1.log"
         reverse_index = name.find(reverse)
         forward_index = name.find(forward)
         if reverse_index != -1:
@@ -231,10 +233,8 @@ def parse_cmdline(argv):
     parser.add_argument('-l', "--file_local_min", help='OPT min')
     parser.add_argument('-s', "--file_ts", help="TS states")
     parser.add_argument('-o', "--out_file", help="testing")
-    parser.add_argument('-n', "--naming", help="naming convention")
-
-    # parser.add_argument("-i", "--input_rates", help="The location of the input rates file",
-    #                     default=DEF_IRATE_FILE, type=read_input_rates)
+    # parser.add_argument('-f', "--for", help="naming convention forward")
+    # parser.add_argument('-r', "--rev", help="naming convection reverse")
 
     args = None
     try:
@@ -267,10 +267,9 @@ def main(argv=None):
     min = pd.read_csv(args.file_min)
     local_min = pd.read_csv(args.file_local_min)
 
-
     all_local_min_puckers = all_puckers(local_min)
 
-    ts_points = find_TS_for_each_min(min,args.naming)
+    ts_points = find_TS_for_each_min(min, args.forward, args.reverse)
     for points in ts_points:
         found = False
         pucker = points.return_min()

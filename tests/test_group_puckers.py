@@ -78,7 +78,13 @@ class TestFunctions(unittest.TestCase):
 class TestMain(unittest.TestCase):
     def testMain(self):
         try:
-            test_input = ['-m', OXANE_MIN, '-s', OXANE_TS, '-o', OUTPUT_EMPTY_PUCKER, '-l',OXANE_LOCAL_MIN, "-n" "not-norm"]
+            # test_input = ['-m', OXANE_MIN, '-s', OXANE_TS, '-o', OUTPUT_EMPTY_PUCKER, '-l',OXANE_LOCAL_MIN, "-n" "not-norm"]
+            test_input = ['-m', OXANE_MIN,
+                          '-s', OXANE_TS,
+                          '-o', OUTPUT_EMPTY_PUCKER,
+                          '-l', OXANE_LOCAL_MIN,
+                          '-f', '-ircf_am1-minIRC_am1.log',
+                          '-r', '-ircr_am1-minIRC_am1.log']
             main(test_input)
             self.assertFalse(diff_lines(OUTPUT_EMPTY_PUCKER, GOOD_OUTPUT_EMPTY_PUCKER))
 
