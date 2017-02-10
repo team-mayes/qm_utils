@@ -6,14 +6,16 @@ Reads a pdb (protein data bank") file and creates gaussian input files and files
 """
 
 from __future__ import print_function
+
 import argparse
 import os
 import sys
+
 import numpy as np
 import six
 
 from qm_common import (GOOD_RET, INVALID_DATA, warning, find_files_by_dir, create_out_fname, list_to_file, process_cfg,
-                       dequote, InvalidDataError, IO_ERROR)
+                       InvalidDataError, IO_ERROR, INPUT_ERROR, prep_string)
 
 try:
     # noinspection PyCompatibility
@@ -132,12 +134,24 @@ def parse_cmdline(argv):
                                                   "it is assumed based on the file extension.",
                         default=None)
 
+    args = None
     try:
         args = parser.parse_args(argv)
-    except (IOError, SystemExit) as e:
+    except KeyError as e:
+
         warning(e)
         parser.print_help()
-        return [], INVALID_DATA
+        return args, INPUT_ERROR
+    except IOError as e:
+        warning(e)
+        parser.print_help()
+        return args, IO_ERROR
+    except SystemExit as e:
+        if e.message == 0:
+            return args, GOOD_RET
+        warning(e)
+        parser.print_help()
+        return args, INPUT_ERROR
 
     if not args.skip_cp:
         if len(args.config[RING_ATOMS]) != 6 or len(args.config[RING_ATOM_TYPES]) != 6:
@@ -147,18 +161,6 @@ def parse_cmdline(argv):
             args.skip_cp = True
 
     return args, GOOD_RET
-
-
-def prep_string(raw_string):
-    """
-    Reads potentially multi-line raw string and returns string that will be correctly outputted
-    :param raw_string: a string which may have "\n" to denote line breaks and may be quoted
-    :return: a string ready to print to the com file, including extra return
-    """
-    if len(raw_string) < 1:
-        return raw_string
-    else:
-        return '\n'.join(dequote(raw_string).split('\\n'))
 
 
 def process_file(file_path, cp_data, cfg):
@@ -299,7 +301,7 @@ def main(argv=None):
     :return: The return code for the program's termination.
     """
     args, ret = parse_cmdline(argv)
-    if ret != GOOD_RET:
+    if ret != GOOD_RET or args is None:
         return ret
 
     cfg = args.config

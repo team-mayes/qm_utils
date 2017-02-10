@@ -6,8 +6,6 @@ Common methods for this project.
 """
 
 from __future__ import print_function
-
-# Return codes
 import collections
 import csv
 import difflib
@@ -28,6 +26,8 @@ INVALID_DATA = 3
 # Tolerance initially based on double standard machine precision of 5 × 10−16 for float64 (decimal64)
 # found to be too stringent
 TOL = 0.00000000001
+
+NA = 'N/A'
 
 
 # Error checking including testing scripts
@@ -320,21 +320,36 @@ def list_to_file(list_to_print, fname, list_format=None, delimiter=' ', mode='w'
             print("  Appended: {}".format(fname))
 
 
-def read_csv_to_dict(src_file, quote_style=csv.QUOTE_MINIMAL):
+def read_csv_to_dict(src_file, mode='r', quote_style=csv.QUOTE_MINIMAL):
     """
     Reads the given CSV (comma-separated with a first-line header row) and returns a list of
     dicts where each dict contains a row's data keyed by the header row.
 
     @param src_file: The CSV to read.
     @param quote_style: how to read the dictionary
+    @param mode: default is 'r'; now can specify 'rb' or 'rU'
     @return: A list of dicts containing the file's data.
     """
     result = []
-    with open(src_file) as csv_file:
+
+    with open(src_file, mode) as csv_file:
         csv_reader = csv.DictReader(csv_file, quoting=quote_style)
         for line in csv_reader:
             result.append(convert_dict_line(line))
     return result
+
+
+def get_csv_fieldnames(src_file, mode='r', quote_style=csv.QUOTE_MINIMAL):
+    """
+    Get fieldnames in preserved order (list)
+    :param src_file:
+    :param quote_style:
+    @param mode: default is 'r'; now can specify 'rb' or 'rU'
+    :return: list of fieldnames from CSV
+    """
+    with open(src_file, mode) as csv_file:
+        csv_reader = csv.DictReader(csv_file, quoting=quote_style)
+        return csv_reader.fieldnames
 
 
 def convert_dict_line(line):
@@ -342,6 +357,21 @@ def convert_dict_line(line):
     for s_key, s_val in line.items():
         s_dict[s_key] = s_val
     return s_dict
+
+
+def list_to_dict(list_of_dicts, key_for_dict):
+    """
+    Convert a list of dicts to a dict of dicts
+    :param list_of_dicts: a list of dicts
+    :param key_for_dict: key in inner dict, whose value will be the key for the outer dict
+    :return : a dict of dicts, with the keys being based on key_for_dict, and the values being the "inner" dict
+    """
+    dict_of_dicts = {}
+    for row in list_of_dicts:
+        if row[key_for_dict] in dict_of_dicts:
+            warning("Will overwrite dictionary entry for key '{}'".format(row[key_for_dict]))
+        dict_of_dicts[row[key_for_dict]] = row
+    return dict_of_dicts
 
 
 def write_csv(data, out_fname, fieldnames, extrasaction="raise", mode='w', quote_style=csv.QUOTE_NONNUMERIC):
@@ -365,3 +395,61 @@ def write_csv(data, out_fname, fieldnames, extrasaction="raise", mode='w', quote
         print("Wrote file: {}".format(out_fname))
     elif mode == 'a':
         print("  Appended: {}".format(out_fname))
+
+
+def write_csv_old(tgt, write_list, cols):
+    try:
+        writer = csv.writer(tgt)
+        writer.writerow(cols)
+        for write_row in write_list:
+            writer.writerow([write_row[col] for col in cols])
+    finally:
+        tgt.close()
+
+
+def conv_map_old(conv_dict, raw_vals):
+    """
+    Takes a dictionary mapping column name to conversion function
+    and a list of dictionaries containing unconverted data.
+    """
+    conv_vals = list()
+    for raw_row in raw_vals:
+        conv_row = dict()
+        for (col, cfunc) in conv_dict.items():
+            if (col in raw_row and (raw_row[col] != NA)):
+                conv_row[col] = cfunc(raw_row[col])
+            else:
+                conv_row[col] = ''
+
+        conv_vals.append(conv_row)
+    return conv_vals
+
+
+def read_csv_old(file_loc):
+    """
+    Reads the given file, mapping data rows to their respective
+    header row.
+    """
+    reader = csv.reader(open(file_loc, 'r'))
+    is_first = True
+    rows = list()
+    for row in reader:
+        if is_first:
+            header = row
+            is_first = False
+            continue
+        rows.append(dict(zip(header,row)))
+    return rows
+
+
+def prep_string(raw_string):
+    """
+    Reads potentially multi-line raw string and returns string that will be correctly outputted
+    :param raw_string: a string which may have "\n" to denote line breaks and may be quoted
+    :return: a string ready to print to the com file, including extra return
+    """
+    if len(raw_string) < 1:
+        return raw_string
+    else:
+        return '\n'.join(dequote(raw_string).split('\\n'))
+

@@ -10,7 +10,7 @@ Tests for `read_pdb` module.
 
 import unittest
 import os
-from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr
+from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout
 from qm_utils.coord_to_com import main
 import logging
 
@@ -66,6 +66,7 @@ class TestMain(unittest.TestCase):
                 self.assertTrue('Will use only default values' in output)
             self.assertFalse(diff_lines(COM_1C4, COM_1C4_GOOD))
             self.assertFalse(diff_lines(CP_FILE, CP_FILE_GOOD))
+            print(diff_lines(COM_1C4,COM_1C4_GOOD))
         finally:
             for o_file in [COM_1C4, COM_E3_FILE, COM_4C1_FILE]:
                 silent_remove(o_file, disable=DISABLE_REMOVE)
@@ -90,6 +91,15 @@ class TestMain(unittest.TestCase):
 
 
 class TestFailWell(unittest.TestCase):
+    def testHelp(self):
+        test_input = ['-h']
+        if logger.isEnabledFor(logging.DEBUG):
+            main(test_input)
+        with capture_stderr(main, test_input) as output:
+            self.assertFalse(output)
+        with capture_stdout(main, test_input) as output:
+            self.assertTrue("optional arguments" in output)
+
     def testWrongOrderAtoms(self):
         try:
             test_input = ['-f', '1c4_wrong_order.txt', "-o", SUB_DATA_DIR, "-t", "pdb"]

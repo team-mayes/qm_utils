@@ -1,0 +1,15 @@
+bxyl_03b_12-TS_am1_norm.log 3.7
+bxyl_03b_20-TS_am1_norm.log 21.0
+bxyl_03b_23-TS_am1_norm.log 25.4
+bxyl_03b_36-TS_am1_norm.log 4.5
+bxyl_03b_48-TS_am1_norm.log 5.9
+bxyl_14b_37-TS_am1_norm.log 7.2
+bxyl_14b_80-TS_am1_norm.log 5.7
+bxyl_2so_59-TS_am1_norm.log 3.1
+bxyl_4c1_18-TS_am1_norm.log 8.0
+bxyl_5s1_31-TS_am1_norm.log 23.3
+bxyl_b14_6-TS_am1_norm.log 10.0
+bxyl_b25_30-TS_am1_norm.log 7.7
+bxyl_b25_41-TS_am1_norm.log 5.1
+bxyl_bo3_13-TS_am1_norm.log 3.1
+bxyl_eo_64-TS_am1_norm.log 18.0

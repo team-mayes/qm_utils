@@ -1,0 +1,16 @@
+z_cluster-sorted-TS-oxane-am1.csv
+z_cluster-sorted-TS-oxane-b3lyp.csv
+z_cluster-sorted-TS-oxane-bmk.csv
+z_cluster-sorted-TS-oxane-m06l.csv
+z_cluster-sorted-TS-oxane-pbe.csv
+z_cluster-sorted-TS-oxane-pm3.csv
+z_cluster-sorted-TS-oxane-pm3mm.csv
+z_cluster-sorted-TS-oxane-pm6.csv
+z_cluster-sorted-optall-oxane-am1.csv
+z_cluster-sorted-optall-oxane-b3lyp.csv
+z_cluster-sorted-optall-oxane-bmk.csv
+z_cluster-sorted-optall-oxane-m06l.csv
+z_cluster-sorted-optall-oxane-pbe.csv
+z_cluster-sorted-optall-oxane-pm3.csv
+z_cluster-sorted-optall-oxane-pm3mm.csv
+z_cluster-sorted-optall-oxane-pm6.csv

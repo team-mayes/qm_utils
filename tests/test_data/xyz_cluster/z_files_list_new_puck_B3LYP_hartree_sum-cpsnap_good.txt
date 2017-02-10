@@ -1,0 +1,8 @@
+oxane-b25-freeze_B3LYP-relax_B3LYP-newpuck_os2.log
+oxane-3s1-freeze_B3LYP-relax_B3LYP-newpuck_3s1.log
+oxane-e5-freeze_B3LYP-relax_B3LYP-newpuck_4c1.log
+oxane-1s3-freeze_B3LYP-relax_B3LYP-newpuck_1s3.log
+oxane-25b-freeze_B3LYP-relax_B3LYP-newpuck_2so.log
+oxane-5e-freeze_B3LYP-relax_B3LYP-newpuck_1c4.log
+oxane-5s1-freeze_B3LYP-relax_B3LYP-newpuck_5s1.log
+oxane-1s5-freeze_B3LYP-relax_B3LYP-newpuck_1s5.log

@@ -71,3 +71,6 @@ target/
 # intellij (for pycharm)
 .idea/
 *.iml
+
+# files genereated from tests
+qm_utils/*xyz

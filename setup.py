@@ -12,8 +12,10 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'six',
     'seaborn',
-    'pandas>=0.19.1',
-    'numpy>=1.11.2',
+    'numpy',
+    'pandas',
+    'pandas',
+    'xlsxwriter',
 ]
 
 test_requirements = [
@@ -28,7 +30,7 @@ setup(
     version='0.1.0',
     description="tools  for QM projects in Team Mayes & Blue",
     long_description=readme + '\n\n' + history,
-    author="Heather Beth Mayes",
+    author="Team Mayes and Blue",
     author_email='hbmayes@umich.edu',
     url='https://github.com/hmayes/qm_utils',
     packages=[
@@ -38,9 +40,13 @@ setup(
                  'qm_utils'},
     entry_points={
         'console_scripts': ['cp_params=qm_utils.cp_params:main',
-                            'read_pdb=qm_utils.read_pdb:main',
-                            'read_sdf=qm_utils.read_sdf:main',
-                            ]
+                            'coord_to_com=qm_utils.coord_to_com:main',
+                            'xyz_cluster=qm_utils.xyz_cluster:main',
+                            'norm_analysis=qm_utils.norm_analysis:main',
+                            'gen_pucker_table=qm_utils.gen_puck_table:main',
+                            'group_puckers=qm_utils.group_puckers:main',
+                            'igor_mercator=qm_utils.igor_mercator_organizer:main',
+                            'break_up_file=qm_utils.break_up_file:main']
     },
     include_package_data=True,
     package_data={'qm_utils': ['cfg/*.*', ], },
