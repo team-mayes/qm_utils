@@ -46,7 +46,7 @@ GOOD_OUTPUT_EMPTY_PUCKER = os.path.join(SUB_DATA_DIR, 'group_puckers_output_good
 class TestFunctions(unittest.TestCase):
     def testFindTSForEachMin(self):
         ts = pd.read_csv(BXYLOSE_B3LYP_MIN_HARTREE)
-        TS_point = find_TS_for_each_min(ts, "norm")
+        TS_point = find_TS_for_each_min(ts, '_norm-ircf_am1-minIRC_am1.log', '_norm-ircr_am1-minIRC_am1.log')
         self.assertEqual(TS_point[1].return_min(), '1c4')
         self.assertEqual(TS_point[1].return_H(), -0.222527)
         self.assertEqual(TS_point[1].return_name(), 'bxyl_1e_52-TS_am1')
@@ -54,7 +54,7 @@ class TestFunctions(unittest.TestCase):
     def testFinding_H_and_pairing(self):
         min = pd.read_csv(BXYLOSE_B3LYP_TS_HARTREE)
         ts = pd.read_csv(BXYLOSE_B3LYP_MIN_HARTREE)
-        TS_point = find_TS_for_each_min(ts,"norm")
+        TS_point = find_TS_for_each_min(ts, '_norm-ircf_am1-minIRC_am1.log', '_norm-ircr_am1-minIRC_am1.log')
         paths = finding_H_and_pairing(TS_point, min)
 
         self.assertEqual(paths[0].return_pucker(), '5ho')
@@ -64,7 +64,7 @@ class TestFunctions(unittest.TestCase):
     def testMake_Dict(self):
         min = pd.read_csv(BXYLOSE_B3LYP_TS_HARTREE)
         ts = pd.read_csv(BXYLOSE_B3LYP_MIN_HARTREE)
-        TS_point = find_TS_for_each_min(ts,"norm")
+        TS_point = find_TS_for_each_min(ts, '_norm-ircf_am1-minIRC_am1.log', '_norm-ircr_am1-minIRC_am1.log')
         paths = finding_H_and_pairing(TS_point, min)
         test_dict = make_dict(paths[0])
         self.assertEqual(test_dict["File name"], 'bxyl_1e_63-TS_am1.log')
@@ -78,15 +78,15 @@ class TestFunctions(unittest.TestCase):
 class TestMain(unittest.TestCase):
     def testMain(self):
         try:
-            # test_input = ['-m', OXANE_MIN, '-s', OXANE_TS, '-o', OUTPUT_EMPTY_PUCKER, '-l',OXANE_LOCAL_MIN, "-n" "not-norm"]
             test_input = ['-m', OXANE_MIN,
                           '-s', OXANE_TS,
                           '-o', OUTPUT_EMPTY_PUCKER,
                           '-l', OXANE_LOCAL_MIN,
-                          '-f', '-ircf_am1-minIRC_am1.log',
-                          '-r', '-ircr_am1-minIRC_am1.log']
+                          '-for', 'ircf_am1-minIRC_am1.log',
+                          '-rev', 'ircr_am1-minIRC_am1.log']
             main(test_input)
             self.assertFalse(diff_lines(OUTPUT_EMPTY_PUCKER, GOOD_OUTPUT_EMPTY_PUCKER))
 
         finally:
-            silent_remove(OUTPUT_EMPTY_PUCKER)
+            print('hi')
+            #silent_remove(OUTPUT_EMPTY_PUCKER)

@@ -86,7 +86,7 @@ def read_hartree_files(filename, hartree_dir):
     split_info = base_filename[17:].split('-')
     job_type = split_info[0]
 
-    if job_type == 'optall':
+    if job_type == 'lm':
         job_type = '-lm'
     elif job_type == 'TS':
         job_type = '-ts'
@@ -190,46 +190,28 @@ def creating_lowest_energy_dict_of_dict(level_of_theory_dict):
 def check_same_puckers_lmirc_and_lm(dict_1, job_type1, dict_2, job_type2):
     ''''''
 
-    dict_1_puckers = []
-    dict_2_puckers = []
-
-    if job_type1.split("-")[0] == job_type2.split("-")[0] and job_type1.split("-")[1] != job_type2.split("-")[1]:
-        for dict_row1 in dict_1:
-            dict_1_puckers.append(dict_row1[PUCKER])
-        for dict_row2 in dict_2:
-            dict_2_puckers.append(dict_row2[PUCKER])
-
-
-        print(dict_1_puckers)
-        print(dict_2_puckers)
-
-        intersecting_puckers = set(dict_2_puckers).intersection(dict_1_puckers)
-
-        print(intersecting_puckers)
-
-        for intersect_puck in intersecting_puckers:
-            if intersect_puck == dict_1_puckers and intersect_puck == dict_2_puckers:
-                print ('mama we made it')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    return
+    pass
+    # dict_1_puckers = []
+    # dict_2_puckers = []
+    #
+    # if job_type1.split("-")[0] == job_type2.split("-")[0] and job_type1.split("-")[1] != job_type2.split("-")[1]:
+    #     for dict_row1 in dict_1:
+    #         dict_1_puckers.append(dict_row1[PUCKER])
+    #     for dict_row2 in dict_2:
+    #         dict_2_puckers.append(dict_row2[PUCKER])
+    #
+    #
+    #     print(dict_1_puckers)
+    #     print(dict_2_puckers)
+    #
+    #     intersecting_puckers = set(dict_2_puckers).intersection(dict_1_puckers)
+    #
+    #     print(intersecting_puckers)
+    #
+    #     for intersect_puck in intersecting_puckers:
+    #         if intersect_puck == dict_1_puckers and intersect_puck == dict_2_puckers:
+    #             print ('mama we made')
+    #return
 
 
 def find_files_by_dir(tgt_dir, pat):

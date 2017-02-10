@@ -33,6 +33,67 @@ K_B = 0.001985877534
 DEFAULT_TEMPERATURE = 298.15
 
 
+
+
+
+## Class ##
+
+class TS_storage:
+    """
+        Class that hold information about each minimum
+    """
+
+    def __init__(self, name, forward, reverse, H, minimum):
+        self.name = name
+        self.forward = forward
+        self.reverse = reverse
+        self.H = H
+        self.minimum = minimum
+
+    def return_name(self):
+        return self.name
+
+    def return_min(self):
+        return self.minimum
+
+    def return_H(self):
+        return self.H
+
+
+class TS_final:
+    """
+        Class that holds information about each "pathway"
+    """
+
+    def __init__(self, name, enthalpy, pucker):
+        self.name = name
+        self.forward = 0
+        self.H = enthalpy
+        self.reverse = 0
+        self.pucker = pucker
+        self.minimums = []
+
+    def return_name(self):
+        return self.name
+
+    def return_H(self):
+        return self.H
+
+    def return_pucker(self):
+        return self.pucker
+
+    def return_mins(self):
+        return self.minimums
+
+    def add_minimum(self, forward, reverse, H, pucker):
+        if forward:
+            self.forward = 1
+        else:
+            self.reverse = 1
+        min = {'pucker': pucker, "enthalpy": H}
+        (self.minimums).append(min)
+
+
 # Logic #
 
 def create_dframes(inputs):
@@ -43,8 +104,8 @@ def create_dframes(inputs):
     return dframes
 
 
-# Command Processing #
 
+## Functions ##
 
 def group_by_pucker(dframes):
     dframe = pd.concat(dframes.values())
@@ -74,11 +135,7 @@ def bin_dframes_by_type(dframes):
     return binned_frames
 
 
-# def calc_boltz(dframes):
-#
-#     pass
-
-def find_TS_for_each_min(binned_frames, namingf, namingr):
+def find_TS_for_each_min(binned_frames, irc_forward, irc_reverse):
     """ Reads in the "minimum" CSV file and returns all of the minimums that were found and what the name ("string")
         of the corresponding transition state should be (along with the pucker and enthalpy - for future use). The
         function assumes that the enthalpy is held in column 11, pucker is held in column 18, and
@@ -87,17 +144,13 @@ def find_TS_for_each_min(binned_frames, namingf, namingr):
     :param binned_frames: requires a DataFrame object that corresponds to a single input CSV file
     :return: an array that contains "TS_Storage" objects - each correspond to a line in the CSV file
     """
+
     TS_points = []
+    forward = str(irc_forward)
+    reverse = str(irc_reverse)
+
     for ir in binned_frames.itertuples():
         name = ir[1]
-        forward = namingf
-        reverse = namingr
-        # if(naming == "norm"):
-        #     forward = "_norm-ircf_am1-minIRC_am1.log"
-        #     reverse = "_norm-ircr_am1-minIRC_am1.log"
-        # else:
-        #     forward = "-ircf_am1-minIRC_am1.log"
-        #     reverse = "-ircr_am1-minIRC_am1.log"
         reverse_index = name.find(reverse)
         forward_index = name.find(forward)
         if reverse_index != -1:
@@ -137,27 +190,6 @@ def finding_H_and_pairing( TS_points, binned_frames):
     return all_paths
 
 
-class TS_storage:
-    """
-        Class that hold information about each minimum
-    """
-
-    def __init__(self, name, forward, reverse, H, minimum):
-        self.name = name
-        self.forward = forward
-        self.reverse = reverse
-        self.H = H
-        self.minimum = minimum
-
-    def return_name(self):
-        return self.name
-
-    def return_min(self):
-        return self.minimum
-
-    def return_H(self):
-        return self.H
-
 def all_puckers(binned_frame):
     puckers = []
     for ir in binned_frame.itertuples():
@@ -184,39 +216,8 @@ def make_dict(TS_final):
     return new_dictionary
 
 
-class TS_final:
-    """
-        Class that holds information about each "pathway"
-    """
 
-    def __init__(self, name, enthalpy, pucker):
-        self.name = name
-        self.forward = 0
-        self.H = enthalpy
-        self.reverse = 0
-        self.pucker = pucker
-        self.minimums = []
-
-    def return_name(self):
-        return self.name
-
-    def return_H(self):
-        return self.H
-
-    def return_pucker(self):
-        return self.pucker
-
-    def return_mins(self):
-        return self.minimums
-
-    def add_minimum(self, forward, reverse, H, pucker):
-        if forward:
-            self.forward = 1
-        else:
-            self.reverse = 1
-        min = {'pucker': pucker, "enthalpy": H}
-        (self.minimums).append(min)
-
+## Command Line Parse ##
 
 def parse_cmdline(argv):
     """
@@ -233,8 +234,8 @@ def parse_cmdline(argv):
     parser.add_argument('-l', "--file_local_min", help='OPT min')
     parser.add_argument('-s', "--file_ts", help="TS states")
     parser.add_argument('-o', "--out_file", help="testing")
-    # parser.add_argument('-f', "--for", help="naming convention forward")
-    # parser.add_argument('-r', "--rev", help="naming convection reverse")
+    parser.add_argument('-for', "--forward", help="The forward naming convection for IRC.")
+    parser.add_argument('-rev', "--reverse", help="The forward naming convection for IRC.")
 
     args = None
     try:
@@ -246,6 +247,8 @@ def parse_cmdline(argv):
     print(args)
     return args, 0
 
+
+## Main ##
 
 def main(argv=None):
     """
@@ -262,6 +265,7 @@ def main(argv=None):
     ts_points = []
     states = []
     all_local_min_puckers = []
+
     # Read input CSV files
     ts = pd.read_csv(args.file_ts)
     min = pd.read_csv(args.file_min)
