@@ -126,26 +126,31 @@ def create_pucker_gibbs_dict(dict_input, qm_method):
 
     for row in dict_input:
         row_pucker = row[PUCKER]
-        row_filename = row[FILE_NAME]
-        dict_of_dict[row_filename] = row
-        if row_pucker in list_puckers:
-            isolation_dict[row_pucker].append(row_filename)
-        elif row_pucker not in list_puckers:
-            list_puckers.append(row_pucker)
-            isolation_dict[row_pucker] = []
-            isolation_dict[row_pucker].append(row_filename)
+        gibbs = float(row[GIBBS]) * HARTREE_TO_KCALMOL
+        puckering_dict[row_pucker] = gibbs
 
-
-    for pucker_key in isolation_dict.keys():
-        for pucker_file in isolation_dict[pucker_key]:
-
-
-            gibbs_kcalmol = float(row[GIBBS]) * HARTREE_TO_KCALMOL
-            enth_kcalmol = float(row[ENTH]) * HARTREE_TO_KCALMOL
-
-            weight = math.exp(-enth_kcalmol/(DEFAULT_TEMPERATURE*K_B))
-
-            print(weight, gibbs_kcalmol, enth_kcalmol, dict_of_dict[pucker_file][GIBBS])
+    # for row in dict_input:
+    #     row_pucker = row[PUCKER]
+    #     row_filename = row[FILE_NAME]
+    #     dict_of_dict[row_filename] = row
+    #     if row_pucker in list_puckers:
+    #         isolation_dict[row_pucker].append(row_filename)
+    #     elif row_pucker not in list_puckers:
+    #         list_puckers.append(row_pucker)
+    #         isolation_dict[row_pucker] = []
+    #         isolation_dict[row_pucker].append(row_filename)
+    #
+    #
+    # for pucker_key in isolation_dict.keys():
+    #     for pucker_file in isolation_dict[pucker_key]:
+    #
+    #
+    #         gibbs_kcalmol = float(row[GIBBS]) * HARTREE_TO_KCALMOL
+    #         enth_kcalmol = float(row[ENTH]) * HARTREE_TO_KCALMOL
+    #
+    #         weight = math.exp(-enth_kcalmol/(DEFAULT_TEMPERATURE*K_B))
+    #
+    #         print(weight, gibbs_kcalmol, enth_kcalmol, dict_of_dict[pucker_file][GIBBS])
 
 
 
