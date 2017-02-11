@@ -14,6 +14,8 @@ import fnmatch
 import os
 import sys
 import pandas as pd
+import math
+
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR,
                                 InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
 
@@ -28,13 +30,22 @@ __author__ = 'SPVicchio'
 
 # Constants #
 HARTREE_TO_KCALMOL = 627.5095
+K_B = 0.001985877534 # Boltzmann Constant in kcal/mol K
+
+# Defaults #
+
+DEFAULT_TEMPERATURE = 298.15
+
 
 # Field Headers #
 FUNCTIONAL = 'Functional'
 MISSING_FUNCTIONAL = 'N/A'
 PUCKER = 'Pucker'
 GIBBS = 'G298 (Hartrees)'
+ENTH = "H298 (Hartrees)"
 JOB_TYPE = 'Pucker Status'
+PUCKERING_NEW = 'Boltz Pucker Num'
+FILE_NAME = 'File Name'
 LIST_PUCKER = ['4c1',
                '14b',
                '25b',
@@ -86,8 +97,10 @@ def read_hartree_files(filename, hartree_dir):
     split_info = base_filename[17:].split('-')
     job_type = split_info[0]
 
-    if job_type == 'lm':
+    if job_type == 'optall':
         job_type = '-lm'
+    elif job_type == 'lm':
+            job_type = '-lm'
     elif job_type == 'TS':
         job_type = '-ts'
     elif job_type == 'lmirc':
@@ -107,11 +120,38 @@ def read_hartree_files(filename, hartree_dir):
 
 def create_pucker_gibbs_dict(dict_input, qm_method):
     puckering_dict = {}
-    # puckering_dict[JOB_TYPE] = job_type
+    list_puckers = []
+    isolation_dict = {}
+    dict_of_dict = {}
+
     for row in dict_input:
-        pucker = row[PUCKER]
-        gibbs = float(row[GIBBS]) * HARTREE_TO_KCALMOL
-        puckering_dict[pucker] = gibbs
+        row_pucker = row[PUCKER]
+        row_filename = row[FILE_NAME]
+        dict_of_dict[row_filename] = row
+        if row_pucker in list_puckers:
+            isolation_dict[row_pucker].append(row_filename)
+        elif row_pucker not in list_puckers:
+            list_puckers.append(row_pucker)
+            isolation_dict[row_pucker] = []
+            isolation_dict[row_pucker].append(row_filename)
+
+
+    for pucker_key in isolation_dict.keys():
+        for pucker_file in isolation_dict[pucker_key]:
+
+
+            gibbs_kcalmol = float(row[GIBBS]) * HARTREE_TO_KCALMOL
+            enth_kcalmol = float(row[ENTH]) * HARTREE_TO_KCALMOL
+
+            weight = math.exp(-enth_kcalmol/(DEFAULT_TEMPERATURE*K_B))
+
+            print(weight, gibbs_kcalmol, enth_kcalmol, dict_of_dict[pucker_file][GIBBS])
+
+
+
+
+        # gibbs = float(row[GIBBS]) * HARTREE_TO_KCALMOL
+        # puckering_dict[row_pucker] = gibbs
 
     # TODO: need to have a Boltzmann function for when multiple local minimum structures are present
 
