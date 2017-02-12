@@ -9,9 +9,7 @@ test_xyz_cluster
 import logging
 import os
 import unittest
-from qm_utils.gen_puck_table import read_hartree_files, create_pucker_gibbs_dict, rel_energy_values, \
-    creating_level_dict_of_dict, main, check_same_puckers_lmirc_and_lm
-from qm_utils.qm_common import diff_lines, silent_remove
+from qm_utils.pucker_table import read_hartree_files_lowest_energy, sorting_job_types, boltzmann_weighting
 
 __author__ = 'SPVicchio'
 
@@ -28,11 +26,44 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'gen_puck_table')
 
 # Sample Files#
 SAMPLE_HARTREE_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-optall-oxane-b3lyp.csv')
+SAMPLE_HARTREE_FILE_TS = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-TS-oxane-b3lyp.csv')
+SAMPLE_HARTREE_FILE_BOTH = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-ALL-bxyl-am1.csv')
+
+## Hartree Headers ##
+
+DIPOLE = "dipole"
 
 
 # Tests #
 
 class TestGenPuckerTableFunctions(unittest.TestCase):
     def testReadHartreeFiles(self):
-        hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(SAMPLE_HARTREE_FILE, SUB_DATA_DIR)
-        self.assertEquals(qm_method,'b3lyp-lm')
+        hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(SAMPLE_HARTREE_FILE, SUB_DATA_DIR)
+        self.assertEquals(qm_method,'b3lyp')
+        self.assertEqual(lowest_energy_dict[0][DIPOLE],'1.6414')
+
+    def testSortingJobTypesLMOnly(self):
+        hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(SAMPLE_HARTREE_FILE, SUB_DATA_DIR)
+        lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+        self.assertEquals(qm_method,'b3lyp')
+        self.assertFalse(ts_jobs)
+
+    def testSortingJobTypesTSOnly(self):
+        hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(SAMPLE_HARTREE_FILE_TS, SUB_DATA_DIR)
+        lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+        self.assertEquals(qm_method,'b3lyp')
+        self.assertFalse(lm_jobs)
+
+    def testSortingJobTypesBoth(self):
+        hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(SAMPLE_HARTREE_FILE_BOTH, SUB_DATA_DIR)
+        lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+        self.assertEqual(qm_method,'am1')
+        self.assertEqual(len(lm_jobs),15)
+        self.assertEqual(len(ts_jobs), 32)
+
+    def testBoltzmannWeighting(self):
+        hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(SAMPLE_HARTREE_FILE_BOTH, SUB_DATA_DIR)
+        lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+        boltzmann_weighting(lm_jobs,qm_method)
+
+

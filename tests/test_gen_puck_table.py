@@ -37,6 +37,7 @@ SAMPLE_PUCKER_DICT_NOT_REL = {'4c1': -170479.2753145665, '3s1': -170473.79213655
                               '5s1': -170473.176549736, '2so': -170473.81786444498, '1s3': -170473.791509046,
                               '1c4': -170479.27594207603, '1s5': -170473.17466720752}
 LIST_OF_CSV_FILES = os.path.join(SUB_DATA_DIR, 'a_list_csv_files.txt')
+BXYL_SAMPLE_FILE = os.path.join(SUB_DATA_DIR, 'z_hartree-unsorted-TS-bxyl-am1.csv')
 
 
 # Good Outputs #
@@ -102,6 +103,12 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
                     = read_hartree_files(SAMPLE_HARTREE_FILE_LM, SUB_DATA_DIR)
 
         check_same_puckers_lmirc_and_lm (hartree_dict_irc, job_type_irc, hartree_dict_lm, job_type_lm)
+
+    def testCreatingPuckerGibbsDictBoltz(self):
+        hartree_headers, hartree_dict, job_type, qm_method = read_hartree_files(BXYL_SAMPLE_FILE, SUB_DATA_DIR)
+        puckering_dict, qm_method_n = create_pucker_gibbs_dict(hartree_dict, qm_method)
+
+
 
     def testMain(self):
         try:
