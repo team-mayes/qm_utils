@@ -129,6 +129,8 @@ def create_pucker_gibbs_dict(dict_input, qm_method):
         gibbs = float(row[GIBBS]) * HARTREE_TO_KCALMOL
         puckering_dict[row_pucker] = gibbs
 
+#####################################################################################
+
     # for row in dict_input:
     #     row_pucker = row[PUCKER]
     #     row_filename = row[FILE_NAME]
@@ -152,14 +154,7 @@ def create_pucker_gibbs_dict(dict_input, qm_method):
     #
     #         print(weight, gibbs_kcalmol, enth_kcalmol, dict_of_dict[pucker_file][GIBBS])
 
-
-
-
-        # gibbs = float(row[GIBBS]) * HARTREE_TO_KCALMOL
-        # puckering_dict[row_pucker] = gibbs
-
-    # TODO: need to have a Boltzmann function for when multiple local minimum structures are present
-
+#####################################################################################
     return puckering_dict, qm_method
 
 
