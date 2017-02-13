@@ -197,24 +197,82 @@ def boltzmann_weighting(low_energy_job_dict, qm_method):
         total_weight = pucker_total_weight_gibbs[pucker_key]
         for main_file in low_energy_job_dict:
             if main_file[PUCKER] == pucker_key:
-                print()
-                contribution_dict[pucker_key] = contribution_dict[pucker_key] + (main_file[WEIGHT_GIBBS]/total_weight)*main_file[GIBBS]
+                contribution_dict[pucker_key] = \
+                    round(contribution_dict[pucker_key] + (main_file[WEIGHT_GIBBS]/total_weight)*main_file[GIBBS],2)
 
-# TODO: finish the code that it accurately sums the weights
-# TODO: create an excel spreadsheet to verify the work
 
-    print(contribution_dict)
+    return contribution_dict, qm_method
+
+def creating_puckering_tables(level_theory_dict):
+    """ takes the dict of dict that contains both information on the local min and transition states structure
+        and separates them.
+
+    :param level_theory_dict: dict of dicts containing both the local min and transition state information
+    :return: lm_table_dict: dict of dicts just for the local min
+    :return: ts_table_dict: dict of dicts just for the transition state information
+    """
+
+
+
+
+def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
+    """ utilizes panda dataframes to write the local min and transition state dict of dicts
+
+    :param lm_table_dict: dictionary corresponding to the local mins
+    :param ts_table_dict: dictional corresponding to the transition state structures
+    :param output_filename: output filename for the excel file
+    :return: excel file with the required information
+    """
+
+    df_lm = pd.DataFrame(lm_table_dict, index=LIST_PUCKER)
+    df_ts = pd.DataFrame(ts_table_dict, index=LIST_PUCKER)
+    writer = pd.ExcelWriter(output_filename, engine='xlsxwriter')
+    df_lm.to_excel(writer, sheet_name='local min')
+    df_ts.to_excel(writer, sheet_name='transition state')
+
+    workbook = writer.book
+
+    format_lm = workbook.add_format({'font_color': '#008000'})
+    format_ts = workbook.add_format({'font_color': '#4F81BD'})
+
+    worksheet_lm = writer.sheets['local min']
+    worksheet_ts = writer.sheets['transition state']
+
+
+    # TODO: figure out why my conditional formatting is no longer working
+    worksheet_lm.conditional_format('B2:P39', {'type': 'cell',
+                                               'criteria': '>=',
+                                               'value': 50,
+                                               'format': format_lm})
+    worksheet_ts.conditional_format('B2:P39', {'type': 'cell',
+                                               'criteria': '>=',
+                                               'value': 50,
+                                               'format': format_ts})
+
+
+
+    writer.save
 
     return
 
+def writing_csv_files(lm_table_dict, ts_table_dict, molecule, sum_file_location):
+    """"""
 
+    prefix_lm = 'a_csv_lm_' + str(molecule)
+    prefix_ts = 'a_csv_ts_' + str(molecule)
 
+    path_lm = create_out_fname(sum_file_location, prefix=prefix_lm, remove_prefix='a_list_csv_files', ext='.csv')
+    path_ts = create_out_fname(sum_file_location, prefix=prefix_ts, remove_prefix='a_list_csv_files', ext='.csv')
 
+    df_lm = pd.DataFrame(lm_table_dict, index=LIST_PUCKER)
+    df_ts = pd.DataFrame(ts_table_dict, index=LIST_PUCKER)
 
-
+    df_lm.to_csv(path_lm, index=LIST_PUCKER)
+    df_ts.to_csv(path_ts, index=LIST_PUCKER)
 
 
  ## Command Line Parse ##
+
 
 def parse_cmdline(argv):
     """
@@ -267,3 +325,66 @@ def parse_cmdline(argv):
         return args, INPUT_ERROR
 
     return args, GOOD_RET
+
+
+def main(argv=None):
+    """
+    Runs the main program
+    :param argv: The command line arguments.
+    :return: The return code for the program's termination.
+    """
+    args, ret = parse_cmdline(argv)
+    if ret != GOOD_RET or args is None:
+        return ret
+    try:
+
+        lm_level_dict = {}
+        ts_level_dict = {}
+        overall_level_dict = {}
+
+        with open(args.sum_file) as f:
+            for csv_file_read_newline in f:
+                csv_file_read = csv_file_read_newline.strip("\n")
+                hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy( csv_file_read,
+                                                                                                   args.dir_hartree)
+                lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+                contribution_dict_lm, qm_method = boltzmann_weighting(lm_jobs, qm_method)
+                contribution_dict_ts, qm_method = boltzmann_weighting(ts_jobs, qm_method)
+
+                lm_level_dict[qm_method + "-lm"] = contribution_dict_lm
+                ts_level_dict[qm_method + "-ts"] = contribution_dict_ts
+                overall_level_dict[qm_method + "-ts"] = contribution_dict_ts
+                overall_level_dict[qm_method + "-lm"] = contribution_dict_lm
+
+
+        prefix = 'a_table_lm-ts_' + str(args.molecule)
+        list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
+                                               base_dir=args.dir_hartree, ext='.xlsx')
+
+        writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
+        writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)
+
+        # level_of_theory_dict_final = creating_lowest_energy_dict_of_dict(level_of_theory_dict)
+        # lm_table_dict, ts_table_dict = creating_puckering_tables(level_of_theory_dict_final)
+        #
+        # prefix = 'a_table_lm-ts_' + str(args.molecule)
+        #
+        # list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
+        #                                base_dir=args.dir_hartree, ext='.xlsx')
+        #
+        # writing_xlsx_files(lm_table_dict, ts_table_dict, list_f_name)
+        # writing_csv_files(lm_table_dict, ts_table_dict, args.molecule, args.sum_file)
+
+    except IOError as e:
+        warning(e)
+        return IO_ERROR
+    except (InvalidDataError, KeyError) as e:
+        warning(e)
+        return INVALID_DATA
+
+    return GOOD_RET  # success
+
+
+if __name__ == '__main__':
+    status = main()
+    sys.exit(status)

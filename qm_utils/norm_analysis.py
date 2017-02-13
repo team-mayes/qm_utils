@@ -53,7 +53,8 @@ def read_puckering_information(filename, norm_dir):
     norm_file_path = create_out_fname(filename, base_dir=norm_dir, ext='.txt')
     with open(norm_file_path, mode='r') as file_reading:
         log_file_information = file_reading.next().strip('\n').replace(REMOVE_BEGINNING_STRING, '')
-        for lines in itertools.islice(file_reading, 20, 35):
+        # for lines in itertools.islice(file_reading, 20, 35):
+        for lines in itertools.islice(file_reading, 22, 35):
             lines = lines.strip('\n')
             if not lines:
                 break
