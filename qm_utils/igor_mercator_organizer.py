@@ -184,7 +184,6 @@ def creating_igor_pathway(dict_of_dicts):
 
             pathway_phi.append(ircr_phi)
             pathway_theta.append(ircr_theta)
-
             pathway_phi.append(row_ts[PHI])
             pathway_theta.append(row_ts[THETA])
 
@@ -193,44 +192,49 @@ def creating_igor_pathway(dict_of_dicts):
 
             pathway_phi.append(ircf_phi)
             pathway_theta.append(ircf_theta)
-
             pathway_phi.append(0)
             pathway_theta.append(0.5*(float(row_ts[THETA]) + float(ircf_theta)))
 
             pathway_phi.append(ircf_phi)
             pathway_theta.append('')
 
-            pathway_phi.append(ircf_phi)
-            pathway_theta.append(ircf_theta)
-
-
-        elif abs(float(ircr_phi) - float(row_ts[PHI])) > 340:
-            pathway_phi.append(ircr_phi)
-            pathway_theta.append('')
-
-            pathway_phi.append(ircr_phi)
-            pathway_theta.append(ircr_theta)
-
-            pathway_phi.append(0)
-            pathway_theta.append(row_ts[THETA])
-
-            pathway_phi.append(ircf_phi)
-            pathway_theta.append('')
-
-            pathway_phi.append(ircf_phi)
-            pathway_theta.append(ircf_theta)
-
+            pathway_phi.append(360)
+            pathway_theta.append(0.5*(float(row_ts[THETA]) + float(ircf_theta)))
             pathway_phi.append(row_ts[PHI])
             pathway_theta.append(row_ts[THETA])
+
+        #
+        #
+        # elif abs(float(ircr_phi) - float(row_ts[PHI])) > 340:
+        #     pathway_phi.append(ircr_phi)
+        #     pathway_theta.append('')
+        #
+        #     pathway_phi.append(ircr_phi)
+        #     pathway_theta.append(ircr_theta)
+        #
+        #     pathway_phi.append(0)
+        #     pathway_theta.append(0.5*(float(row_ts[THETA]) + float(ircr_theta)))
+        #
+        #     pathway_phi.append(ircf_phi)
+        #     pathway_theta.append('')
+        #
+        #     pathway_phi.append(ircf_phi)
+        #     pathway_theta.append(ircf_theta)
+        #
+        #     pathway_phi.append(row_ts[PHI])
+        #     pathway_theta.append(row_ts[THETA])
         else:
             pathway_phi.append(ircr_phi)
             pathway_theta.append('')
+
             pathway_phi.append(ircr_phi)
             pathway_theta.append(ircr_theta)
             pathway_phi.append(row_ts[PHI])
             pathway_theta.append(row_ts[THETA])
+
             pathway_phi.append(ircf_phi)
             pathway_theta.append('')
+
             pathway_phi.append(ircf_phi)
             pathway_theta.append(ircf_theta)
             pathway_phi.append(row_ts[PHI])
