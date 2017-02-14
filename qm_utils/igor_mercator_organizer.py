@@ -182,6 +182,12 @@ def creating_igor_pathway(dict_of_dicts):
         pathway_theta.append(ircr_theta)
         pathway_phi.append(row_ts[PHI])
         pathway_theta.append(row_ts[THETA])
+        pathway_phi.append(ircf_phi)
+        pathway_theta.append('')
+        pathway_phi.append(ircf_phi)
+        pathway_theta.append(ircf_theta)
+        pathway_phi.append(row_ts[PHI])
+        pathway_theta.append(row_ts[THETA])
 
     pathway_dict[str(qm_method) +'path_phi'] = pathway_phi
     pathway_dict[str(qm_method) +'path_theta'] = pathway_theta
