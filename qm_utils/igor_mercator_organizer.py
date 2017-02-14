@@ -140,6 +140,53 @@ def write_file_data_dict(data_dict, out_filename):
     return
 
 
+def creating_igor_pathway(dict_of_dicts):
+    ''''''
+
+    ts_dict = {}
+    irc_dict = {}
+    pathway_phi = []
+    pathway_theta = []
+    pathway_dict = {}
+
+    for job_type_keys in dict_of_dicts.keys():
+        type_split = job_type_keys.split('-')
+        qm_method = type_split[0]
+        if type_split[1] == 'TS' and type_split[2] == 'sorted':
+            ts_dict = dict_of_dicts[job_type_keys]
+        elif type_split[1] == 'lmirc' and type_split[2] == 'unsorted':
+            irc_dict = dict_of_dicts[job_type_keys]
+        else:
+            pass
+
+    for row_ts in ts_dict:
+        ircf_file = 'missing'
+        ircr_file = 'missing'
+        ts_file_name = row_ts[FILE_NAME].split('-')
+
+        for row_irc in irc_dict:
+            irc_file_name = row_irc[FILE_NAME]
+            if ts_file_name[0] in irc_file_name and ts_file_name[1] in irc_file_name:
+                if 'ircf' in irc_file_name:
+                   ircf_file = irc_file_name
+                   ircf_theta = row_irc[THETA]
+                   ircf_phi = row_irc[PHI]
+                elif 'ircr' in irc_file_name:
+                    ircr_file = irc_file_name
+                    ircr_theta = row_irc[THETA]
+                    ircr_phi = row_irc[PHI]
+
+        pathway_phi.append(ircr_phi)
+        pathway_theta.append('')
+        pathway_phi.append(ircr_phi)
+        pathway_theta.append(ircr_theta)
+        pathway_phi.append(row_ts[PHI])
+        pathway_theta.append(row_ts[THETA])
+
+    pathway_dict[str(qm_method) +'path_phi'] = pathway_phi
+    pathway_dict[str(qm_method) +'path_theta'] = pathway_theta
+
+    return pathway_dict
 
 
 
@@ -214,9 +261,12 @@ def main(argv=None):
 
         dict_of_dicts, method = creating_dict_of_dict(list_files, str(args.mole))
         data_dict = sorting_dict_of_dict(dict_of_dicts)
+        pathway_dict = creating_igor_pathway(dict_of_dicts)
 
         output_filename = create_out_fname('igor_df_' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.csv')
+        output_filename_pathway = create_out_fname('igor_pathway_' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.csv')
         write_file_data_dict(data_dict,output_filename)
+        write_file_data_dict(pathway_dict, output_filename_pathway)
 
 
 if __name__ == '__main__':

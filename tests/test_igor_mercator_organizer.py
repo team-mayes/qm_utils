@@ -13,7 +13,7 @@ import unittest
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 from qm_utils.igor_mercator_organizer import main, reading_all_csv_input_files, creating_dict_of_dict, \
-    sorting_dict_of_dict, write_file_data_dict
+    sorting_dict_of_dict, write_file_data_dict, creating_igor_pathway
 
 __author__ = 'SPVicchio'
 
@@ -80,6 +80,9 @@ class TestIgorMercator(unittest.TestCase):
         self.assertEqual(data_dict['am1-TS-unsorted-theta'][-1], csv_file_information[-1][THETA])
         self.assertEqual(data_dict['am1-TS-unsorted-phi'][-1],csv_file_information[-1][PHI])
 
+    def testCreatingIgorPathway(self):
+        dict_of_dicts, method = creating_dict_of_dict(LIST_FILES, 'oxane')
+        creating_igor_pathway(dict_of_dicts)
 
 class TestMain(unittest.TestCase):
     def testMain(self):

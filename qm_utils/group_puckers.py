@@ -33,9 +33,6 @@ K_B = 0.001985877534
 DEFAULT_TEMPERATURE = 298.15
 
 
-
-
-
 ## Class ##
 
 class TS_storage:
@@ -94,7 +91,7 @@ class TS_final:
         (self.minimums).append(min)
 
 
-# Logic #
+## Logic ##
 
 def create_dframes(inputs):
     # We use the first input for out default out_file, so we use an OrderedDict here
@@ -102,7 +99,6 @@ def create_dframes(inputs):
     for fname in inputs:
         dframes[fname] = pd.read_csv(fname)
     return dframes
-
 
 
 ## Functions ##
@@ -214,8 +210,6 @@ def make_dict(TS_final):
     new_dictionary["Delta H2"] = (-TS_final.return_H() + minimums[1]["enthalpy"]) * 627.5095
 
     return new_dictionary
-
-
 
 ## Command Line Parse ##
 
