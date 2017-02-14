@@ -82,11 +82,10 @@ class TestMain(unittest.TestCase):
                           '-s', OXANE_TS,
                           '-o', OUTPUT_EMPTY_PUCKER,
                           '-l', OXANE_LOCAL_MIN,
-                          '-for', 'ircf_am1-minIRC_am1.log',
-                          '-rev', 'ircr_am1-minIRC_am1.log']
+                          '-for', 'am1-ircf_am1-minIRC_am1.log',
+                          '-rev', 'am1-ircr_am1-minIRC_am1.log']
             main(test_input)
             self.assertFalse(diff_lines(OUTPUT_EMPTY_PUCKER, GOOD_OUTPUT_EMPTY_PUCKER))
 
         finally:
-            print('hi')
-            #silent_remove(OUTPUT_EMPTY_PUCKER)
+            silent_remove(OUTPUT_EMPTY_PUCKER)

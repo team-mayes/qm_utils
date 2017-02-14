@@ -203,17 +203,6 @@ def boltzmann_weighting(low_energy_job_dict, qm_method):
 
     return contribution_dict, qm_method
 
-def creating_puckering_tables(level_theory_dict):
-    """ takes the dict of dict that contains both information on the local min and transition states structure
-        and separates them.
-
-    :param level_theory_dict: dict of dicts containing both the local min and transition state information
-    :return: lm_table_dict: dict of dicts just for the local min
-    :return: ts_table_dict: dict of dicts just for the transition state information
-    """
-
-
-
 
 def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
     """ utilizes panda dataframes to write the local min and transition state dict of dicts
@@ -249,14 +238,19 @@ def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
                                                'value': 50,
                                                'format': format_ts})
 
-
-
     writer.save
 
     return
 
 def writing_csv_files(lm_table_dict, ts_table_dict, molecule, sum_file_location):
-    """"""
+    """
+
+    :param lm_table_dict:  dict of dicts containing the local min information
+    :param ts_table_dict: dict of dicts containing the TS information
+    :param molecule: the molecule currently being studied
+    :param sum_file_location: the loation of the file
+    :return: two csv files (one for the local min and one for the TS) containing the boltzmann weighted energies
+    """
 
     prefix_lm = 'a_csv_lm_' + str(molecule)
     prefix_ts = 'a_csv_ts_' + str(molecule)
