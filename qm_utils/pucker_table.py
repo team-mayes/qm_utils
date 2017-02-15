@@ -239,6 +239,7 @@ def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
                                                'format': format_ts})
 
     writer.save
+    writer.close()
 
     return
 
@@ -263,7 +264,7 @@ def writing_csv_files(lm_table_dict, ts_table_dict, molecule, sum_file_location)
 
     df_lm.to_csv(path_lm, index=LIST_PUCKER)
     df_ts.to_csv(path_ts, index=LIST_PUCKER)
-    
+
 
  ## Command Line Parse ##
 
@@ -352,22 +353,14 @@ def main(argv=None):
 
 
         prefix = 'a_table_lm-ts_' + str(args.molecule)
+
         list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
-                                               base_dir=args.dir_hartree, ext='.xlsx')
+                                               base_dir=os.path.dirname(args.sum_file), ext='.xlsx')
+
+
 
         writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
         writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)
-
-        # level_of_theory_dict_final = creating_lowest_energy_dict_of_dict(level_of_theory_dict)
-        # lm_table_dict, ts_table_dict = creating_puckering_tables(level_of_theory_dict_final)
-        #
-        # prefix = 'a_table_lm-ts_' + str(args.molecule)
-        #
-        # list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
-        #                                base_dir=args.dir_hartree, ext='.xlsx')
-        #
-        # writing_xlsx_files(lm_table_dict, ts_table_dict, list_f_name)
-        # writing_csv_files(lm_table_dict, ts_table_dict, args.molecule, args.sum_file)
 
     except IOError as e:
         warning(e)
