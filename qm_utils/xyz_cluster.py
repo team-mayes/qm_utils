@@ -37,6 +37,7 @@ ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 HARTREE_TO_KCALMOL = 627.5095
 STRUCTURE_COMPARE_TOL = 5.0
 TRIGGER_WARN_TOL = 2.50
+# TODO change the TRIGGER WARN TOLERENCE TO ABOUT 2.50 ( above 4 or so should be good)
 
 # Hartree field headers
 FILE_NAME = 'File Name'
@@ -321,8 +322,9 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
 
     return hartree_dict, pucker_filename_dict, hartree_headers
 
+########################################################################################################################
 
-def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_option='off'):
+def test_clusters(pucker_filename_dict, hartree_dict, xyz_dir, ok_tol, ring_num_list, print_option='off'):
     """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
     are further expanded to ensure the cluster is consistent.
 
@@ -338,19 +340,24 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
     process_cluster_dict = {}
     xyz_coords_dict = {}
     atoms_order = None
+
+
     for pucker, file_list in pucker_filename_dict.items():
         pucker_cluster = 0
-        cluster_name = pucker + "_" + str(pucker_cluster)
+        cluster_name = pucker + '-' + str(pucker_cluster)
         process_cluster_dict[cluster_name] = [file_list[0]]
         raw_cluster_len = len(file_list)
+        print('{} -- {}'.format(raw_cluster_len, pucker))
+        print(file_list)
+        print('')
 
         if raw_cluster_len == 1:
+            # if there is only one pucker in the list, then the centriod is calculated and all atoms are translated
+            # according to the centriod
             file_name = file_list[0]
             num_atoms, xyz_atoms, xyz_coords, atoms_ring_order, xyz_coords_ring, list_atoms \
-                = get_coordinates_xyz(file_name, xyz_dir, ring_num_list)
-
+                            = get_coordinates_xyz(file_name, xyz_dir, ring_num_list)
             xyz_coords_all_translate, xyz_coords_ring_translate = translate_centroid_ring(xyz_coords, xyz_coords_ring)
-
             xyz_coords_dict[file_name] = xyz_coords_all_translate
 
         else:
@@ -364,6 +371,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
                                          ring_num_list)
                     xyz_coords_dict[file_name] = ctr_ring_all_xyz1
                     xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
+                    print(process_cluster_dict[assigned_cluster_name][0], rmsd_kabsch, file_name)
                     if rmsd_kabsch < ok_tol:
                         process_cluster_dict[assigned_cluster_name].append(file_name)
                         not_assigned = False
@@ -376,8 +384,10 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
     if print_option != 'off':
         for cluster_key, cluster_values in process_cluster_dict.items():
             print("Cluster Key: {} Cluster Files: {}".format(cluster_key, cluster_values))
+
     return process_cluster_dict, xyz_coords_dict, atoms_order
 
+########################################################################################################################
 
 def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
     """ Select only one file name from each cluster (based on the lowest energy)
@@ -395,6 +405,7 @@ def read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict):
         cluster_low_filename = cluster_file_names[0]
         cluster_low_e = float(hartree_dict[cluster_low_filename][ENERGY_ELECTRONIC]) * HARTREE_TO_KCALMOL
 
+    # THIS IS WHERE THE ENERGY ERROR WARNING IS PRINTED
         for selected_file_cluster in cluster_file_names[1:]:
             test_cluster_dict = hartree_dict[selected_file_cluster]
             cluster_test_energy = float(test_cluster_dict[ENERGY_ELECTRONIC]) * HARTREE_TO_KCALMOL
@@ -544,7 +555,8 @@ def main(argv=None):
         hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol, args.ring_order, print_option='off')
+            = test_clusters(pucker_filename_dict, hartree_dict, args.dir_xyz, args.tol,
+                            args.ring_order, print_option='off')
         filtered_cluster_list, filtered_cluster_filename_list \
             = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
         out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=args.dir_xyz, ext='.csv')

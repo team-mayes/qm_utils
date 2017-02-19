@@ -183,7 +183,8 @@ class TestXYZFunctions(unittest.TestCase):
             pass
 
     def testTestClustersLowTol(self):
-        low_tol = 0.00001
+        # low_tol = 0.00001
+        low_tol = 0.1
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
@@ -272,6 +273,7 @@ class TestMain(unittest.TestCase):
         finally:
             silent_remove(OUT_FILE)
             silent_remove(FILE_NEW_PUCK_LIST)
+
 
     def testTranstionStateMainScript(self):
             test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.1']
