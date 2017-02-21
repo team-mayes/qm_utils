@@ -190,7 +190,7 @@ class TestXYZFunctions(unittest.TestCase):
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, hartree_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
         self.assertEquals(len(process_cluster_dict), len(hartree_dict))
 
     def testTestClustersHighTol(self):
@@ -200,7 +200,7 @@ class TestXYZFunctions(unittest.TestCase):
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, hartree_dict, SUB_DATA_DIR, high_tol, atoms_order, print_option='off')
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, high_tol, atoms_order, print_option='off')
 
         self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS, len(process_cluster_dict))
         self.assertEqual(TOTAL_NUM_OXANE_CLUSTER, len(hartree_dict))
@@ -287,9 +287,9 @@ class TestMain(unittest.TestCase):
         with capture_stdout(main, test_input) as output:
             self.assertFalse("Warning! The following puckers have been dropped:" in output)
 
-    def testTransitionStateMain3(self):
-        test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1', '-r', '7,4,16,12,8,0']
-        main(test_input)
-        # with capture_stdout(main, test_input) as output:
-        #     self.assertFalse("Warning! The following puckers have been dropped:" in output)
+    # def testTransitionStateMain3(self):
+    #     test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1', '-r', '7,4,16,12,8,0']
+    #     main(test_input)
+    #     # with capture_stdout(main, test_input) as output:
+    #     #     self.assertFalse("Warning! The following puckers have been dropped:" in output)
 
