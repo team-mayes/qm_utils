@@ -37,7 +37,6 @@ ACCEPT_AS_TRUE = ['T', 't', 'true', 'TRUE', 'True']
 HARTREE_TO_KCALMOL = 627.5095
 STRUCTURE_COMPARE_TOL = 5.0
 TRIGGER_WARN_TOL = 2.50
-# TODO change the TRIGGER WARN TOLERENCE TO ABOUT 2.50 ( above 4 or so should be good)
 
 # Hartree field headers
 FILE_NAME = 'File Name'
@@ -337,6 +336,25 @@ def test_clusters(pucker_filename_dict, hartree_dict, xyz_dir, ok_tol, ring_num_
     :return: returns a dict (keys being the puckering geometries w/ potential duplicates) of lists (containing the
         clustered file names)
     """
+
+    # for pucker, pucker_file_list in pucker_filename_dict.items():
+    #     pucker_rmsd_list = []
+    #     pucker_count = 0
+    #
+    #     print('The length of the number of puckers ({}) is: {}.'.format(pucker, len(pucker_file_list)))
+    #     print(pucker_file_list)
+    #
+    #     for num_file_main in range(0, len(pucker_file_list)-1):
+    #         pucker_count += 1
+    #         for num_file_compare in range(pucker_count, len(pucker_file_list)):
+    #             (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
+    #                                     compare_rmsd_xyz(pucker_file_list[num_file_main], pucker_file_list[num_file_compare], xyz_dir,
+    #                                      ring_num_list)
+    #             print(pucker_file_list[num_file_main], rmsd_kabsch, pucker_file_list[num_file_compare])
+    #
+    # return
+
+
     process_cluster_dict = {}
     xyz_coords_dict = {}
     atoms_order = None
@@ -347,9 +365,9 @@ def test_clusters(pucker_filename_dict, hartree_dict, xyz_dir, ok_tol, ring_num_
         cluster_name = pucker + '-' + str(pucker_cluster)
         process_cluster_dict[cluster_name] = [file_list[0]]
         raw_cluster_len = len(file_list)
-        print('{} -- {}'.format(raw_cluster_len, pucker))
-        print(file_list)
-        print('')
+        # print('{} -- {}'.format(raw_cluster_len, pucker))
+        # print(file_list)
+        # print('')
 
         if raw_cluster_len == 1:
             # if there is only one pucker in the list, then the centriod is calculated and all atoms are translated
@@ -384,6 +402,8 @@ def test_clusters(pucker_filename_dict, hartree_dict, xyz_dir, ok_tol, ring_num_
     if print_option != 'off':
         for cluster_key, cluster_values in process_cluster_dict.items():
             print("Cluster Key: {} Cluster Files: {}".format(cluster_key, cluster_values))
+
+    print(process_cluster_dict)
 
     return process_cluster_dict, xyz_coords_dict, atoms_order
 

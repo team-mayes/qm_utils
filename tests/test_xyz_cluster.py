@@ -28,6 +28,7 @@ TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'xyz_cluster')
 TS_DATA_DIR = os.path.join(SUB_DATA_DIR, 'TS_data')
+PM3MM_DATA_DIR = os.path.join(SUB_DATA_DIR,'bxyl_data')
 
 # Input files #
 
@@ -96,7 +97,7 @@ GOOD_NEW_PUCKER_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_new_puck_b3lyp_h
 
 
 OXANE_HARTREE_SUM_TS_B3LYP_FILE = os.path.join(TS_DATA_DIR, 'z_hartree_out-unsorted-oxane-b3lyp.csv')
-
+BXYL_HARTREE_PM3MM_TS_FILE = os.path.join(PM3MM_DATA_DIR, 'z_hartree-unsorted-TS-pm3mm.csv')
 
 # Good output
 XYZ_TOL = 0.1
@@ -183,14 +184,13 @@ class TestXYZFunctions(unittest.TestCase):
             pass
 
     def testTestClustersLowTol(self):
-        # low_tol = 0.00001
-        low_tol = 0.1
+        low_tol = 0.00001
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         hartree_list, pucker_filename_dict, hartree_headers \
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
+            = test_clusters(pucker_filename_dict, hartree_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
         self.assertEquals(len(process_cluster_dict), len(hartree_dict))
 
     def testTestClustersHighTol(self):
@@ -200,7 +200,7 @@ class TestXYZFunctions(unittest.TestCase):
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, high_tol, atoms_order, print_option='off')
+            = test_clusters(pucker_filename_dict, hartree_dict, SUB_DATA_DIR, high_tol, atoms_order, print_option='off')
 
         self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS, len(process_cluster_dict))
         self.assertEqual(TOTAL_NUM_OXANE_CLUSTER, len(hartree_dict))
@@ -276,13 +276,20 @@ class TestMain(unittest.TestCase):
 
 
     def testTranstionStateMainScript(self):
-            test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.1']
-            main(test_input)
-            with capture_stdout(main, test_input) as output:
-                self.assertFalse("Warning! The following puckers have been dropped: ['eo']." in output)
+        test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.1']
+        main(test_input)
+        with capture_stdout(main, test_input) as output:
+            self.assertFalse("Warning! The following puckers have been dropped: ['eo']." in output)
 
 
     def testTranstionStateMainScript2(self):
-            test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.005']
-            with capture_stdout(main, test_input) as output:
-                self.assertFalse("Warning! The following puckers have been dropped:" in output)
+        test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.005']
+        with capture_stdout(main, test_input) as output:
+            self.assertFalse("Warning! The following puckers have been dropped:" in output)
+
+    def testTransitionStateMain3(self):
+        test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1', '-r', '7,4,16,12,8,0']
+        main(test_input)
+        # with capture_stdout(main, test_input) as output:
+        #     self.assertFalse("Warning! The following puckers have been dropped:" in output)
+
