@@ -71,6 +71,8 @@ def reading_all_csv_input_files(file_read, molecule):
             sort_status = filename_split[len_file-4]
         elif filename_split[len_file-4] == 'sorted':
             sort_status = filename_split[len_file-4]
+        elif filename_split[len_file-4] == 'allunsorted':
+            sort_status = filename_split[len_file-4]
         else:
             print('Some is wrong... not sure whether the file is sorted or not')
 
