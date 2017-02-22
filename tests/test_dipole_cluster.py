@@ -10,9 +10,9 @@ import logging
 import os
 import unittest
 
+from qm_utils.dipole_cluster import main, hartree_sum_pucker_cluster, check_before_after_sorting
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
-from qm_utils.dipole_cluster import main, hartree_sum_pucker_cluster, check_before_after_sorting, test_clusters
 
 __author__ = 'SPVicchio'
 
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 
 # Directories #
-
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'dipole_cluster')
@@ -37,9 +36,19 @@ PUCK_2SO_FILES = ['25Bm062xconstb3lypbigb3lrelm062x.log', 'E4m062xconstb3lypbigc
 # Input files #
 BXYL_HARTREE_PM3MM_TS_FILE = os.path.join(SUB_DATA_DIR, 'z_hartree-unsorted-TS-bxyl-pm3mm.csv')
 
+# Output Files #
+OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_cluster_z_hartree-unsorted-TS-bxyl-pm3mm.csv')
+OUT_FILE_LIST_0p05 = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsz_hartree-unsorted-TS-bxyl-pm3mm.txt')
+OUT_FILE_0p1 = os.path.join(SUB_DATA_DIR, 'z_cluster_z_hartree-unsorted-TS-bxyl-pm3mm_0p1.csv')
+OUT_FILE_LIST_0p1 = os.path.join(SUB_DATA_DIR, 'z_files_list_freq_runsz_hartree-unsorted-TS-bxyl-pm3mm_0p1.txt')
+
 # Good Output Files #
-GOOD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_dcluster-sorted-TS-bxyl-pm3mm_good.csv')
-BAD_OUT_FILE  = os.path.join(SUB_DATA_DIR, 'z_dcluster-sorted-TS-bxyl-pm3mm_bad.csv')
+GOOD_OUT_FILE_0p05 = os.path.join(SUB_DATA_DIR, 'z_dcluster-sorted-TS-bxyl-pm3mm_good.csv')
+BAD_OUT_FILE = os.path.join(SUB_DATA_DIR, 'z_dcluster-sorted-TS-bxyl-pm3mm_bad.csv')
+GOOD_OUT_FILE_0p1 = os.path.join(SUB_DATA_DIR, 'z_cluster_z_hartree-unsorted-TS-bxyl-pm3mm_0p1.csv')
+
+# Hartree Headers #
+FILE_NAME = 'File Name'
 
 
 # Tests #
@@ -50,7 +59,7 @@ class TestFailWell(unittest.TestCase):
         if logger.isEnabledFor(logging.DEBUG):
             main(test_input)
         with capture_stderr(main, test_input) as output:
-            self.assertEquals(output,'WARNING:  0\n')
+            self.assertEquals(output, 'WARNING:  0\n')
         with capture_stdout(main, test_input) as output:
             self.assertTrue("optional arguments" in output)
 
@@ -82,12 +91,12 @@ class TestDIPOLEFunctions(unittest.TestCase):
             = hartree_sum_pucker_cluster(BXYL_HARTREE_PM3MM_TS_FILE)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         len(hartree_dict)
-        self.assertEqual(len(hartree_dict),len(hartree_list))
+        self.assertEqual(len(hartree_dict), len(hartree_list))
 
     def testCheckBeforeAfterSortingGood(self):
         try:
             file_unsorted = BXYL_HARTREE_PM3MM_TS_FILE
-            file_sorted = GOOD_OUT_FILE
+            file_sorted = GOOD_OUT_FILE_0p05
             list_pucker_missing = check_before_after_sorting(file_unsorted, file_sorted)
         finally:
             self.assertEquals(list_pucker_missing, [])
@@ -102,30 +111,38 @@ class TestDIPOLEFunctions(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
-    def testMain(self):
+    def testMain0p05(self):
+        try:
+            test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.05']
+            main(test_input)
+            hartree_dict_test = read_csv_to_dict(OUT_FILE, mode='rU')
+            hartree_dict_good = read_csv_to_dict(GOOD_OUT_FILE_0p05, mode='rU')
+
+            for row1 in hartree_dict_test:
+                for row2 in hartree_dict_good:
+                    if len(hartree_dict_test) != len(hartree_dict_good):
+                        self.assertEqual(1, 0)
+                    else:
+                        if row1[FILE_NAME] == row2[FILE_NAME]:
+                            self.assertEqual(row1, row2)
+        finally:
+            silent_remove(OUT_FILE)
+            silent_remove(OUT_FILE_LIST_0p05)
+
+    def testMain0p1(self):
         try:
             test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1']
             main(test_input)
             hartree_dict_test = read_csv_to_dict(OUT_FILE, mode='rU')
-            hartree_dict_good = read_csv_to_dict(GOOD_OUT_FILE2, mode='rU')
+            hartree_dict_good = read_csv_to_dict(GOOD_OUT_FILE_0p1, mode='rU')
 
             for row1 in hartree_dict_test:
                 for row2 in hartree_dict_good:
-                    if row1[FILE_NAME] == row2[FILE_NAME]:
-                        self.assertEqual(row1, row2)
+                    if len(hartree_dict_test) != len(hartree_dict_good):
+                        self.assertEqual(1, 0)
+                    else:
+                        if row1[FILE_NAME] == row2[FILE_NAME]:
+                            self.assertEqual(row1, row2)
         finally:
             silent_remove(OUT_FILE)
-            silent_remove(OUT_FILE_LIST)
-            silent_remove(FILE_NEW_PUCK_LIST)
-
-    def testTranstionStateMainScript2(self):
-        test_input = ["-s", OXANE_HARTREE_SUM_TS_B3LYP_FILE, "-t", '0.005']
-        with capture_stdout(main, test_input) as output:
-            self.assertFalse("Warning! The following puckers have been dropped:" in output)
-
-    def testTransitionStateMain3(self):
-        test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1']
-        main(test_input)
-        # with capture_stdout(main, test_input) as output:
-        #     self.assertFalse("Warning! The following puckers have been dropped:" in output)
-
+            silent_remove(OUT_FILE_LIST_0p1)

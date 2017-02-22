@@ -11,8 +11,6 @@ from __future__ import print_function
 
 import argparse
 import os
-
-import numpy as np
 import sys
 
 from qm_utils.qm_common import (GOOD_RET, list_to_dict, create_out_fname, write_csv, list_to_file, warning, IO_ERROR,
@@ -43,8 +41,7 @@ FILE_NAME = 'File Name'
 PUCKER = 'Pucker'
 ENERGY_GIBBS = 'G298 (Hartrees)'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
-DIPOLE ='dipole'
-
+DIPOLE = 'dipole'
 
 
 def hartree_sum_pucker_cluster(sum_file, print_status='off'):
@@ -78,19 +75,15 @@ def test_clusters(pucker_filename_dict, hartree_dict, ok_tol):
     """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
     are further expanded to ensure the cluster is consistent.
 
-    :param ring_num_list: list of atom numbers in the ring (in order O, C1, C2, C3, C4, C5)
-    :param print_option: turns on and off the print option
+    :param hartree_dict: the hartree dict with the outer key as the filename
     :param pucker_filename_dict: lists of dicts for each row of hartree, and a dictionary of puckers (keys) and
         file_names, and a list of headers
-    :param xyz_dir: the location of the directory in which all of the files are located (must contain xyz and log files)
     :param ok_tol: the tolerance for when grouping two different structures
     :return: returns a dict (keys being the puckering geometries w/ potential duplicates) of lists (containing the
         clustered file names)
     """
 
     process_cluster_dict = {}
-    xyz_coords_dict = {}
-    atoms_order = None
 
     for pucker, file_list in pucker_filename_dict.items():
         pucker_cluster = 0
@@ -114,7 +107,8 @@ def test_clusters(pucker_filename_dict, hartree_dict, ok_tol):
                     if assigned_cluster_name.split('-')[0] == hartree_dict[file_name][PUCKER]:
 
                         dipole_difference = abs(float(hartree_dict[file_name][DIPOLE]) -
-                                                float(hartree_dict[process_cluster_dict[assigned_cluster_name][0]][DIPOLE]))
+                                                float(hartree_dict[process_cluster_dict[assigned_cluster_name][0]][
+                                                          DIPOLE]))
                         if dipole_difference < ok_tol:
                             process_cluster_dict[assigned_cluster_name].append(file_name)
                             not_assigned = False
@@ -123,7 +117,6 @@ def test_clusters(pucker_filename_dict, hartree_dict, ok_tol):
                     pucker_cluster += 1
                     cluster_name = pucker + "-" + str(pucker_cluster)
                     process_cluster_dict[cluster_name] = [file_name]
-
 
     return process_cluster_dict
 
@@ -217,7 +210,6 @@ def parse_cmdline(argv):
     parser.add_argument('-t', "--tol", help="Tolerance (allowable RMSD) for coordinates in the same cluster.",
                         default=DEF_TOL_CLUSTER, type=float)
 
-
     args = None
     try:
         args = parser.parse_args(argv)
@@ -229,22 +221,16 @@ def parse_cmdline(argv):
     except (KeyError, InvalidDataError) as e:
         warning(e)
         parser.print_help()
-        status_check = e.args
         return args, INPUT_ERROR
     except IOError as e:
         warning(e)
         parser.print_help()
-        status_check = e.args
         return args, IO_ERROR
     except (ValueError, SystemExit) as e:
-        status_check = e.args
-
         if e.args == 0:
-            status_check = e.args
             return args, GOOD_RET
         warning(e)
         parser.print_help()
-        status_check = e.args
         return args, INPUT_ERROR
 
     return args, GOOD_RET
@@ -265,10 +251,12 @@ def main(argv=None):
         process_cluster_dict = test_clusters(pucker_filename_dict, hartree_dict, args.tol)
         filtered_cluster_list, filtered_cluster_filename_list \
             = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
-        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=os.path.dirname(args.sum_file), ext='.csv')
+        out_f_name = create_out_fname(args.sum_file, prefix='z_cluster_', base_dir=os.path.dirname(args.sum_file),
+                                      ext='.csv')
         write_csv(filtered_cluster_list, out_f_name, hartree_headers, extrasaction="ignore")
 
-        list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs', base_dir=os.path.dirname(args.sum_file),
+        list_f_name = create_out_fname(args.sum_file, prefix='z_files_list_freq_runs',
+                                       base_dir=os.path.dirname(args.sum_file),
                                        ext='.txt')
 
         list_to_file(filtered_cluster_filename_list, list_f_name, list_format=None, delimiter=' ', mode='w',
