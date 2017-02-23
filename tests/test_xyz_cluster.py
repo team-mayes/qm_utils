@@ -287,9 +287,9 @@ class TestMain(unittest.TestCase):
         with capture_stdout(main, test_input) as output:
             self.assertFalse("Warning! The following puckers have been dropped:" in output)
 
-    # def testTransitionStateMain3(self):
-    #     test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1', '-r', '7,4,16,12,8,0']
-    #     main(test_input)
-    #     # with capture_stdout(main, test_input) as output:
-    #     #     self.assertFalse("Warning! The following puckers have been dropped:" in output)
+    def testTransitionStateMain3(self):
+        test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1', '-r', '7,4,16,12,8,0']
+        main(test_input)
+        # with capture_stdout(main, test_input) as output:
+        #     self.assertFalse("Warning! The following puckers have been dropped:" in output)
 

@@ -246,7 +246,7 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     return
 
 
-def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_option='off'):
+def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_option='on'):
     """ calculates the rmsd both using the standard method and rotating the structures method
 
     :param input_file1: xyz coordinates for the first molecular structure
@@ -281,6 +281,7 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_o
     [center_ring_all_xyz2, center_ring_ring_xyz2] = translate_centroid_ring(xyz_coords2, xyz_coords_ring2)
 
     if print_option == 'on':
+        print(input_file1, input_file2)
         print("""Now print the different cases:
         Rmsd (all align, standard): {}
         Rmsd (ring align, standard): {}
@@ -290,7 +291,7 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_o
                    kabsch_algorithm(center_xyz1, center_xyz2),
                    kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
 
-    rmsd_kabsch = kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)[0]
+    rmsd_kabsch = kabsch_algorithm(center_xyz1, center_xyz2)[0]
 
     return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2, atom_ordering
 
@@ -376,7 +377,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
                         break
                 if not_assigned:
                     pucker_cluster += 1
-                    cluster_name = pucker + "_" + str(pucker_cluster)
+                    cluster_name = pucker + "-" + str(pucker_cluster)
                     process_cluster_dict[cluster_name] = [file_name]
 
     if print_option != 'off':

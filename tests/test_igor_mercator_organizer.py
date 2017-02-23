@@ -40,6 +40,11 @@ LIST_FILES = [  OXANE_AM1_LM_UNSORTED,
                 OXANE_AM1_TS_SORTED,
                 OXANE_AM1_LM_SORTED]
 
+BXYL_AM1_LM_SORTED = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-lm-bxyl-am1.csv')
+BXYL_AM1_LMIRC_UNSORTED = os.path.join(SUB_DATA_DIR, 'z_hartree-unsorted-lmirc-bxyl-am1.csv')
+BXYL_AM1_TS_SORTED = os.path.join(SUB_DATA_DIR, 'z_cluster_ring_pucker-sorted-TS-bxyl-am1.csv')
+
+
 # Good output
 
 OXANE_AM1_LM_UNSORTED_DICT = '1.5081'
@@ -85,18 +90,31 @@ class TestIgorMercator(unittest.TestCase):
         creating_igor_pathway(dict_of_dicts)
 
 class TestMain(unittest.TestCase):
-    def testMain(self):
+    # def testMainOxane(self):
+    #     try:
+    #         test_input = [ "-m", 'oxane',
+    #                        "-raw_lm", OXANE_AM1_LM_UNSORTED,
+    #                        "-raw_lmirc", OXANE_AM1_LMIRC_UNSORTED,
+    #                        "-raw_ts",OXANE_AM1_TS_UNSORTED,
+    #                        "-ts", OXANE_AM1_TS_SORTED,
+    #                        "-lm", OXANE_AM1_LM_SORTED]
+    #         main(test_input)
+    #         OXANE_AM1_OUTPUT = os.path.join(SUB_DATA_DIR, 'igor_df_oxane_am1.csv')
+    #     finally:
+    #         self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
+    #         silent_remove(OXANE_AM1_OUTPUT)
+
+    def testMainBxyl(self):
         try:
-            test_input = [ "-m", 'oxane',
-                           "-raw_lm", OXANE_AM1_LM_UNSORTED,
-                           "-raw_lmirc", OXANE_AM1_LMIRC_UNSORTED,
-                           "-raw_ts",OXANE_AM1_TS_UNSORTED,
-                           "-ts", OXANE_AM1_TS_SORTED,
-                           "-lm", OXANE_AM1_LM_SORTED]
+            test_input = [ "-m", 'bxyl',
+                           "-raw_lmirc", BXYL_AM1_LMIRC_UNSORTED,
+                           "-ts", BXYL_AM1_TS_SORTED,
+                           "-lm", BXYL_AM1_LM_SORTED]
             main(test_input)
-            OXANE_AM1_OUTPUT = os.path.join(SUB_DATA_DIR, 'igor_df_oxane_am1.csv')
+
         finally:
-            self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
-            silent_remove(OXANE_AM1_OUTPUT)
-
-
+            print('hi')
+        #     OXANE_AM1_OUTPUT = os.path.join(SUB_DATA_DIR, 'igor_df_oxane_am1.csv')
+        # finally:
+        #     self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
+        #     silent_remove(OXANE_AM1_OUTPUT)

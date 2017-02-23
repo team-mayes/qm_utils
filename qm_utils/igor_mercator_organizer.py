@@ -28,14 +28,23 @@ except ImportError:
 __author__ = 'SPVicchio'
 
 # Constants #
+HARTREE_TO_KCALMOL = 627.5095
+K_B = 0.001985877534 # Boltzmann Constant in kcal/mol K
+
+# Defaults #
+
+DEFAULT_TEMPERATURE = 298.15
+
 
 # Hartree field headers
 FILE_NAME = 'File Name'
 PUCKER = 'Pucker'
-ENERGY_GIBBS = 'G298 (Hartrees)'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
 THETA = 'theta'
 PHI = 'phi'
+GIBBS = 'G298 (Hartrees)'
+ENTH = "H298 (Hartrees)"
+pathway_list_field_names = 'H1Pucker#H1#TSPucker#H2#H2Pucker'
 
 # Functions #
 
@@ -150,6 +159,7 @@ def creating_igor_pathway(dict_of_dicts):
     pathway_phi = []
     pathway_theta = []
     pathway_dict = {}
+    pathway_table_list= []
 
     for job_type_keys in dict_of_dicts.keys():
         type_split = job_type_keys.split('-')
@@ -165,19 +175,47 @@ def creating_igor_pathway(dict_of_dicts):
         ircf_file = 'missing'
         ircr_file = 'missing'
         ts_file_name = row_ts[FILE_NAME].split('-')
+        ts_enth = row_ts[ENTH]
+        ts_puck = row_ts[PUCKER]
 
         for row_irc in irc_dict:
             irc_file_name = row_irc[FILE_NAME]
             if ts_file_name[0] in irc_file_name and ts_file_name[1] in irc_file_name:
                 if 'ircf' in irc_file_name:
-                   ircf_file = irc_file_name
-                   ircf_theta = row_irc[THETA]
-                   ircf_phi = row_irc[PHI]
+                    ircf_file = irc_file_name
+                    ircf_theta = row_irc[THETA]
+                    ircf_phi = row_irc[PHI]
+                    ircf_enth = row_irc[ENTH]
+                    ircf_puck = row_irc[PUCKER]
                 elif 'ircr' in irc_file_name:
                     ircr_file = irc_file_name
                     ircr_theta = row_irc[THETA]
                     ircr_phi = row_irc[PHI]
+                    ircr_enth = row_irc[ENTH]
+                    ircr_puck = row_irc[PUCKER]
 
+
+        diff_ts_ircf = (float(ircf_enth) - float(ts_enth)) * HARTREE_TO_KCALMOL
+        diff_ircr_ts = (float(ircr_enth) - float(ts_enth)) * HARTREE_TO_KCALMOL
+
+        if abs(diff_ircr_ts) > abs(diff_ts_ircf):
+            deltaH1      = -1 * diff_ircr_ts
+            deltaH2      = diff_ts_ircf
+            deltaH1_puck = ircr_puck
+            deltaH2_puck = ircf_puck
+        elif abs(diff_ircr_ts) < abs(diff_ts_ircf):
+            deltaH1 = -1 * diff_ts_ircf
+            deltaH2 = diff_ircr_ts
+            deltaH1_puck = ircf_puck
+            deltaH2_puck = ircr_puck
+
+        elif abs(diff_ircr_ts) == abs(diff_ts_ircf):
+            deltaH1 = -1 * diff_ts_ircf
+            deltaH2 = diff_ircr_ts
+            deltaH1_puck = ircr_puck
+            deltaH2_puck = ircf_puck
+
+        pathway_table_list.append(str(deltaH1_puck) + '#' + str(round(deltaH1, 2)) +'#' + str(ts_puck) + '#' + str(round(deltaH2, 2)) + '#' + str(deltaH2_puck))
 
 
         if abs(float(ircf_phi) - float(row_ts[PHI])) > 340:
@@ -251,8 +289,7 @@ def creating_igor_pathway(dict_of_dicts):
     pathway_dict[str(qm_method) +'path_phi'] = pathway_phi
     pathway_dict[str(qm_method) +'path_theta'] = pathway_theta
 
-    return pathway_dict
-
+    return pathway_dict, pathway_table_list
 
 
 # Command Line Parser #
@@ -326,13 +363,20 @@ def main(argv=None):
 
         dict_of_dicts, method = creating_dict_of_dict(list_files, str(args.mole))
         data_dict = sorting_dict_of_dict(dict_of_dicts)
-        pathway_dict = creating_igor_pathway(dict_of_dicts)
+        pathway_dict, pathway_table_list = creating_igor_pathway(dict_of_dicts)
 
         output_filename = create_out_fname('igor_df_' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.csv')
         output_filename_pathway = create_out_fname('igor_pathway_' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.csv')
+        output_filename_pathway_list = create_out_fname('a_pathway_list' + str(args.mole) + '_' + str(method), base_dir=args.dir, ext='.txt')
+
         write_file_data_dict(data_dict,output_filename)
         write_file_data_dict(pathway_dict, output_filename_pathway)
 
+        with open(output_filename_pathway_list, mode='w') as f:
+            for row in pathway_table_list:
+                f.write("%s\n" % row)
+
+# TODO: look at this information and see how I want things to be organized
 
 if __name__ == '__main__':
     status = main()

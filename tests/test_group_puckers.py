@@ -89,3 +89,4 @@ class TestMain(unittest.TestCase):
 
         finally:
             silent_remove(OUTPUT_EMPTY_PUCKER)
+
