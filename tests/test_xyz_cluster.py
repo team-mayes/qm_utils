@@ -143,20 +143,6 @@ class TestXYZFunctions(unittest.TestCase):
         hartree_headers = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_HEATHER_FILE)
         self.assertTrue(pucker_filename_dict[PUCK_2SO], PUCK_2SO_FILES)
 
-    def testTwoFiles_similar(self):
-        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
-        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar, \
-        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE,
-                                      SUB_DATA_DIR, atoms_order)
-        self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_GOOD[0]) < XYZ_TOL)
-
-    def testTwoFiles_1c4to4c1(self):
-        atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
-        rmsd_kabsch, xyz_coords1_similar, xyz_coords2_similar, \
-        atom_order = compare_rmsd_xyz(OXANE_1c4_INPUT_FILE, OXANE_4c1_INPUT_FILE,
-                                      SUB_DATA_DIR, atoms_order)
-        self.assertTrue(abs(rmsd_kabsch - RMSD_KABSCH_SIMILAR_1c4to4c1[0]) < 0.5)
-
     def testTwoFiles_PrintFeature(self):
         atoms_order = read_ring_atom_ids(OXANE_RING_ATOM_ORDER)
         with capture_stdout(compare_rmsd_xyz, OXANE_1c4_INPUT_FILE, OXANE_1e_INPUT_FILE, SUB_DATA_DIR, atoms_order,
@@ -190,7 +176,7 @@ class TestXYZFunctions(unittest.TestCase):
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, low_tol, atoms_order, print_option='off')
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, hartree_dict, low_tol, atoms_order, print_option='off')
         self.assertEquals(len(process_cluster_dict), len(hartree_dict))
 
     def testTestClustersHighTol(self):
@@ -200,7 +186,7 @@ class TestXYZFunctions(unittest.TestCase):
             = hartree_sum_pucker_cluster(OXANE_HARTREE_SUM_B3LYP_FILE)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, high_tol, atoms_order, print_option='off')
+            = test_clusters(pucker_filename_dict, SUB_DATA_DIR, hartree_dict, high_tol, atoms_order, print_option='off')
 
         self.assertEqual(CLUSTER_DICT_NUM_PUCKER_GROUPS, len(process_cluster_dict))
         self.assertEqual(TOTAL_NUM_OXANE_CLUSTER, len(hartree_dict))
@@ -239,31 +225,6 @@ class TestMain(unittest.TestCase):
             silent_remove(OUT_FILE_LIST)
             silent_remove(FILE_NEW_PUCK_LIST)
 
-    # def testMainPrintXYZCoords(self):
-    #     try:
-    #         test_input = ["-s", OXANE_HARTREE_SUM_B3LYP_FI LE, "-t", '0.1', "-p", "true"]
-    #         main(test_input)
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s3, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s3))
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_3s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_3s1))
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5e, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5e))
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_25b, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_25b))
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_b25, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_b25))
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_e5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_e5))
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_1s5, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_1s5))
-    #         self.assertFalse(diff_lines(OXANE_XYZ_COORDS_WRITE_FILE_5s1, GOOD_OXANE_XYZ_COORDS_WRITE_FILE_5s1))
-    #     finally:
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_3s1)
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5e)
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_25b)
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_b25)
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_e5)
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s5)
-    #         silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_5s1)
-    #         silent_remove(OUT_FILE)
-    #         silent_remove(OUT_FILE_LIST)
-    #         silent_remove(FILE_NEW_PUCK_LIST)
-
     def testMainNotPrintXYZCoords(self):
         try:
             silent_remove(OXANE_XYZ_COORDS_WRITE_FILE_1s3)
@@ -288,7 +249,7 @@ class TestMain(unittest.TestCase):
             self.assertFalse("Warning! The following puckers have been dropped:" in output)
 
     def testTransitionStateMain3(self):
-        test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.1', '-r', '7,4,16,12,8,0']
+        test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.01', '-r', '7,4,16,12,8,0']
         main(test_input)
         # with capture_stdout(main, test_input) as output:
         #     self.assertFalse("Warning! The following puckers have been dropped:" in output)

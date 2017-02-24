@@ -43,6 +43,7 @@ FILE_NAME = 'File Name'
 PUCKER = 'Pucker'
 ENERGY_GIBBS = 'G298 (Hartrees)'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
+DIPOLE = 'dipole'
 
 
 def get_coordinates_xyz(filename, xyz_dir, ring_atom_order):
@@ -246,7 +247,7 @@ def print_xyz_coords(to_print_xyz_coords, to_print_atoms, file_sum):
     return
 
 
-def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_option='on'):
+def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_option='off'):
     """ calculates the rmsd both using the standard method and rotating the structures method
 
     :param input_file1: xyz coordinates for the first molecular structure
@@ -293,6 +294,9 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_o
 
     rmsd_kabsch = kabsch_algorithm(center_xyz1, center_xyz2)[0]
 
+    # print(input_file1, input_file2)
+    # print('RMSD: {}\n'.format(rmsd_kabsch))
+
     return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2, atom_ordering
 
 
@@ -323,7 +327,7 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     return hartree_dict, pucker_filename_dict, hartree_headers
 
 
-def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_option='off'):
+def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_list, print_option='off'):
     """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
     are further expanded to ensure the cluster is consistent.
 
@@ -372,9 +376,15 @@ def test_clusters(pucker_filename_dict, xyz_dir, ok_tol, ring_num_list, print_op
                     xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
                     # print(process_cluster_dict[assigned_cluster_name][0], rmsd_kabsch, file_name)
                     if rmsd_kabsch < ok_tol:
-                        process_cluster_dict[assigned_cluster_name].append(file_name)
-                        not_assigned = False
-                        break
+                        dipole_difference = abs(float(hartree_dict[file_name][DIPOLE]) -
+                                                float(hartree_dict[process_cluster_dict[assigned_cluster_name][0]][
+                                                          DIPOLE]))
+                        if dipole_difference < ok_tol:
+                            print(process_cluster_dict[assigned_cluster_name][0], file_name)
+                            print('RMSD: {} Dipole: {}\n'.format(round(rmsd_kabsch,5), round(dipole_difference,5)))
+                            process_cluster_dict[assigned_cluster_name].append(file_name)
+                            not_assigned = False
+                            break
                 if not_assigned:
                     pucker_cluster += 1
                     cluster_name = pucker + "-" + str(pucker_cluster)
@@ -548,7 +558,7 @@ def main(argv=None):
         hartree_list, pucker_filename_dict, hartree_headers = hartree_sum_pucker_cluster(args.sum_file)
         hartree_dict = list_to_dict(hartree_list, FILE_NAME)
         process_cluster_dict, xyz_coords_dict, atom_order \
-            = test_clusters(pucker_filename_dict, args.dir_xyz, args.tol,
+            = test_clusters(pucker_filename_dict, args.dir_xyz, hartree_dict, args.tol,
                             args.ring_order, print_option='off')
         filtered_cluster_list, filtered_cluster_filename_list \
             = read_clustered_keys_in_hartree(process_cluster_dict, hartree_dict)
