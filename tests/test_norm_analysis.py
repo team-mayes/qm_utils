@@ -55,15 +55,12 @@ GOOD_OUTPUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR,
 OUT_FILE_LIST_PUCK = os.path.join(SUB_DATA_DIR, 'z_norm-analysis_TS_ring_puckers_z_hartree_norm_analysis_am1.txt')
 OUT_FILE_LIST_EXO = os.path.join(SUB_DATA_DIR, 'z_norm-analysis_TS_exo_puckers_z_hartree_norm_analysis_am1.txt')
 
-
 # Tests #
 class TestFailWell(unittest.TestCase):
     def testHelp(self):
         test_input = ['-h']
         if logger.isEnabledFor(logging.DEBUG):
             main(test_input)
-        with capture_stderr(main, test_input) as output:
-            self.assertFalse(output)
         with capture_stdout(main, test_input) as output:
             self.assertTrue("optional arguments" in output)
 
@@ -82,7 +79,7 @@ class TestNORMFunctions(unittest.TestCase):
     def testAnalyzeFirstNormalMode(self):
         filename, out_percent = analyze_first_normal_mode(NORM_SAMPLE_FILE, GOOD_OUTPUT_NORM_READ_TABLE,
                                                           GOOD_OUTPUT_RING_ATOMS_INDEX)
-        self.assertEquals(round(out_percent, ndigits=3), GOOD_OUTPUT_PERCENTAGE)
+        self.assertEquals(round(out_percent, 3), GOOD_OUTPUT_PERCENTAGE)
 
     def testRingIndexSplit(self):
         sorted_ring_atoms_index = split_ring_index(DEF_RING_ORDER)

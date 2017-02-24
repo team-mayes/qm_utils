@@ -52,9 +52,8 @@ def read_puckering_information(filename, norm_dir):
     highest_dihedral_table = []
     norm_file_path = create_out_fname(filename, base_dir=norm_dir, ext='.txt')
     with open(norm_file_path, mode='r') as file_reading:
-        log_file_information = file_reading.next().strip('\n').replace(REMOVE_BEGINNING_STRING, '')
+        log_file_information = file_reading.readline().strip('\n').replace(REMOVE_BEGINNING_STRING, '')
         for lines in itertools.islice(file_reading, 20, 35):
-        # for lines in itertools.islice(file_reading, 22, 35):
             lines = lines.strip('\n')
             if not lines:
                 break
@@ -88,7 +87,7 @@ def analyze_first_normal_mode(filename, first_di_normal_mode_info, sorted_ring_a
         if first_di_atom_in_pair in sorted_ring_atom_index and second_di_atom_in_pair in sorted_ring_atom_index:
             total_di_percent += percent_line
 
-    return filename, total_di_percent
+    return filename, round(total_di_percent,3)
 
 
 def parse_cmdline(argv):
@@ -139,7 +138,7 @@ def parse_cmdline(argv):
         parser.print_help()
         return args, IO_ERROR
     except (ValueError, SystemExit) as e:
-        if e.message == 0:
+        if e.args == 0:
             return args, GOOD_RET
         warning(e)
         parser.print_help()
