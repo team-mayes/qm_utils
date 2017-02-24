@@ -72,7 +72,7 @@ class TestFailWell(unittest.TestCase):
 
 class TestNORMFunctions(unittest.TestCase):
     def testReadNormTxtFile(self):
-        out_filename, dihedral_table = read_puckering_information(NORM_SAMPLE_FILE, SUB_DATA_DIR)
+        out_filename, dihedral_table = read_puckering_information(NORM_SAMPLE_FILE, SUB_DATA_DIR, 20)
         self.assertEquals(GOOD_OUTPUT_NORM_READ_FILENAME_BOTH, out_filename)
         self.assertEquals(GOOD_OUTPUT_NORM_READ_TABLE, dihedral_table)
 
@@ -89,7 +89,7 @@ class TestNORMFunctions(unittest.TestCase):
 class TestMain(unittest.TestCase):
     def testMain(self):
         try:
-            test_input = ["-s", INPUT_MAIN_NORM_FILE, "-r", DEF_RING_ORDER]
+            test_input = ["-s", INPUT_MAIN_NORM_FILE, "-r", DEF_RING_ORDER, "-m", 'bxyl']
             main(test_input)
             self.assertFalse(diff_lines(OUT_FILE_LIST_PUCK, GOOD_OUTPUT_FILE_LIST_PUCK))
             self.assertFalse(diff_lines(OUT_FILE_LIST_EXO, GOOD_OUTPUT_FILE_LIST_EXO))

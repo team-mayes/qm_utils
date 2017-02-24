@@ -39,7 +39,7 @@ NORM_FILE_END = '=== Normal mode   2 ==='
 REMOVE_BEGINNING_STRING = 'Normal mode summary for file '
 
 
-def read_puckering_information(filename, norm_dir):
+def read_puckering_information(filename, norm_dir, atoms_order):
     """ The purpose of this script is to read a hartree normal input file to capture the "Highest DoF percentages by
         dihedral table" for further analysis." The table contains the top 10 highest percentages of all modes and their
         frequency.
@@ -53,7 +53,7 @@ def read_puckering_information(filename, norm_dir):
     norm_file_path = create_out_fname(filename, base_dir=norm_dir, ext='.txt')
     with open(norm_file_path, mode='r') as file_reading:
         log_file_information = file_reading.readline().strip('\n').replace(REMOVE_BEGINNING_STRING, '')
-        for lines in itertools.islice(file_reading, 20, 35):
+        for lines in itertools.islice(file_reading, atoms_order, 35):
             lines = lines.strip('\n')
             if not lines:
                 break
@@ -114,6 +114,8 @@ def parse_cmdline(argv):
     parser.add_argument('-s', "--sum_file", help="List of the files complete in Hartree norm.",
                         default=None)
     parser.add_argument('-r', "--ring_order", help="List of the atom ids in any order.")
+    parser.add_argument('-m', '--mole', help='the molecule that is currently being studied',
+                        default=None)
 
     args = None
     try:
@@ -158,6 +160,12 @@ def main(argv=None):
         return ret
     try:
 
+        if args.mole == 'bxyl':
+            atoms_order = 20
+        else:
+            print('Missing the molecule type in norm...')
+
+
         sorted_ring_order = split_ring_index(args.ring_order)
 
         ring_pucker_ts_list = []
@@ -166,7 +174,7 @@ def main(argv=None):
         with open(args.sum_file) as f:
             list_of_gaussian_norm = f.read().splitlines()
         for hartree_filename in list_of_gaussian_norm:
-            out_filename, first_mode_di_info = read_puckering_information(hartree_filename, args.dir_norm)
+            out_filename, first_mode_di_info = read_puckering_information(hartree_filename, args.dir_norm, atoms_order)
             out_filename, file_percentage = analyze_first_normal_mode(out_filename, first_mode_di_info,
                                                                       sorted_ring_order)
 
