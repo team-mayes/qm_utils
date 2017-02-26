@@ -164,12 +164,15 @@ def creating_igor_pathway(dict_of_dicts):
     for job_type_keys in dict_of_dicts.keys():
         type_split = job_type_keys.split('-')
         qm_method = type_split[0]
+
         if type_split[1] == 'TS' and type_split[2] == 'sorted':
             ts_dict = dict_of_dicts[job_type_keys]
         elif type_split[1] == 'lmirc' and type_split[2] == 'unsorted':
             irc_dict = dict_of_dicts[job_type_keys]
         else:
             pass
+
+    pathway_table_list.append(str(qm_method) + '#' + str(qm_method) +'#' + str(qm_method) + '#' + str(qm_method) + '#' + str(qm_method))
 
     for row_ts in ts_dict:
         ircf_file = 'missing'

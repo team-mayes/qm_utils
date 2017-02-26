@@ -116,6 +116,8 @@ def parse_cmdline(argv):
     parser.add_argument('-r', "--ring_order", help="List of the atom ids in any order.")
     parser.add_argument('-m', '--mole', help='the molecule that is currently being studied',
                         default=None)
+    parser.add_argument('-t', "--tol", help='tolerance for deciding ring vs. exo',
+                        default=float(RING_PUCKER_TOL))
 
     args = None
     try:
@@ -178,9 +180,9 @@ def main(argv=None):
             out_filename, file_percentage = analyze_first_normal_mode(out_filename, first_mode_di_info,
                                                                       sorted_ring_order)
 
-            if file_percentage > RING_PUCKER_TOL:
+            if file_percentage > float(args.tol):
                 ring_pucker_ts_list.append([out_filename, file_percentage])
-            elif file_percentage < RING_PUCKER_TOL:
+            elif file_percentage < float(args.tol):
                 exo_pucker_ts_list.append([out_filename, file_percentage])
 
         filename_ring_ts = create_out_fname(args.sum_file, prefix='z_norm-analysis_TS_ring_puckers_',
