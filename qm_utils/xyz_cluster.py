@@ -327,7 +327,7 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     return hartree_dict, pucker_filename_dict, hartree_headers
 
 
-def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_list, print_option='off'):
+def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_list, print_option='on'):
     """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
     are further expanded to ensure the cluster is consistent.
 
