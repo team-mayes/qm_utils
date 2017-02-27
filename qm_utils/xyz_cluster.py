@@ -327,7 +327,7 @@ def hartree_sum_pucker_cluster(sum_file, print_status='off'):
     return hartree_dict, pucker_filename_dict, hartree_headers
 
 
-def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_list, print_option='on'):
+def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_list, print_option='odff'):
     """ Clusters the puckers based on their initial arrangement and RMSD. The puckers initially constructed from Hartree
     are further expanded to ensure the cluster is consistent.
 
@@ -374,7 +374,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_
                                          ring_num_list)
                     xyz_coords_dict[file_name] = ctr_ring_all_xyz1
                     xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
-                    print(process_cluster_dict[assigned_cluster_name][0], rmsd_kabsch, file_name)
+                    # print(process_cluster_dict[assigned_cluster_name][0], rmsd_kabsch, file_name)
                     if rmsd_kabsch < ok_tol:
                         dipole_difference = abs(float(hartree_dict[file_name][DIPOLE]) -
                                                 float(hartree_dict[process_cluster_dict[assigned_cluster_name][0]][
@@ -390,9 +390,11 @@ def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_
                     cluster_name = pucker + "-" + str(pucker_cluster)
                     process_cluster_dict[cluster_name] = [file_name]
 
-    if print_option != 'off':
-        for cluster_key, cluster_values in process_cluster_dict.items():
-            print("Cluster Key: {} Cluster Files: {}".format(cluster_key, cluster_values))
+    # if print_option != 'off':
+    for cluster_key, cluster_values in process_cluster_dict.items():
+        print("Cluster Key: {} Cluster Files: {}".format(cluster_key, cluster_values))
+
+
 
     return process_cluster_dict, xyz_coords_dict, atoms_order
 
