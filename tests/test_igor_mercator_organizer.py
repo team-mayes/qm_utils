@@ -27,6 +27,7 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 TEST_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'igor_mercator')
+NEW_DATA_DIR = os.path.join(SUB_DATA_DIR, 'new_data')
 
 # Input files #
 OXANE_AM1_LM_UNSORTED = os.path.join(SUB_DATA_DIR, 'z_hartree_out-unsorted-lm-oxane-am1.csv')
@@ -44,6 +45,9 @@ BXYL_AM1_LM_SORTED = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-lm-bxyl-am1.cs
 BXYL_AM1_LMIRC_UNSORTED = os.path.join(SUB_DATA_DIR, 'z_hartree-unsorted-lmirc-bxyl-am1.csv')
 BXYL_AM1_TS_SORTED = os.path.join(SUB_DATA_DIR, 'z_cluster_ring_pucker-sorted-TS-bxyl-am1.csv')
 
+NEW_OXANE_AM1_LMIRC_UNSORTED = os.path.join(NEW_DATA_DIR, 'z_hartree-unsorted-lmirc-oxane-am1.csv')
+NEW_OXANE_AM1_TS_SORTED = os.path.join(NEW_DATA_DIR, 'z_cluster-sorted-TS-oxane-am1.csv')
+NEW_OXANE_AM1_LM_SORTED = os.path.join(NEW_DATA_DIR, 'z_cluster-sorted-lm-oxane-am1.csv')
 
 # Good output
 
@@ -118,3 +122,10 @@ class TestMain(unittest.TestCase):
         # finally:
         #     self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
         #     silent_remove(OXANE_AM1_OUTPUT)
+
+    def testMainOxane(self):
+        test_input = [ "-m", 'oxane',
+                       "-raw_lmirc", NEW_OXANE_AM1_LMIRC_UNSORTED,
+                       "-ts", NEW_OXANE_AM1_TS_SORTED,
+                       "-lm", NEW_OXANE_AM1_LM_SORTED]
+        main(test_input)

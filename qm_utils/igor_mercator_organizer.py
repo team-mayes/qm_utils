@@ -201,6 +201,8 @@ def creating_igor_pathway(dict_of_dicts):
         diff_ts_ircf = (float(ircf_enth) - float(ts_enth)) * HARTREE_TO_KCALMOL
         diff_ircr_ts = (float(ircr_enth) - float(ts_enth)) * HARTREE_TO_KCALMOL
 
+# TODO fix this section of the code
+
         if abs(diff_ircr_ts) > abs(diff_ts_ircf):
             deltaH1      = -1 * diff_ircr_ts
             deltaH2      = diff_ts_ircf
