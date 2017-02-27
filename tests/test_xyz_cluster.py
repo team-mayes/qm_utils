@@ -29,7 +29,7 @@ DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'xyz_cluster')
 TS_DATA_DIR = os.path.join(SUB_DATA_DIR, 'TS_data')
 PM3MM_DATA_DIR = os.path.join(SUB_DATA_DIR,'bxyl_data')
-
+AM1_OXANE_DATA = os.path.join(SUB_DATA_DIR,'oxane_am1_new_data')
 # Input files #
 
 OXANE_HARTREE_SUM_HEATHER_FILE = os.path.join(SUB_DATA_DIR, 'b3lyp-test.csv')
@@ -94,10 +94,13 @@ GOOD_25b_TO_2so = os.path.join(SUB_DATA_DIR, 'oxane-25b-freeze_b3lyp-optall_b3ly
 GOOD_b25_TO_os2 = os.path.join(SUB_DATA_DIR, 'oxane-b25-freeze_b3lyp-optall_b3lyp.log')
 GOOD_e5_TO_4c1 = os.path.join(SUB_DATA_DIR, 'oxane-e5-freeze_b3lyp-optall_b3lyp.log')
 GOOD_NEW_PUCKER_LIST = os.path.join(SUB_DATA_DIR, 'z_files_list_new_puck_b3lyp_hartree_sum-cpsnap_good.txt')
+GOOD_AM1_OXANE_DATA = os.path.join(AM1_OXANE_DATA, 'z_files_list_freq_runsz_hartree-unsorted-TS-oxane-am1_good.txt')
 
 
 OXANE_HARTREE_SUM_TS_B3LYP_FILE = os.path.join(TS_DATA_DIR, 'z_hartree_out-unsorted-oxane-b3lyp.csv')
 BXYL_HARTREE_PM3MM_TS_FILE = os.path.join(PM3MM_DATA_DIR, 'z_hartree-unsorted-TS-pm3mm.csv')
+
+OXANE_AM1_TS_HARTREE = os.path.join(AM1_OXANE_DATA,'z_hartree-unsorted-TS-oxane-am1.csv')
 
 # Good output
 XYZ_TOL = 0.1
@@ -251,6 +254,14 @@ class TestMain(unittest.TestCase):
     def testTransitionStateMain3(self):
         test_input = ["-s", BXYL_HARTREE_PM3MM_TS_FILE, "-t", '0.01', '-r', '7,4,16,12,8,0']
         main(test_input)
-        # with capture_stdout(main, test_input) as output:
-        #     self.assertFalse("Warning! The following puckers have been dropped:" in output)
+
+
+    def testTransitionStateMain4(self):
+        try:
+            test_input = ["-s", OXANE_AM1_TS_HARTREE, "-t", '0.01']
+            main(test_input)
+            output = os.path.join(AM1_OXANE_DATA, 'z_files_list_freq_runsz_hartree-unsorted-TS-oxane-am1.txt')
+
+        finally:
+            silent_remove(output)
 

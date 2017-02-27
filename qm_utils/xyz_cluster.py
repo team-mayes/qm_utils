@@ -164,8 +164,10 @@ def rmsd(coords1, coords2):
 
     for v, w in zip(coords1, coords2):
         rmsd_val += sum([(v[i] - w[i]) ** 2.0 for i in range(num_dim)])
+        # print(rmsd_val)
 
     rmsd_value = np.sqrt(rmsd_val / num_atoms)
+    # print('{}\n'.format(rmsd_value))
 
     return rmsd_value, num_dim, num_atoms
 
@@ -292,10 +294,11 @@ def compare_rmsd_xyz(input_file1, input_file2, xyz_dir, ring_atom_order, print_o
                    kabsch_algorithm(center_xyz1, center_xyz2),
                    kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)))
 
-    rmsd_kabsch = kabsch_algorithm(center_xyz1, center_xyz2)[0]
 
-    # print(input_file1, input_file2)
-    # print('RMSD: {}\n'.format(rmsd_kabsch))
+    if 'oxane' in input_file1 and 'oxane' in input_file2:
+        rmsd_kabsch = kabsch_algorithm(center_ring_ring_xyz1, center_ring_ring_xyz2)[0]
+    else:
+        rmsd_kabsch = kabsch_algorithm(center_ring_all_xyz1, center_ring_all_xyz2)[0]
 
     return rmsd_kabsch, center_ring_all_xyz1, center_ring_all_xyz2, atom_ordering
 
@@ -369,6 +372,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_
                 file_name = file_list[file_id]
                 not_assigned = True
                 for assigned_cluster_name in process_cluster_dict:
+                    # print(file_name, process_cluster_dict[assigned_cluster_name][0])
                     (rmsd_kabsch, ctr_ring_all_xyz1, ctr_ring_all_xyz2, atoms_order) = \
                         compare_rmsd_xyz(file_name, process_cluster_dict[assigned_cluster_name][0], xyz_dir,
                                          ring_num_list)
@@ -394,7 +398,7 @@ def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_
     for cluster_key, cluster_values in process_cluster_dict.items():
         print("Cluster Key: {} Cluster Files: {}".format(cluster_key, cluster_values))
 
-
+    print('\n')
 
     return process_cluster_dict, xyz_coords_dict, atoms_order
 
