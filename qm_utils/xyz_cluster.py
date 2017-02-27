@@ -374,9 +374,8 @@ def test_clusters(pucker_filename_dict, xyz_dir, hartree_dict, ok_tol, ring_num_
                                          ring_num_list)
                     xyz_coords_dict[file_name] = ctr_ring_all_xyz1
                     xyz_coords_dict[process_cluster_dict[assigned_cluster_name][0]] = ctr_ring_all_xyz2
-                    # print(process_cluster_dict[assigned_cluster_name][0], rmsd_kabsch, file_name)
+                    print(process_cluster_dict[assigned_cluster_name][0], rmsd_kabsch, file_name)
                     if rmsd_kabsch < ok_tol:
-                        print('RMSD: {}'.format(round(rmsd_kabsch,5)))
                         dipole_difference = abs(float(hartree_dict[file_name][DIPOLE]) -
                                                 float(hartree_dict[process_cluster_dict[assigned_cluster_name][0]][
                                                           DIPOLE]))
