@@ -30,6 +30,7 @@ SAMPLE_HARTREE_FILE_TS = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-TS-oxane-b
 SAMPLE_HARTREE_FILE_BOTH = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-ALL-bxyl-am1.csv')
 LIST_OF_CSV_FILES_BXYL = os.path.join(SUB_DATA_DIR, 'a_list_csv_files2.txt')
 LIST_OF_CSV_FILES_OXANE = os.path.join(SUB_DATA_DIR, 'a_list_csv_files_oxane_ALL.txt')
+ENERGY_FILE = os.path.join(SUB_DATA_DIR, 'z_energies_CCSDT-B3LYP_bxyl.csv')
 
 
 # GOOD OUTPUTS #
@@ -87,7 +88,7 @@ class TestGenPuckerTableFunctions(unittest.TestCase):
 
 class TestMain(unittest.TestCase):
     def testMainBxyl(self):
-        test_input = ["-s", LIST_OF_CSV_FILES_BXYL, "-d", SUB_DATA_DIR, "-m", 'bxyl']
+        test_input = ["-s", LIST_OF_CSV_FILES_BXYL, "-d", SUB_DATA_DIR, "-m", 'bxyl', "-c", ENERGY_FILE]
         main(test_input)
 
     def testMainOxane(self):

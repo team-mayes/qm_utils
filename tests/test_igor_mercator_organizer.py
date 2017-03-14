@@ -94,19 +94,19 @@ class TestIgorMercator(unittest.TestCase):
         creating_igor_pathway(dict_of_dicts)
 
 class TestMain(unittest.TestCase):
-    # def testMainOxane(self):
-    #     try:
-    #         test_input = [ "-m", 'oxane',
-    #                        "-raw_lm", OXANE_AM1_LM_UNSORTED,
-    #                        "-raw_lmirc", OXANE_AM1_LMIRC_UNSORTED,
-    #                        "-raw_ts",OXANE_AM1_TS_UNSORTED,
-    #                        "-ts", OXANE_AM1_TS_SORTED,
-    #                        "-lm", OXANE_AM1_LM_SORTED]
-    #         main(test_input)
-    #         OXANE_AM1_OUTPUT = os.path.join(SUB_DATA_DIR, 'igor_df_oxane_am1.csv')
-    #     finally:
-    #         self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
-    #         silent_remove(OXANE_AM1_OUTPUT)
+    def testMainOxane(self):
+        try:
+            test_input = [ "-m", 'oxane',
+                           "-raw_lm", OXANE_AM1_LM_UNSORTED,
+                           "-raw_lmirc", OXANE_AM1_LMIRC_UNSORTED,
+                           "-raw_ts",OXANE_AM1_TS_UNSORTED,
+                           "-ts", OXANE_AM1_TS_SORTED,
+                           "-lm", OXANE_AM1_LM_SORTED]
+            main(test_input)
+            OXANE_AM1_OUTPUT = os.path.join(SUB_DATA_DIR, 'igor_df_oxane_am1.csv')
+        finally:
+            self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
+            silent_remove(OXANE_AM1_OUTPUT)
 
     def testMainBxyl(self):
         try:
@@ -123,9 +123,9 @@ class TestMain(unittest.TestCase):
         #     self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
         #     silent_remove(OXANE_AM1_OUTPUT)
 
-    def testMainOxane(self):
-        test_input = [ "-m", 'oxane',
-                       "-raw_lmirc", NEW_OXANE_AM1_LMIRC_UNSORTED,
-                       "-ts", NEW_OXANE_AM1_TS_SORTED,
-                       "-lm", NEW_OXANE_AM1_LM_SORTED]
-        main(test_input)
+    # def testMainOxane(self):
+    #     test_input = [ "-m", 'oxane',
+    #                    "-raw_lmirc", NEW_OXANE_AM1_LMIRC_UNSORTED,
+    #                    "-ts", NEW_OXANE_AM1_TS_SORTED,
+    #                    "-lm", NEW_OXANE_AM1_LM_SORTED]
+    #     main(test_input)

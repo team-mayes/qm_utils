@@ -158,6 +158,8 @@ def creating_igor_pathway(dict_of_dicts):
     irc_dict = {}
     pathway_phi = []
     pathway_theta = []
+    pathway_pucker = []
+    pathway_ts_pucker = []
     pathway_dict = {}
     pathway_table_list= []
 
@@ -277,22 +279,37 @@ def creating_igor_pathway(dict_of_dicts):
         else:
             pathway_phi.append(ircr_phi)
             pathway_theta.append('')
+            pathway_pucker.append('')
+            pathway_ts_pucker.append(ts_puck)
+            pathway_ts_pucker.append(ts_puck)
 
             pathway_phi.append(ircr_phi)
             pathway_theta.append(ircr_theta)
+            pathway_pucker.append(ircr_puck)
             pathway_phi.append(row_ts[PHI])
             pathway_theta.append(row_ts[THETA])
+            pathway_pucker.append(ts_puck)
+            pathway_ts_pucker.append(ts_puck)
 
             pathway_phi.append(ircf_phi)
             pathway_theta.append('')
+            pathway_pucker.append('')
+            pathway_ts_pucker.append(ts_puck)
+            pathway_ts_pucker.append(ts_puck)
 
             pathway_phi.append(ircf_phi)
             pathway_theta.append(ircf_theta)
+            pathway_pucker.append(ircf_puck)
             pathway_phi.append(row_ts[PHI])
             pathway_theta.append(row_ts[THETA])
+            pathway_pucker.append(ts_puck)
+            pathway_ts_pucker.append(ts_puck)
 
-    pathway_dict[str(qm_method) +'path_phi'] = pathway_phi
-    pathway_dict[str(qm_method) +'path_theta'] = pathway_theta
+
+    pathway_dict[str(qm_method) + '_path_phi'] = pathway_phi
+    pathway_dict[str(qm_method) + '_path_theta'] = pathway_theta
+    pathway_dict[str(qm_method) + '_z_pucker'] = pathway_pucker
+    pathway_dict[str(qm_method) + '_z_ts_pucker'] = pathway_ts_pucker
 
     return pathway_dict, pathway_table_list
 

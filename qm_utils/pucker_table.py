@@ -10,11 +10,12 @@ information based on pucker and level of theory.
 from __future__ import print_function
 
 import argparse
-import fnmatch
+import math
 import os
 import sys
+
+import csv
 import pandas as pd
-import math
 
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR,
                                 InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
@@ -30,12 +31,11 @@ __author__ = 'SPVicchio'
 
 # Constants #
 HARTREE_TO_KCALMOL = 627.5095
-K_B = 0.001985877534 # Boltzmann Constant in kcal/mol K
+K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
 
 # Defaults #
 
 DEFAULT_TEMPERATURE = 298.15
-
 
 # Field Headers #
 FUNCTIONAL = 'Functional'
@@ -92,19 +92,19 @@ LIST_PUCKER = ['4c1',
 ## Functions ##
 
 def read_hartree_files_lowest_energy(filename, hartree_dir):
-    ''' Loads the hartree files containing all of the methods for a given level of theory and finds the lowest energy
+    """ Loads the hartree files containing all of the methods for a given level of theory and finds the lowest energy
         structure for the given QM method.
 
     :param filename: the filename for the CSV that contains all of the information
     :param hartree_dir: the dictory that the files are located in
     :return: returns the hartree headers, the lowest energy dict, and the type of method used to solve it.
-    '''
+    """
     hartree_file_path = create_out_fname(filename, base_dir=hartree_dir, ext='.csv')
     hartree_dict = read_csv_to_dict(hartree_file_path, mode='rU')
     hartree_headers = get_csv_fieldnames(hartree_file_path, mode='rU')
     base_filename = os.path.split(filename)[1]
     split_info = base_filename.split('-')
-    qm_method = split_info[len(split_info)-1].split('.')[0]
+    qm_method = split_info[len(split_info) - 1].split('.')[0]
 
     lowest_energy_enth_val = 1000000
     lowest_energy_gibbs_val = 1000000
@@ -133,13 +133,13 @@ def read_hartree_files_lowest_energy(filename, hartree_dir):
     return hartree_headers, lowest_energy_dict, qm_method
 
 
-def sorting_job_types(lowest_energy_duct,qm_method):
-    ''' Based on the frequency, the combined hartree file sorts the data into lm and TS jobs for future processing
+def sorting_job_types(lowest_energy_duct, qm_method):
+    """ Based on the frequency, the combined hartree file sorts the data into lm and TS jobs for future processing
 
     :param lowest_energy_duct: the lowest energy dict for the given qm_method
     :param qm_method: the qm_method used to generate the structures in the hartree file
     :return: list of dicts for the lm_jobs and the ts_jobs along with the qm_method
-    '''
+    """
 
     lm_jobs = []
     ts_jobs = []
@@ -155,14 +155,13 @@ def sorting_job_types(lowest_energy_duct,qm_method):
 
     return lm_jobs, ts_jobs, qm_method
 
-def boltzmann_weighting(low_energy_job_dict, qm_method):
 
+def boltzmann_weighting(low_energy_job_dict, qm_method):
     list_puckers = []
     isolation_dict = {}
     dict_of_dict = {}
     pucker_total_weight_gibbs = {}
     contribution_dict = {}
-
 
     for row in low_energy_job_dict:
         row_pucker = row[PUCKER]
@@ -177,7 +176,6 @@ def boltzmann_weighting(low_energy_job_dict, qm_method):
             pucker_total_weight_gibbs[row_pucker] = float(0)
             contribution_dict[row_pucker] = float(0)
 
-
     for pucker_key in isolation_dict.keys():
         for pucker_file in isolation_dict[pucker_key]:
             for main_file in low_energy_job_dict:
@@ -186,20 +184,20 @@ def boltzmann_weighting(low_energy_job_dict, qm_method):
                     try:
                         gibbs_energy = float(main_file[GIBBS])
                         enth_energy = float(main_file[ENTH])
-                        weight_gibbs = math.exp(-gibbs_energy/(DEFAULT_TEMPERATURE*K_B))
-                        weight_enth = math.exp(-enth_energy/(DEFAULT_TEMPERATURE*K_B))
+                        weight_gibbs = math.exp(-gibbs_energy / (DEFAULT_TEMPERATURE * K_B))
+                        weight_enth = math.exp(-enth_energy / (DEFAULT_TEMPERATURE * K_B))
                         main_file[WEIGHT_GIBBS] = weight_gibbs
                         main_file[WEIGHT_ENTH] = weight_enth
                     finally:
-                        pucker_total_weight_gibbs[pucker_type] = pucker_total_weight_gibbs[pucker_type] + weight_gibbs
+                        pucker_total_weight_gibbs[pucker_type] += weight_gibbs
 
     for pucker_key in isolation_dict.keys():
         total_weight = pucker_total_weight_gibbs[pucker_key]
         for main_file in low_energy_job_dict:
             if main_file[PUCKER] == pucker_key:
                 contribution_dict[pucker_key] = \
-                    round(contribution_dict[pucker_key] + (main_file[WEIGHT_GIBBS]/total_weight)*main_file[GIBBS],2)
-
+                    round(contribution_dict[pucker_key] + (main_file[WEIGHT_GIBBS] / total_weight) * main_file[GIBBS],
+                          2)
 
     return contribution_dict, qm_method
 
@@ -227,7 +225,6 @@ def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
     worksheet_lm = writer.sheets['local min']
     worksheet_ts = writer.sheets['transition state']
 
-
     # TODO: figure out why my conditional formatting is no longer working
     worksheet_lm.conditional_format('B2:P39', {'type': 'cell',
                                                'criteria': '>=',
@@ -238,10 +235,11 @@ def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
                                                'value': 50,
                                                'format': format_ts})
 
-    writer.save
+    writer.save()
     writer.close()
 
     return
+
 
 def writing_csv_files(lm_table_dict, ts_table_dict, molecule, sum_file_location):
     """
@@ -266,7 +264,59 @@ def writing_csv_files(lm_table_dict, ts_table_dict, molecule, sum_file_location)
     df_ts.to_csv(path_ts, index=LIST_PUCKER)
 
 
- ## Command Line Parse ##
+def creating_bar_graph_function(ccsdt_file_info, overall_level_dict):
+
+    ccsdt_pucker_list = []
+    ccsdt_pucker_lm = []
+    ccsdt_pucker_ts = []
+
+    with open(ccsdt_file_info, 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if 'CCSD(T)' not in row[0]:
+                ccsdt_pucker_list.append(row[0])
+                ccsdt_pucker_lm.append(row[1])
+                ccsdt_pucker_ts.append(row[2])
+    f.close()
+
+    ccsdt_dict = {}
+
+    inner_dict = {}
+    for count in range(0, len(ccsdt_pucker_list)):
+        if ccsdt_pucker_lm[count] is not None:
+            inner_dict['lm'] = ccsdt_pucker_lm[count]
+        if ccsdt_pucker_lm[count] is not None:
+            inner_dict['ts'] = ccsdt_pucker_ts[count]
+
+        ccsdt_dict[ccsdt_pucker_list[count]] = inner_dict
+        inner_dict = {}
+
+    for level_keys in overall_level_dict.keys():
+        print(level_keys.split('-'))
+        if level_keys.split('-')[1] == 'lm':
+            for pucker_row in overall_level_dict[level_keys]:
+                print(pucker_row)
+
+# TODO print out pucker row
+
+    # for level_keys in overall_level_dict.keys():
+    #     for pucker_row in overall_level_dict[level_keys]:
+    #         count=0
+    #         for pucker in ccsdt_pucker_list:
+    #             if pucker == pucker_row:
+    #                 if level_keys.split('-')[1] == 'lm':
+    #                     print(pucker_row, pucker)
+    #                     print(ccsdt_pucker_lm[count])
+    #                     print(overall_level_dict[level_keys][pucker_row])
+    #                     print('\n')
+    #                 # if level_keys.split('-')[1] == 'ts':
+    #                 #     print(pucker_row, pucker)
+    #                 #     print(ccsdt_pucker_ts[count])
+    #             count += 1
+
+    return
+
+## Command Line Parse ##
 
 
 def parse_cmdline(argv):
@@ -289,6 +339,8 @@ def parse_cmdline(argv):
     parser.add_argument('-p', "--pattern", help="The file pattern you are looking for (example: '.csv').",
                         default=None)
     parser.add_argument('-m', "--molecule", help="The type of molecule that is currently being studied")
+    parser.add_argument('-c', "--ccsdt" , help="The CCSD(T) file for the molecule being studied",
+                        default=None)
 
     args = None
     try:
@@ -332,35 +384,36 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return ret
     try:
+            lm_level_dict = {}
+            ts_level_dict = {}
+            overall_level_dict = {}
 
-        lm_level_dict = {}
-        ts_level_dict = {}
-        overall_level_dict = {}
+            with open(args.sum_file) as f:
+                for csv_file_read_newline in f:
+                    csv_file_read = csv_file_read_newline.strip("\n")
+                    hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(csv_file_read,
+                                                                                                      args.dir_hartree)
+                    lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+                    contribution_dict_lm, qm_method = boltzmann_weighting(lm_jobs, qm_method)
+                    contribution_dict_ts, qm_method = boltzmann_weighting(ts_jobs, qm_method)
 
-        with open(args.sum_file) as f:
-            for csv_file_read_newline in f:
-                csv_file_read = csv_file_read_newline.strip("\n")
-                hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy( csv_file_read,
-                                                                                                   args.dir_hartree)
-                lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
-                contribution_dict_lm, qm_method = boltzmann_weighting(lm_jobs, qm_method)
-                contribution_dict_ts, qm_method = boltzmann_weighting(ts_jobs, qm_method)
+                    lm_level_dict[qm_method + "-lm"] = contribution_dict_lm
+                    ts_level_dict[qm_method + "-ts"] = contribution_dict_ts
+                    overall_level_dict[qm_method + "-ts"] = contribution_dict_ts
+                    overall_level_dict[qm_method + "-lm"] = contribution_dict_lm
 
-                lm_level_dict[qm_method + "-lm"] = contribution_dict_lm
-                ts_level_dict[qm_method + "-ts"] = contribution_dict_ts
-                overall_level_dict[qm_method + "-ts"] = contribution_dict_ts
-                overall_level_dict[qm_method + "-lm"] = contribution_dict_lm
+            prefix = 'a_table_lm-ts_' + str(args.molecule)
 
+            list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
+                                           base_dir=os.path.dirname(args.sum_file), ext='.xlsx')
 
-        prefix = 'a_table_lm-ts_' + str(args.molecule)
+            writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
+            writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)
 
-        list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
-                                               base_dir=os.path.dirname(args.sum_file), ext='.xlsx')
+            if args.ccsdt is not None:
+                creating_bar_graph_function(args.ccsdt, overall_level_dict)
 
 
-
-        writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
-        writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)
 
     except IOError as e:
         warning(e)

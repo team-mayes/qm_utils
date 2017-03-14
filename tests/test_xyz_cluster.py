@@ -258,7 +258,7 @@ class TestMain(unittest.TestCase):
 
     def testTransitionStateMain4(self):
         try:
-            test_input = ["-s", OXANE_AM1_TS_HARTREE, "-t", '0.01']
+            test_input = ["-s", OXANE_AM1_TS_HARTREE, "-t", '0.1']
             main(test_input)
             output = os.path.join(AM1_OXANE_DATA, 'z_files_list_freq_runsz_hartree-unsorted-TS-oxane-am1.txt')
 
