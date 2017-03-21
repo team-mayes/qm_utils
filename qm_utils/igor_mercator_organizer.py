@@ -180,7 +180,7 @@ def creating_igor_pathway(dict_of_dicts):
         ircf_file = 'missing'
         ircr_file = 'missing'
         ts_file_name = row_ts[FILE_NAME].split('-')
-        ts_enth = row_ts[ENTH]
+        ts_gibbs = row_ts[GIBBS]
         ts_puck = row_ts[PUCKER]
 
         for row_irc in irc_dict:
@@ -190,39 +190,36 @@ def creating_igor_pathway(dict_of_dicts):
                     ircf_file = irc_file_name
                     ircf_theta = row_irc[THETA]
                     ircf_phi = row_irc[PHI]
-                    ircf_enth = row_irc[ENTH]
+                    ircf_gibbs = row_irc[GIBBS]
                     ircf_puck = row_irc[PUCKER]
                 elif 'ircr' in irc_file_name:
                     ircr_file = irc_file_name
                     ircr_theta = row_irc[THETA]
                     ircr_phi = row_irc[PHI]
-                    ircr_enth = row_irc[ENTH]
+                    ircr_gibbs = row_irc[GIBBS]
                     ircr_puck = row_irc[PUCKER]
 
-
-        diff_ts_ircf = (float(ircf_enth) - float(ts_enth)) * HARTREE_TO_KCALMOL
-        diff_ircr_ts = (float(ircr_enth) - float(ts_enth)) * HARTREE_TO_KCALMOL
-
-# TODO fix this section of the code
+        diff_ts_ircf = (float(ircf_gibbs) - float(ts_gibbs)) * HARTREE_TO_KCALMOL
+        diff_ircr_ts = (float(ircr_gibbs) - float(ts_gibbs)) * HARTREE_TO_KCALMOL
 
         if abs(diff_ircr_ts) > abs(diff_ts_ircf):
-            deltaH1      = -1 * diff_ircr_ts
-            deltaH2      = diff_ts_ircf
-            deltaH1_puck = ircr_puck
-            deltaH2_puck = ircf_puck
+            deltaG1      = -1 * diff_ircr_ts
+            deltaG2      = diff_ts_ircf
+            deltaG1_puck = ircr_puck
+            deltaG2_puck = ircf_puck
         elif abs(diff_ircr_ts) < abs(diff_ts_ircf):
-            deltaH1 = -1 * diff_ts_ircf
-            deltaH2 = diff_ircr_ts
-            deltaH1_puck = ircf_puck
-            deltaH2_puck = ircr_puck
-
+            deltaG1 = -1 * diff_ts_ircf
+            deltaG2 = diff_ircr_ts
+            deltaG1_puck = ircf_puck
+            deltaG2_puck = ircr_puck
         elif abs(diff_ircr_ts) == abs(diff_ts_ircf):
-            deltaH1 = -1 * diff_ts_ircf
-            deltaH2 = diff_ircr_ts
-            deltaH1_puck = ircr_puck
-            deltaH2_puck = ircf_puck
+            deltaG1 = -1 * diff_ts_ircf
+            deltaG2 = diff_ircr_ts
+            deltaG1_puck = ircr_puck
+            deltaG2_puck = ircf_puck
 
-        pathway_table_list.append(str(deltaH1_puck) + '#' + str(round(deltaH1, 2)) +'#' + str(ts_puck) + '#' + str(round(deltaH2, 2)) + '#' + str(deltaH2_puck))
+        pathway_table_list.append(str(deltaG1_puck) + '#' + str(round(deltaG1, 4)) +'#' + str(ts_puck) + '#' +
+                                  str(round(deltaG2, 4)) + '#' + str(deltaG2_puck) + '#' + str(round(deltaG1 + deltaG2,4)))
 
 
         if abs(float(ircf_phi) - float(row_ts[PHI])) > 340:
