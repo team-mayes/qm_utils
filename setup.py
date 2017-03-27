@@ -48,7 +48,8 @@ setup(
                             'igor_mercator=qm_utils.igor_mercator_organizer:main',
                             'break_up_file=qm_utils.break_up_file:main',
                             'pucker_table=qm_utils.pucker_table:main',
-                            'dipole_cluster=qm_utils.dipole_cluster:main']
+                            'dipole_cluster=qm_utils.dipole_cluster:main',
+                            'rmsd=qm_utils.RMSD:main']
     },
     include_package_data=True,
     package_data={'qm_utils': ['cfg/*.*', ], },

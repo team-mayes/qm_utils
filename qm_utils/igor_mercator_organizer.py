@@ -44,6 +44,7 @@ THETA = 'theta'
 PHI = 'phi'
 GIBBS = 'G298 (Hartrees)'
 ENTH = "H298 (Hartrees)"
+# GIBBS = 'H298 (Hartrees)'
 pathway_list_field_names = 'H1Pucker#H1#TSPucker#H2#H2Pucker'
 
 # Functions #
@@ -207,20 +208,28 @@ def creating_igor_pathway(dict_of_dicts):
             deltaG2      = diff_ts_ircf
             deltaG1_puck = ircr_puck
             deltaG2_puck = ircf_puck
+            deltaG1_name = ircr_file
+            deltaG2_name = ircf_file
         elif abs(diff_ircr_ts) < abs(diff_ts_ircf):
             deltaG1 = -1 * diff_ts_ircf
             deltaG2 = diff_ircr_ts
             deltaG1_puck = ircf_puck
             deltaG2_puck = ircr_puck
+            deltaG1_name = ircf_file
+            deltaG2_name = ircr_file
         elif abs(diff_ircr_ts) == abs(diff_ts_ircf):
             deltaG1 = -1 * diff_ts_ircf
             deltaG2 = diff_ircr_ts
             deltaG1_puck = ircr_puck
             deltaG2_puck = ircf_puck
+            deltaG1_name = ircr_file
+            deltaG2_name = ircf_file
 
-        pathway_table_list.append(str(deltaG1_puck) + '#' + str(round(deltaG1, 4)) +'#' + str(ts_puck) + '#' +
-                                  str(round(deltaG2, 4)) + '#' + str(deltaG2_puck) + '#' + str(round(deltaG1 + deltaG2,4)))
+        # pathway_table_list.append(str(deltaG1_puck) + '#' + str(round(deltaG1, 4)) +'#' + str(ts_puck) + '#' +
+        #                           str(round(deltaG2, 4)) + '#' + str(deltaG2_puck) + '#' + str(round(deltaG1 + deltaG2,4)))
 
+        pathway_table_list.append(str(deltaG1_puck) + '#' + str(deltaG1_name) +'#' + str(ts_puck) + '#' +
+                                  str(row_ts[FILE_NAME]) + '#' + str(deltaG2_puck) + '#' + str(deltaG2_name))
 
         if abs(float(ircf_phi) - float(row_ts[PHI])) > 340:
             pass
