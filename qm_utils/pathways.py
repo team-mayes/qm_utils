@@ -8,17 +8,13 @@ The purpose of this script is to organize the pathway information for the variou
 from __future__ import print_function
 
 import argparse
-import fnmatch
+import math
 import os
 import sys
-import pandas as pd
-import math
+
 import numpy as np
 
 from qm_utils.pucker_table import read_hartree_files_lowest_energy
-
-from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR,
-                                InvalidDataError, INVALID_DATA, INPUT_ERROR, read_csv_to_dict, get_csv_fieldnames)
 
 try:
     # noinspection PyCompatibility
@@ -31,12 +27,11 @@ __author__ = 'SPVicchio'
 
 # Constants #
 HARTREE_TO_KCALMOL = 627.5095
-K_B = 0.001985877534 # Boltzmann Constant in kcal/mol K
+K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
 
 # Defaults #
 
 DEFAULT_TEMPERATURE = 298.15
-
 
 # Field Headers #
 FILE_NAME = 'File Name'
@@ -46,6 +41,7 @@ THETA = 'theta'
 PHI = 'phi'
 GIBBS = 'G298 (Hartrees)'
 ENTH = "H298 (Hartrees)"
+
 
 # Functions #
 
@@ -64,8 +60,7 @@ def read_pathway_information(file, csv_filename):
     for row in lowest_energy_dict:
         method_dict[row[FILE_NAME]] = row
 
-
-    dict = {}
+    main_dict = {}
     pathway_list = {}
     pathway_multiple = []
 
@@ -85,7 +80,7 @@ def read_pathway_information(file, csv_filename):
                 mini_dict = {}
                 mini_dict[pathway] = pathway
                 mini_dict['files'] = filenames
-                dict[pathway + '$' + str(pathway_list[pathway])] = mini_dict
+                main_dict[pathway + '$' + str(pathway_list[pathway])] = mini_dict
             else:
                 if pathway_list[pathway] == 0:
                     pathway_multiple.append(pathway)
@@ -93,42 +88,42 @@ def read_pathway_information(file, csv_filename):
                 mini_dict = {}
                 mini_dict[pathway] = pathway
                 mini_dict['files'] = filenames
-                dict[pathway + '$' + str(pathway_list[pathway])] = mini_dict
+                main_dict[pathway + '$' + str(pathway_list[pathway])] = mini_dict
 
     pathway_dict = {}
 
     for dupe_pathway in pathway_multiple:
         gibbs_lm1 = []
-        gibbs_ts  = []
+        gibbs_ts = []
         gibbs_lm2 = []
         enth_lm1 = []
-        enth_ts  = []
+        enth_ts = []
         enth_lm2 = []
-        for large_dict_keys in dict.keys():
+        for large_dict_keys in main_dict.keys():
             if large_dict_keys.split('$')[0] == dupe_pathway:
                 ind_pathway = {}
-                files = dict[large_dict_keys]['files'].split('#')
+                files = main_dict[large_dict_keys]['files'].split('#')
                 gibbs_lm1.append(method_dict[files[0]][GIBBS])
                 gibbs_ts.append(method_dict[files[1]][GIBBS])
                 gibbs_lm2.append(method_dict[files[2]][GIBBS])
                 enth_lm1.append(method_dict[files[0]][ENTH])
                 enth_ts.append(method_dict[files[1]][ENTH])
                 enth_lm2.append(method_dict[files[2]][ENTH])
-                if len(gibbs_lm2) == pathway_list[dupe_pathway]+1:
+                if len(gibbs_lm2) == pathway_list[dupe_pathway] + 1:
                     ind_pathway['lm1'] = perform_pucker_boltzmann_weighting_gibbs(gibbs_lm1, enth_lm1)
-                    ind_pathway['ts']  = perform_pucker_boltzmann_weighting_gibbs(gibbs_ts , enth_ts)
+                    ind_pathway['ts'] = perform_pucker_boltzmann_weighting_gibbs(gibbs_ts, enth_ts)
                     ind_pathway['lm2'] = perform_pucker_boltzmann_weighting_gibbs(gibbs_lm2, enth_lm2)
-                    ind_pathway['dupe'] = str(pathway_list[dupe_pathway ]+ 1)
+                    ind_pathway['dupe'] = str(pathway_list[dupe_pathway] + 1)
 
         pathway_dict[dupe_pathway] = ind_pathway
 
-    for large_dict_keys in dict.keys():
+    for large_dict_keys in main_dict.keys():
         ind_pathway = {}
         if large_dict_keys.split('$')[0] not in pathway_multiple:
-            files = dict[large_dict_keys]['files'].split('#')
-            ind_pathway['lm1'] = round(method_dict[files[0]][ENTH],4)
-            ind_pathway['ts']  = round(method_dict[files[1]][ENTH],4)
-            ind_pathway['lm2'] = round(method_dict[files[2]][ENTH],4)
+            files = main_dict[large_dict_keys]['files'].split('#')
+            ind_pathway['lm1'] = round(method_dict[files[0]][ENTH], 4)
+            ind_pathway['ts'] = round(method_dict[files[1]][ENTH], 4)
+            ind_pathway['lm2'] = round(method_dict[files[2]][ENTH], 4)
             ind_pathway['dupe'] = str('0')
             pathway_dict[large_dict_keys.split('$')[0]] = ind_pathway
 
@@ -149,7 +144,7 @@ def perform_pucker_boltzmann_weighting_gibbs(gibbs_list, enth_list):
 
     for energy in gibbs_list:
         try:
-            boltz_weight = math.exp(-energy/ (DEFAULT_TEMPERATURE * K_B))
+            boltz_weight = math.exp(-energy / (DEFAULT_TEMPERATURE * K_B))
         finally:
             weight_gibbs.append(boltz_weight)
             pucker_total_weight_gibbs += boltz_weight
@@ -164,9 +159,10 @@ def perform_pucker_boltzmann_weighting_gibbs(gibbs_list, enth_list):
         print('The sum of the boltzmann weights equals {} (should equal 1.0).'
               .format(abs(sum(puckering_weight))))
 
-    weighted_value = round(sum(np.array(puckering_weight) * np.array(enth_list)),4)
+    weighted_value = round(sum(np.array(puckering_weight) * np.array(enth_list)), 4)
 
     return weighted_value
+
 
 # Command Line Parser #
 
@@ -202,8 +198,6 @@ def parse_cmdline(argv):
             GOOD_RET = 'No'
     else:
         GOOD_RET = 'good'
-
-
 
     return args, GOOD_RET
 
