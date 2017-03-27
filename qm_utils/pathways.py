@@ -13,6 +13,7 @@ import os
 import sys
 import pandas as pd
 import math
+import numpy as np
 
 from qm_utils.pucker_table import read_hartree_files_lowest_energy
 
@@ -49,7 +50,13 @@ ENTH = "H298 (Hartrees)"
 # Functions #
 
 def read_pathway_information(file, csv_filename):
-    """"""
+    """ Organizes and collects all of the pathway information! If there are multiple pathways with the same
+        three puckers, then they are grouped together and a weighted boltzman distribution is computed for them.
+
+    :param file: the text file containing the pathway file information
+    :param csv_filename: a hartree CSV file containing all of the lmirc and TS structures for analysis
+    :return: the qm method used and a dictionary of all of the pathways
+    """
 
     method_dict = {}
     hartree_headers, lowest_energy_dict, qm_method = \
@@ -88,6 +95,8 @@ def read_pathway_information(file, csv_filename):
                 mini_dict['files'] = filenames
                 dict[pathway + '$' + str(pathway_list[pathway])] = mini_dict
 
+    pathway_dict = {}
+
     for dupe_pathway in pathway_multiple:
         gibbs_lm1 = []
         gibbs_ts  = []
@@ -97,6 +106,7 @@ def read_pathway_information(file, csv_filename):
         enth_lm2 = []
         for large_dict_keys in dict.keys():
             if large_dict_keys.split('$')[0] == dupe_pathway:
+                ind_pathway = {}
                 files = dict[large_dict_keys]['files'].split('#')
                 gibbs_lm1.append(method_dict[files[0]][GIBBS])
                 gibbs_ts.append(method_dict[files[1]][GIBBS])
@@ -104,42 +114,59 @@ def read_pathway_information(file, csv_filename):
                 enth_lm1.append(method_dict[files[0]][ENTH])
                 enth_ts.append(method_dict[files[1]][ENTH])
                 enth_lm2.append(method_dict[files[2]][ENTH])
-
                 if len(gibbs_lm2) == pathway_list[dupe_pathway]+1:
-                    pucker_total_weight_gibbs_lm1 = 0
-                    pucker_total_weight_gibbs_ts  = 0
-                    pucker_total_weight_gibbs_lm2 = 0
+                    ind_pathway['lm1'] = perform_pucker_boltzmann_weighting_gibbs(gibbs_lm1, enth_lm1)
+                    ind_pathway['ts']  = perform_pucker_boltzmann_weighting_gibbs(gibbs_ts , enth_ts)
+                    ind_pathway['lm2'] = perform_pucker_boltzmann_weighting_gibbs(gibbs_lm2, enth_lm2)
+                    ind_pathway['dupe'] = str(pathway_list[dupe_pathway ]+ 1)
 
-                    weight_gibbs = []
-                    for energy in gibbs_lm1:
-                        try:
-                            boltz_weight = math.exp(-energy/ (DEFAULT_TEMPERATURE * K_B))
-                        finally:
-                            weight_gibbs.append(boltz_weight)
-                            pucker_total_weight_gibbs_lm1 += boltz_weight
-                    puckering_weight = []
-                    for value in weight_gibbs:
-                        try:
-                            individual_weight = float(value / pucker_total_weight_gibbs_lm1)
-                        finally:
-                            puckering_weight.append(individual_weight)
+        pathway_dict[dupe_pathway] = ind_pathway
 
-                    print(puckering_weight)
+    for large_dict_keys in dict.keys():
+        ind_pathway = {}
+        if large_dict_keys.split('$')[0] not in pathway_multiple:
+            files = dict[large_dict_keys]['files'].split('#')
+            ind_pathway['lm1'] = round(method_dict[files[0]][ENTH],4)
+            ind_pathway['ts']  = round(method_dict[files[1]][ENTH],4)
+            ind_pathway['lm2'] = round(method_dict[files[2]][ENTH],4)
+            ind_pathway['dupe'] = str('0')
+            pathway_dict[large_dict_keys.split('$')[0]] = ind_pathway
 
-                    if abs(sum(puckering_weight) - 1.0000) < 0.01:
-                        print(puckering_weight)
+    return method[0], pathway_dict
 
 
-            else:
-                # TODO: will just have to pull the information here so that the pathway can be complete
-                pass
+def perform_pucker_boltzmann_weighting_gibbs(gibbs_list, enth_list):
+    """ The script focuses on performing the boltzmann weighting for the puckering pathways. The boltzmann weighting
+        is completed based on Gibbs free energy (with the weight applied to Enthalpy).
 
-    return method[0]
+    :param gibbs_list: list of the energies associated with a particular pucker
+    :param enth_list: list of enthalpies associated with a particular pucker
+    :return: the weighted energy for the pathway
+    """
+    pucker_total_weight_gibbs = 0
+    weight_gibbs = []
+    puckering_weight = []
 
+    for energy in gibbs_list:
+        try:
+            boltz_weight = math.exp(-energy/ (DEFAULT_TEMPERATURE * K_B))
+        finally:
+            weight_gibbs.append(boltz_weight)
+            pucker_total_weight_gibbs += boltz_weight
 
-def perform_pucker_boltzmann_weighting_gibbs(gibbs_list, enth_list,
+    for value in weight_gibbs:
+        try:
+            individual_weight = value / pucker_total_weight_gibbs
+        finally:
+            puckering_weight.append(individual_weight)
 
+    if abs(sum(puckering_weight) - 1.0000) > 0.01:
+        print('The sum of the boltzmann weights equals {} (should equal 1.0).'
+              .format(abs(sum(puckering_weight))))
 
+    weighted_value = round(sum(np.array(puckering_weight) * np.array(enth_list)),4)
+
+    return weighted_value
 
 # Command Line Parser #
 
