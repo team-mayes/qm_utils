@@ -29,6 +29,9 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'pathways')
 # Sample Files#
 INPUT_BXYL_PATHWAYS = os.path.join(SUB_DATA_DIR, 'a_pathway_listbxyl_am1.txt')
 INPUT_BXYL_CSV      = os.path.join(SUB_DATA_DIR, 'z_pathways-am1.csv')
+INPUT_BXYL_LIST_FILES    = os.path.join(SUB_DATA_DIR, 'a_pathway_list_all.txt')
+
+# Function Inputs #
 INPUT_GIBBS_LIST    = [3.357175825, 4.750246915, 4.80672277, 2.77359199, 4.587094445]
 INPUT_ENTH_LIST     = [3.884283805, 5.47188284, 5.47188284, 3.244224115, 5.327555655]
 
@@ -50,8 +53,14 @@ class TestPathwayFunctions(unittest.TestCase):
         weight = perform_pucker_boltzmann_weighting_gibbs(INPUT_GIBBS_LIST, INPUT_ENTH_LIST)
         self.assertEqual(weight, GOOD_WEIGHT)
 
+    # def test
+
 
 class TestMain(unittest.TestCase):
-    def testMain(self):
-        input_info = ["-f", INPUT_BXYL_PATHWAYS]
+    def testMainSingle(self):
+        input_info = ["-f", INPUT_BXYL_PATHWAYS, "-d", SUB_DATA_DIR]
+        main(input_info)
+
+    def testMainMultiple(self):
+        input_info = ["-s", INPUT_BXYL_LIST_FILES, "-d", SUB_DATA_DIR]
         main(input_info)
