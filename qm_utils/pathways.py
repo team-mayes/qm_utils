@@ -36,12 +36,13 @@ DEFAULT_TEMPERATURE = 298.15
 
 # Field Headers #
 FILE_NAME = 'File Name'
-PUCKER = 'Pucker'
+PUCKER    = 'Pucker'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
 THETA = 'theta'
-PHI = 'phi'
+PHI   = 'phi'
 GIBBS = 'G298 (Hartrees)'
-ENTH = "H298 (Hartrees)"
+ENTH  = "H298 (Hartrees)"
+Q_VAL = 'Q'
 
 # Puckers #
 LIST_PUCKER = ['4c1', '14b', '25b', 'o3b', '1h2', '2h3', '3h4', '4h5', '5ho', 'oh1', '1s3', '1s5', '2so',  '1e',  '2e',
@@ -132,7 +133,7 @@ def read_pathway_information(file, csv_filename):
             ind_pathway['dupe'] = str('0')
             pathway_dict[large_dict_keys.split('$')[0]] = ind_pathway
 
-    return method[0], pathway_dict
+    return method[0], pathway_dict, method_dict
 
 
 def perform_pucker_boltzmann_weighting_gibbs(gibbs_list, enth_list):
@@ -182,6 +183,48 @@ def find_hartree_csv_file(file, directory):
 
     return hartree_file[0]
 
+
+def distance_between_puckers(method_dict_info1, method_dict_info2):
+    """"""
+    print('phi: {}, theta: {}, Q: {}'.format(method_dict_info1[PHI], method_dict_info1[THETA], method_dict_info1[Q_VAL]))
+    print('phi: {}, theta: {}, Q: {}\n'.format(method_dict_info2[PHI], method_dict_info2[THETA], method_dict_info2[Q_VAL]))
+
+
+# Values for the first set of spherical coordiantes
+    phi1   = 0*math.pi/180 #float(method_dict_info1[PHI]) * math.pi/180
+    theta1 = 90*math.pi/180 #float(method_dict_info1[THETA]) * math.pi/180
+    q_val1 = 1 #float(method_dict_info1[Q_VAL])
+
+# Values for the second set of spherical coordinates
+    phi2   = 180*math.pi/180 #float(method_dict_info2[PHI]) * math.pi/180
+    theta2 = 0*math.pi/180 # float(method_dict_info2[THETA]) * math.pi/180
+    q_val2 = 1 #float(method_dict_info2[Q_VAL])
+
+# Altering spherical coordinates to cartesian coordinates
+    q_val = (q_val1 + q_val2)/2
+    x1 = round(q_val * math.sin(theta1) * math.cos(phi1),4)
+    x2 = round(q_val * math.sin(theta2) * math.cos(phi2),4)
+
+    y1 = round(q_val * math.sin(theta1) * math.sin(phi1),4)
+    y2 = round(q_val * math.sin(theta2) * math.sin(phi2),4)
+
+    z1 = round(q_val * math.cos(theta1),4)
+    z2 = round(q_val * math.cos(theta2),4)
+
+    print('x1: {}, y1: {}, z1: {}'.format(x1, y1, z1))
+    print('x2: {}, y2: {}, z2: {}'.format(x2, y2, z2))
+
+
+
+    distance = math.sqrt(math.pow((x1-x2),2) + math.pow((y1-y2),2) + math.pow((z1-z2),2))
+
+    arc_length =  q_val * math.asin((distance/(2 * q_val)) * (math.sqrt(4*math.pow(q_val,2) - math.pow(distance,2))))
+
+    print('\n{}'.format(distance))
+    print('\n{}'.format(arc_length))
+
+
+    return
 
 def create_minimum_pathways():
     pass
@@ -238,7 +281,8 @@ def main(argv=None):
         if args.single_file is not None:
 
             hartree_file = find_hartree_csv_file(args.single_file, args.dir)
-            method, pathway_dict = read_pathway_information(args.single_file, os.path.join(args.dir, hartree_file))
+            method, pathway_dict, method_dict = read_pathway_information(args.single_file,
+                                                                         os.path.join(args.dir, hartree_file))
 
             print(pd.DataFrame(pathway_dict))
 
@@ -247,8 +291,8 @@ def main(argv=None):
             method_dict = {}
             for row in list:
                 hartree_file = find_hartree_csv_file(row.strip('\n'), args.dir)
-                method, pathway_dict = read_pathway_information(os.path.join(args.dir, row.strip('\n')),
-                                                                os.path.join(args.dir, hartree_file))
+                method, pathway_dict, single_method_dict = read_pathway_information(os.path.join(args.dir,
+                                                            row.strip('\n')), os.path.join(args.dir, hartree_file))
                 method_dict[method] = pathway_dict
 
             overall_pathways = {}
@@ -268,7 +312,7 @@ def main(argv=None):
                     if row == overall_pathways_keys.split('-')[1]:
                         print(overall_pathways_keys, overall_pathways[overall_pathways_keys])
 
-                # if 'dftb' in overall_pathways[overall_pathways_keys]:
+                # if 'am1' and 'am1full' in overall_pathways[overall_pathways_keys]:
                 #     print(overall_pathways_keys, overall_pathways[overall_pathways_keys])
 
 

@@ -180,14 +180,15 @@ def creating_igor_pathway(dict_of_dicts):
     for row_ts in ts_dict:
         ircf_file = 'missing'
         ircr_file = 'missing'
-        ts_file_name = row_ts[FILE_NAME].split('-')
+        # ts_file_name = row_ts[FILE_NAME].split('-')
+        ts_file_name = row_ts[FILE_NAME].split('.') # USE IF YOU ARE DOING OLD HARTREE FILES
         ts_gibbs = row_ts[GIBBS]
         ts_puck = row_ts[PUCKER]
 
         for row_irc in irc_dict:
             irc_file_name = row_irc[FILE_NAME]
             # if ts_file_name[0] in irc_file_name and ts_file_name[1] in irc_file_name:
-            if ts_file_name[1] in irc_file_name and ts_file_name[2] in irc_file_name:
+            if ts_file_name[0] in irc_file_name in irc_file_name: # USE IF YOU ARE DOING OLD HARTREE FILES
                 if 'ircf' in irc_file_name:
                     ircf_file = irc_file_name
                     ircf_theta = row_irc[THETA]

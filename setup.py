@@ -49,7 +49,8 @@ setup(
                             'break_up_file=qm_utils.break_up_file:main',
                             'pucker_table=qm_utils.pucker_table:main',
                             'dipole_cluster=qm_utils.dipole_cluster:main',
-                            'rmsd=qm_utils.RMSD:main']
+                            'rmsd=qm_utils.RMSD:main',
+                            'pathways=qm_utils.pathways:main']
     },
     include_package_data=True,
     package_data={'qm_utils': ['cfg/*.*', ], },

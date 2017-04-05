@@ -9,7 +9,8 @@ test_xyz_cluster
 import logging
 import os
 import unittest
-from qm_utils.pathways import read_pathway_information, main, perform_pucker_boltzmann_weighting_gibbs
+from qm_utils.pathways import read_pathway_information, main, perform_pucker_boltzmann_weighting_gibbs, \
+    distance_between_puckers
 from qm_utils.qm_common import diff_lines, silent_remove
 
 __author__ = 'SPVicchio'
@@ -44,7 +45,7 @@ GOOD_WEIGHT            = 3.5717
 # Tests #
 class TestPathwayFunctions(unittest.TestCase):
     def testReadPathwayInformation(self):
-        qm_method, pathway_dict= read_pathway_information(INPUT_BXYL_PATHWAYS, INPUT_BXYL_CSV)
+        qm_method, pathway_dict, method_dict = read_pathway_information(INPUT_BXYL_PATHWAYS, INPUT_BXYL_CSV)
         self.assertEqual(qm_method, 'am1')
         self.assertEqual(pathway_dict['1c4-b14-os2']['lm1'], GOOD_PATHWAY_DICT_LM1)
         self.assertEqual(pathway_dict['bo3-5ho-1c4']['dupe'],GOOD_PATHWAY_DICT_DUPE)
@@ -53,7 +54,23 @@ class TestPathwayFunctions(unittest.TestCase):
         weight = perform_pucker_boltzmann_weighting_gibbs(INPUT_GIBBS_LIST, INPUT_ENTH_LIST)
         self.assertEqual(weight, GOOD_WEIGHT)
 
-    # def test
+    def testDistanceBetweenPuckersSim(self):
+        try:
+            qm_method, pathway_dict, method_dict = read_pathway_information(INPUT_BXYL_PATHWAYS, INPUT_BXYL_CSV)
+            distance_between_puckers(method_dict['beta-xylose38-TS_am1-ircr-am1.log'],
+                                     method_dict['beta-xylose39-TS_am1-ircr-am1.log'])
+        finally:
+            self.assertEqual(qm_method, 'am1')
+
+    def testDistanceBetweenPuckersDiff(self):
+        try:
+            qm_method, pathway_dict, method_dict = read_pathway_information(INPUT_BXYL_PATHWAYS, INPUT_BXYL_CSV)
+            distance_between_puckers(method_dict['beta-xylose40-TS_am1-ircr-am1.log'],
+                                     method_dict['beta-xylose68-TS_am1-ircf-am1.log']) # bo3, os2
+        finally:
+            self.assertEqual(qm_method, 'am1')
+
+
 
 
 class TestMain(unittest.TestCase):
@@ -64,3 +81,4 @@ class TestMain(unittest.TestCase):
     def testMainMultiple(self):
         input_info = ["-s", INPUT_BXYL_LIST_FILES, "-d", SUB_DATA_DIR]
         main(input_info)
+
