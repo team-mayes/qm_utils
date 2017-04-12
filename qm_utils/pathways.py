@@ -133,7 +133,7 @@ def read_pathway_information(file, csv_filename):
             ind_pathway['dupe'] = str('0')
             pathway_dict[large_dict_keys.split('$')[0]] = ind_pathway
 
-    return method[0], pathway_dict, method_dict
+    return method[0], pathway_dict, method_dict, main_dict
 
 
 def perform_pucker_boltzmann_weighting_gibbs(gibbs_list, enth_list):
@@ -184,47 +184,65 @@ def find_hartree_csv_file(file, directory):
     return hartree_file[0]
 
 
-def distance_between_puckers(method_dict_info1, method_dict_info2):
-    """"""
-    print('phi: {}, theta: {}, Q: {}'.format(method_dict_info1[PHI], method_dict_info1[THETA], method_dict_info1[Q_VAL]))
-    print('phi: {}, theta: {}, Q: {}\n'.format(method_dict_info2[PHI], method_dict_info2[THETA], method_dict_info2[Q_VAL]))
+def id_key_pathways(main_dict, method_dict, pucker_interest):
+    """ This script finds all of the pathways containing the loacl min that is in being studied.
+
+    :param main_dict: the main dict of all of the pathways (including duplicates)
+    :param method_dict: the hartree output dict where the key is the hartree input file
+    :param pucker_interest: the preferred pucker of interest (must be lowest local min in pathway)
+    :return: a list of the interesting pathways, and a list of all of the pathways (including multiples)
+
+    """
+    path_interest = []
+    multiple_pathways = []
+
+    for pathway in main_dict:
+        count = pathway.split('$')
+        puckers = count[0].split('-')
+        if puckers[0] == pucker_interest:
+            path_interest.append(pathway)
+            if count[1] != 0 and count[0] not in multiple_pathways:
+                multiple_pathways.append(count[0])
+
+    return path_interest, multiple_pathways
+
+def comparing_pathways_between_methods(path_interest_b3lyp, multiple_pathways_b3lyp, method_dict_b3lyp,
+                                       path_interest_compare, multiple_pathways_compare, method_dict_compare):
+
+    print(path_interest_b3lyp)
+
+    for pathway_b3lyp in path_interest_b3lyp:
+        pathway_b3lyp_puckers = pathway_b3lyp.split('$')[0].split('-')
+        for pathway_compa in path_interest_compare:
+            pathway_compa_puckers = pathway_compa.split('$')[0].split('-')
+            if pathway_b3lyp_puckers[0] != pathway_compa_puckers[0]:
+                print('The initial puckers are different! Something doesn\'t seem right.')
+            else:
+                if pathway_b3lyp_puckers[1] == pathway_compa_puckers[1]:
+                    print(pathway_b3lyp_puckers)
+                    print(pathway_compa_puckers)
 
 
-# Values for the first set of spherical coordiantes
-    phi1   = 0*math.pi/180 #float(method_dict_info1[PHI]) * math.pi/180
-    theta1 = 90*math.pi/180 #float(method_dict_info1[THETA]) * math.pi/180
-    q_val1 = 1 #float(method_dict_info1[Q_VAL])
+            #
+            # print(path_interest_b3lyp)
+            # print(path_interest_b3lyp.split('-')[1])
+            # if path_interest_b3lyp.split('-')[1] == path_interest_compare.split('-')[1]:
+            #     print('hi')
 
-# Values for the second set of spherical coordinates
-    phi2   = 180*math.pi/180 #float(method_dict_info2[PHI]) * math.pi/180
-    theta2 = 0*math.pi/180 # float(method_dict_info2[THETA]) * math.pi/180
-    q_val2 = 1 #float(method_dict_info2[Q_VAL])
-
-# Altering spherical coordinates to cartesian coordinates
-    q_val = (q_val1 + q_val2)/2
-    x1 = round(q_val * math.sin(theta1) * math.cos(phi1),4)
-    x2 = round(q_val * math.sin(theta2) * math.cos(phi2),4)
-
-    y1 = round(q_val * math.sin(theta1) * math.sin(phi1),4)
-    y2 = round(q_val * math.sin(theta2) * math.sin(phi2),4)
-
-    z1 = round(q_val * math.cos(theta1),4)
-    z2 = round(q_val * math.cos(theta2),4)
-
-    print('x1: {}, y1: {}, z1: {}'.format(x1, y1, z1))
-    print('x2: {}, y2: {}, z2: {}'.format(x2, y2, z2))
-
-
-
-    distance = math.sqrt(math.pow((x1-x2),2) + math.pow((y1-y2),2) + math.pow((z1-z2),2))
-
-    arc_length =  q_val * math.asin((distance/(2 * q_val)) * (math.sqrt(4*math.pow(q_val,2) - math.pow(distance,2))))
-
-    print('\n{}'.format(distance))
-    print('\n{}'.format(arc_length))
-
+    # for row in path_interest:
+    #     for rows in main_dict:
+    #         if row == rows:
+    #             files = main_dict[row]['files'].split('#')
+    #             lm1 = files[0]
+    #             ts0 = files[1]
+    #             lm2 = files[2]
+    #
+    #             params_lm1 = [method_dict[lm1][PUCKER], method_dict[lm1][PHI], method_dict[lm1][THETA]]
+    #             params_ts0 = [method_dict[ts0][PUCKER], method_dict[ts0][PHI], method_dict[ts0][THETA]]
+    #             params_lm2 = [method_dict[lm2][PUCKER], method_dict[lm2][PHI], method_dict[lm2][THETA]]
 
     return
+
 
 def create_minimum_pathways():
     pass
@@ -281,17 +299,21 @@ def main(argv=None):
         if args.single_file is not None:
 
             hartree_file = find_hartree_csv_file(args.single_file, args.dir)
-            method, pathway_dict, method_dict = read_pathway_information(args.single_file,
+            method, pathway_dict, method_dict, main_dict = read_pathway_information(args.single_file,
                                                                          os.path.join(args.dir, hartree_file))
 
-            print(pd.DataFrame(pathway_dict))
+
+            path_interest, multiple_pathways = id_key_pathways(main_dict, method_dict, pucker_interest='4c1')
+
+
+            # print(pd.DataF rame(pathway_dict))
 
         else:
             list = open(args.sum_file, mode='r')
             method_dict = {}
             for row in list:
                 hartree_file = find_hartree_csv_file(row.strip('\n'), args.dir)
-                method, pathway_dict, single_method_dict = read_pathway_information(os.path.join(args.dir,
+                method, pathway_dict, single_method_dict, main_dict = read_pathway_information(os.path.join(args.dir,
                                                             row.strip('\n')), os.path.join(args.dir, hartree_file))
                 method_dict[method] = pathway_dict
 

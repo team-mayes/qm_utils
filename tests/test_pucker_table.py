@@ -93,4 +93,3 @@ class TestMain(unittest.TestCase):
 
     def testMainOxane(self):
         test_input = ["-s", LIST_OF_CSV_FILES_OXANE, "-d", SUB_DATA_DIR, "-m", 'oxane']
-        main(test_input)

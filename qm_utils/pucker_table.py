@@ -428,3 +428,115 @@ def main(argv=None):
 if __name__ == '__main__':
     status = main()
     sys.exit(status)
+## Command Line Parse ##
+
+
+def parse_cmdline(argv):
+    """
+    Returns the parsed argument list and return code.
+    `argv` is a list of arguments, or `None` for ``sys.argv[1:]``.
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # initialize the parser object:
+    parser = argparse.ArgumentParser(description="The gen_puck_table.py script is designed to combine hartree output "
+                                                 "files to compare different properties across different levels of "
+                                                 "theory. The hartree input files for a variety of levels of theory "
+                                                 "are combined to produce a new data table.")
+
+    parser.add_argument('-s', "--sum_file", help="List of csv files to read.", default=None)
+    parser.add_argument('-d', "--dir_hartree", help="The directory where the hartree files can be found.",
+                        default=None)
+    parser.add_argument('-p', "--pattern", help="The file pattern you are looking for (example: '.csv').",
+                        default=None)
+    parser.add_argument('-m', "--molecule", help="The type of molecule that is currently being studied")
+    parser.add_argument('-c', "--ccsdt" , help="The CCSD(T) file for the molecule being studied",
+                        default=None)
+
+    args = None
+    try:
+        args = parser.parse_args(argv)
+        if args.sum_file is None:
+            raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
+        elif not os.path.isfile(args.sum_file):
+            raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
+        # Finally, if the summary file is there, and there is no dir_xyz provided
+        if args.dir_hartree is None:
+            args.dir_hartree = os.path.dirname(args.sum_file)
+        # if a  dir_xyz is provided, ensure valid
+        elif not os.path.isdir(args.dir_hartree):
+            raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_hartree', args.dir_hartree))
+
+    except (KeyError, InvalidDataError) as e:
+        warning(e)
+        parser.print_help()
+        return args, INPUT_ERROR
+    except IOError as e:
+        warning(e)
+        parser.print_help()
+        return args, IO_ERROR
+    except (ValueError, SystemExit) as e:
+        if e.message == 0:
+            return args, GOOD_RET
+        warning(e)
+        parser.print_help()
+        return args, INPUT_ERROR
+
+    return args, GOOD_RET
+
+
+def main(argv=None):
+    """
+    Runs the main program
+    :param argv: The command line arguments.
+    :return: The return code for the program's termination.
+    """
+    args, ret = parse_cmdline(argv)
+    if ret != GOOD_RET or args is None:
+        return ret
+    try:
+            lm_level_dict = {}
+            ts_level_dict = {}
+            overall_level_dict = {}
+
+            with open(args.sum_file) as f:
+                for csv_file_read_newline in f:
+                    csv_file_read = csv_file_read_newline.strip("\n")
+                    hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(csv_file_read,
+                                                                                                      args.dir_hartree)
+                    lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+                    contribution_dict_lm, qm_method = boltzmann_weighting(lm_jobs, qm_method)
+                    contribution_dict_ts, qm_method = boltzmann_weighting(ts_jobs, qm_method)
+
+                    lm_level_dict[qm_method + "-lm"] = contribution_dict_lm
+                    ts_level_dict[qm_method + "-ts"] = contribution_dict_ts
+                    overall_level_dict[qm_method + "-ts"] = contribution_dict_ts
+                    overall_level_dict[qm_method + "-lm"] = contribution_dict_lm
+
+            prefix = 'a_table_lm-ts_' + str(args.molecule)
+
+            list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
+                                           base_dir=os.path.dirname(args.sum_file), ext='.xlsx')
+
+            writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
+            writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)
+
+            if args.ccsdt is not None:
+                creating_bar_graph_function(args.ccsdt, overall_level_dict)
+
+
+
+    except IOError as e:
+        warning(e)
+        return IO_ERROR
+    except (InvalidDataError, KeyError) as e:
+        warning(e)
+        return INVALID_DATA
+
+    return GOOD_RET  # success
+
+
+if __name__ == '__main__':
+    status = main()
+    sys.exit(status)

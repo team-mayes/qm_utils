@@ -14,6 +14,7 @@ import os
 import pandas as pd
 import numpy as np
 import sys
+import math
 from qm_utils.qm_common import read_csv_to_dict
 from qm_utils.qm_common import (GOOD_RET, list_to_dict, create_out_fname, write_csv, list_to_file, warning, IO_ERROR,
                                 InvalidDataError, INVALID_DATA, read_csv_to_dict, get_csv_fieldnames, INPUT_ERROR)
@@ -42,6 +43,7 @@ PUCKER = 'Pucker'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
 THETA = 'theta'
 PHI = 'phi'
+Q_VAL = 'Q'
 GIBBS = 'G298 (Hartrees)'
 ENTH = "H298 (Hartrees)"
 # GIBBS = 'H298 (Hartrees)'
@@ -320,6 +322,85 @@ def creating_igor_pathway(dict_of_dicts):
     pathway_dict[str(qm_method) + '_z_ts_pucker'] = pathway_ts_pucker
 
     return pathway_dict, pathway_table_list
+
+
+def pathway_polar_creator(pathway_table_list,dict_of_dict, key_pucker='4c1'):
+
+
+    count = 0
+    lm_phi_values  = []
+    lm_proj_values = []
+    ts_phi_values  = []
+    ts_proj_values = []
+    pathways_phi  = []
+    pathways_proj = []
+    polar_dict = {}
+
+    for row in pathway_table_list:
+        line_info = row.split('#')
+        lm1 = line_info[0]
+        ts0 = line_info[2]
+        lm2 = line_info[4]
+        if count == 0:
+            count += 1
+        else:
+            if lm1 == key_pucker or lm2 == key_pucker:
+                lm1_file = line_info[1]
+                ts0_file = line_info[3]
+                lm2_file = line_info[5]
+                for file in dict_of_dict['am1-lmirc-unsorted']:
+                    if file[FILE_NAME] == lm1_file:
+                        lm1_phi   = float(file[PHI])
+                        lm1_theta = float(file[THETA])
+                        Q_VAL1    = float(file[Q_VAL])
+                        lm1_proj  = Q_VAL1 * np.sin(lm1_theta * math.pi/180)
+                    elif file[FILE_NAME] == lm2_file:
+                        lm2_phi   = float(file[PHI])
+                        lm2_theta = float(file[THETA])
+                        Q_VAL2    = float(file[Q_VAL])
+                        lm2_proj  = Q_VAL2 * np.sin(lm2_theta * math.pi/180)
+                for file_t in dict_of_dict['am1-TS-sorted']:
+                    if file_t[FILE_NAME] == ts0_file:
+                        tso_phi   = float(file_t[PHI])
+                        tso_theta = float(file_t[THETA])
+                        Q_VALt    = float(file_t[Q_VAL])
+                        tso_proj  = Q_VALt * np.sin(tso_theta * math.pi/180)
+
+                lm_phi_values.append(lm1_phi)
+                lm_phi_values.append(lm2_phi)
+                lm_proj_values.append(lm1_proj)
+                lm_proj_values.append(lm2_proj)
+
+                ts_phi_values.append(tso_phi)
+                ts_proj_values.append(tso_proj)
+
+
+                pathways_phi.append(lm1_phi)
+                pathways_proj.append('')
+
+                pathways_phi.append(lm1_phi)
+                pathways_proj.append(lm1_proj)
+                pathways_phi.append(tso_phi)
+                pathways_proj.append(tso_proj)
+
+                pathways_phi.append(lm2_phi)
+                pathways_proj.append('')
+
+                pathways_phi.append(lm2_phi)
+                pathways_proj.append(lm2_proj)
+                pathways_phi.append(tso_phi)
+                pathways_proj.append(tso_proj)
+
+
+    polar_dict[str('lm_phi_values')] = lm_phi_values
+    polar_dict[str('lm_proj_values')] = lm_proj_values
+    polar_dict[str('ts_phi_values')] = ts_phi_values
+    polar_dict[str('ts_proj_values')] = ts_proj_values
+    polar_dict[str('pathways_phi')] = pathways_phi
+    polar_dict[str('pathways_proj')] = pathways_proj
+
+    return polar_dict
+
 
 
 # Command Line Parser #

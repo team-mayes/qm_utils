@@ -10,8 +10,9 @@ Tests for `read_sdf` module.
 
 import unittest
 import os
+import math
 from qm_utils.qm_common import (list_to_file, diff_lines, silent_remove, write_csv, capture_stdout, create_out_fname,
-                                process_cfg, InvalidDataError, dequote, capture_stderr)
+                                process_cfg, InvalidDataError, dequote, capture_stderr, arc_length_calculator)
 
 
 __author__ = 'hmayes'
@@ -120,6 +121,58 @@ class TestWriteCSV(unittest.TestCase):
         finally:
             silent_remove(LIST_OUT)
 
+
+class TestArcLengthCalculator(unittest.TestCase):
+    def testArcLengthOneRadian(self):
+        try:
+            p1 = 179 # around equator (ranges from 0 to 360)
+            t1 = 90 # vertical (ranges from 0 to 180)
+            p2 = 180 # around equator (ranges fom 0 to 360)
+            t2 = 90 # vertical (ranges form 0 to 180)
+            arc_length = arc_length_calculator(p1, t1, p2, t2)
+        finally:
+            self.assertEqual(round(arc_length,4), round(math.pi / 180,4))
+
+    def testArcLengthPiRadians(self):
+        try:
+            p1 = 0 # around equator (ranges from 0 to 360)
+            t1 = 90 # vertical (ranges from 0 to 180)
+            p2 = 180 # around equator (ranges fom 0 to 360)
+            t2 = 90 # vertical (ranges form 0 to 180)
+            arc_length = arc_length_calculator(p1, t1, p2, t2)
+        finally:
+            self.assertEqual(round(arc_length,4), round(math.pi,4))
+
+    def testArcLengthZeroRadians(self):
+        try:
+            p1 = 360 # around equator (ranges from 0 to 360)
+            t1 = 55 # vertical (ranges from 0 to 180)
+            p2 = 0 # around equator (ranges fom 0 to 360)
+            t2 = 55 # vertical (ranges form 0 to 180)
+            arc_length = arc_length_calculator(p1, t1, p2, t2)
+        finally:
+            self.assertEqual(round(arc_length,4), round(0.000000,4))
+
+    def testArcLength1e1hoRadians(self):
+        try:
+            p1 = 240 # around equator (ranges from 0 to 360)
+            t1 = 125 # vertical (ranges from 0 to 180)
+            p2 = 210 # around equator (ranges fom 0 to 360)
+            t2 = 129 # vertical (ranges form 0 to 180)
+            arc_length1 = arc_length_calculator(p1, t1, p2, t2)
+            arc_length2 = arc_length_calculator(p1, t1, 270, 129) # puckers for 1h2
+        finally:
+            self.assertEqual(round(arc_length1,4), round(arc_length2,4))
+
+    def testArcLength1etoe1Radians(self):
+        try:
+            p1 = 240 # around equator (ranges from 0 to 360)
+            t1 = 125 # vertical (ranges from 0 to 180)
+            p2 = 60 # around equator (ranges fom 0 to 360)
+            t2 = 55 # vertical (ranges form 0 to 180)
+            arc_length1 = arc_length_calculator(p1, t1, p2, t2)
+        finally:
+            self.assertEqual(round(arc_length1,4), round(math.pi,4))
 
 class TestProcessCfg(unittest.TestCase):
     def testEmptyCfg(self):

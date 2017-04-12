@@ -13,7 +13,7 @@ import unittest
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 from qm_utils.igor_mercator_organizer import main, reading_all_csv_input_files, creating_dict_of_dict, \
-    sorting_dict_of_dict, write_file_data_dict, creating_igor_pathway
+    sorting_dict_of_dict, write_file_data_dict, creating_igor_pathway, pathway_polar_creator
 
 __author__ = 'SPVicchio'
 
@@ -92,6 +92,21 @@ class TestIgorMercator(unittest.TestCase):
     def testCreatingIgorPathway(self):
         dict_of_dicts, method = creating_dict_of_dict(LIST_FILES, 'oxane')
         creating_igor_pathway(dict_of_dicts)
+
+    def testPathwayPolarCreator(self):
+        dict_of_dicts, method = creating_dict_of_dict(LIST_FILES, 'oxane')
+        data_dict = sorting_dict_of_dict(dict_of_dicts)
+        pathway_dict, pathway_table_list = creating_igor_pathway(dict_of_dicts)
+        polar_dict = pathway_polar_creator(pathway_table_list,dict_of_dicts)
+
+        output_filename_polar_pathway = create_out_fname('igor_polar_' + str('oxane') + '_' + str(method), base_dir=SUB_DATA_DIR, ext='.csv')
+
+        write_file_data_dict(polar_dict,output_filename_polar_pathway)
+
+
+
+        print('hi')
+
 
 class TestMain(unittest.TestCase):
     def testMainOxane(self):
