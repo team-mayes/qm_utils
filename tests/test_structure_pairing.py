@@ -11,7 +11,7 @@ import os
 import unittest
 
 from qm_utils.qm_common import read_csv_to_dict
-from qm_utils.structure_pairing import create_new_cp_params, comparing_across_methods, \
+from qm_utils.structure_pairing import create_reference_cp_params, comparing_across_methods, \
     sorting_for_matching_values, boltzmann_weighting_group, main
 
 __author__ = 'SPVicchio'
@@ -33,11 +33,15 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'structure_pairing')
 
 # Input files #
 FILE_SAMPLE_B3LYP_LM = os.path.join(SUB_DATA_DIR, 'z_lm-b3lyp_howsugarspucker.csv')
-FILE_SAMPLE_B3LYP_TS = os.path.join(SUB_DATA_DIR, 'z_TS-b3lyp_howsugarspucler.csv')
+FILE_SAMPLE_B3LYP_TS = os.path.join(SUB_DATA_DIR, 'z_TS-b3lyp_howsugarspucker.csv')
 FILE_HARTREE_SAMPLE_DFTB_TS = os.path.join(SUB_DATA_DIR, 'z_pathways-dftb.csv')
 LIST_OF_CSV_FILES_BXYL = os.path.join(SUB_DATA_DIR, 'a_list_csv_files.txt')
 
 # Good output #
+GOOD_STRUCTURE_DICT_TS   = 14.46
+# GOOD_UPDATED_METHOD_DICT =
+# GOOD_GROUP_FILE_DICT     =
+
 
 
 # class TestFailWell(unittest.TestCase):
@@ -64,19 +68,23 @@ class TestStructurePairingFunctions(unittest.TestCase):
     #     compute_rmsd_between_puckers(phi, theta)
 
     def testCreateNewCPParams(self):
-        data_dict_lm = read_csv_to_dict(FILE_SAMPLE_B3LYP_TS, mode='r')
-        structure_dict_lm, phi_mean_lm, theta_mean_lm = create_new_cp_params(data_dict_lm)
-
-        data_dict_ts = read_csv_to_dict(FILE_SAMPLE_B3LYP_TS, mode='r')
-        structure_dict_ts, phi_mean_ts, theta_mean_ts = create_new_cp_params(data_dict_ts)
+        # This portion of the script updates the reference parameters for further analysis. The final_structures_dict
+        # values for both local min and TS must be grouped together.
+            data_dict_lm = read_csv_to_dict(FILE_SAMPLE_B3LYP_LM, mode='r')
+            structure_dict_lm, phi_mean_lm, theta_mean_lm = create_reference_cp_params(data_dict_lm, print_status='off')
+            data_dict_ts = read_csv_to_dict(FILE_SAMPLE_B3LYP_TS, mode='r')
+            structure_dict_ts, phi_mean_ts, theta_mean_ts = create_reference_cp_params(data_dict_ts, print_status='off')
 
     def testComparingAcrossMethods(self):
-        data_dict_ts = read_csv_to_dict(FILE_SAMPLE_B3LYP_TS, mode='r')
-        structure_dict_ts, phi_mean_ts, theta_mean_ts = create_new_cp_params(data_dict_ts)
-        method_dict = read_csv_to_dict(FILE_HARTREE_SAMPLE_DFTB_TS, mode='r')
+        try:
+            data_dict_ts = read_csv_to_dict(FILE_SAMPLE_B3LYP_TS, mode='r')
+            structure_dict_ts, phi_mean_ts, theta_mean_ts = create_reference_cp_params(data_dict_ts)
+            method_dict = read_csv_to_dict(FILE_HARTREE_SAMPLE_DFTB_TS, mode='r')
+            updated_method_dict, group_file_dict, ungrouped_files = comparing_across_methods(method_dict, structure_dict_ts)
+            sorting_for_matching_values(updated_method_dict, print_status='off')
+        finally:
 
-        updated_method_dict, group_file_dict, ungrouped_files = comparing_across_methods(method_dict, structure_dict_ts)
-        sorting_for_matching_values(updated_method_dict, print_status='off')
+            pass
 
 class TestMain(unittest.TestCase):
     def testMainBxyl(self):

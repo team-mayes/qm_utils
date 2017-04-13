@@ -50,7 +50,8 @@ setup(
                             'pucker_table=qm_utils.pucker_table:main',
                             'dipole_cluster=qm_utils.dipole_cluster:main',
                             'rmsd=qm_utils.RMSD:main',
-                            'pathways=qm_utils.pathways:main']
+                            'pathways=qm_utils.pathways:main',
+                            'structure_pairing=qm_utils.structure_pairing:main']
     },
     include_package_data=True,
     package_data={'qm_utils': ['cfg/*.*', ], },

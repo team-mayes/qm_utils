@@ -122,9 +122,6 @@ def read_hartree_files_lowest_energy(filename, hartree_dir):
             lowest_energy_gibbs_val = energy_row_gibbs
             lowest_energy_puck_gibbs = row[PUCKER]
 
-    if lowest_energy_puck_gibbs == lowest_energy_puck_enth:
-        print('The lowest energy pucker was : {}'.format(lowest_energy_puck_enth))
-
     for row in hartree_dict:
         row[ENTH] = round(float(row[ENTH]) - float(lowest_energy_enth_val), 5) * HARTREE_TO_KCALMOL
         row[GIBBS] = round(float(row[GIBBS]) - float(lowest_energy_gibbs_val), 5) * HARTREE_TO_KCALMOL
