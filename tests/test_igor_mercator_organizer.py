@@ -94,12 +94,13 @@ class TestIgorMercator(unittest.TestCase):
         creating_igor_pathway(dict_of_dicts)
 
     def testPathwayPolarCreator(self):
-        dict_of_dicts, method = creating_dict_of_dict(LIST_FILES, 'oxane')
+        # dict_of_dicts, method = creating_dict_of_dict(LIST_FILES, 'oxane')
+        dict_of_dicts, method = creating_dict_of_dict([BXYL_AM1_LMIRC_UNSORTED, BXYL_AM1_TS_SORTED], 'bxyl')
         data_dict = sorting_dict_of_dict(dict_of_dicts)
         pathway_dict, pathway_table_list = creating_igor_pathway(dict_of_dicts)
         polar_dict = pathway_polar_creator(pathway_table_list,dict_of_dicts)
 
-        output_filename_polar_pathway = create_out_fname('igor_polar_' + str('oxane') + '_' + str(method), base_dir=SUB_DATA_DIR, ext='.csv')
+        output_filename_polar_pathway = create_out_fname('igor_polar_' + str('bxyl') + '_' + str(method), base_dir=SUB_DATA_DIR, ext='.csv')
 
         write_file_data_dict(polar_dict,output_filename_polar_pathway)
 

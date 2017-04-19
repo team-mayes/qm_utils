@@ -174,6 +174,18 @@ class TestArcLengthCalculator(unittest.TestCase):
         finally:
             self.assertEqual(round(arc_length1,4), round(math.pi,4))
 
+    def testArcLengthRadians(self):
+        p1 = 180 # around equator (ranges from 0 to 360)
+        t1 = 90 # vertical (ranges from 0 to 180)
+        p2 = 150 # around equator (ranges fom 0 to 360)
+        t2 = 92 # vertical (ranges form 0 to 180)
+        arc_length1 = arc_length_calculator(p1, t1, p2, t2)
+        print(arc_length1)
+
+
+
+
+
 class TestProcessCfg(unittest.TestCase):
     def testEmptyCfg(self):
         self.assertEqual(len(process_cfg({})), 0)

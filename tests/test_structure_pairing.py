@@ -12,7 +12,7 @@ import unittest
 
 from qm_utils.qm_common import read_csv_to_dict
 from qm_utils.structure_pairing import create_reference_cp_params, comparing_across_methods, \
-    sorting_for_matching_values, boltzmann_weighting_group, main
+    sorting_for_matching_values, boltzmann_weighting_group, main, compute_rmsd_between_puckers
 
 __author__ = 'SPVicchio'
 
@@ -62,10 +62,10 @@ GOOD_STRUCTURE_DICT_TS   = 14.46
 
 # noinspection PyUnboundLocalVariable
 class TestStructurePairingFunctions(unittest.TestCase):
-    # def testComputeRmsdBetweenPuckers(self):
-    #     phi = 37
-    #     theta = 91
-    #     compute_rmsd_between_puckers(phi, theta)
+    def testComputeRmsdBetweenPuckers(self):
+        phi = 150
+        theta = 51
+        compute_rmsd_between_puckers(phi, theta)
 
     def testCreateNewCPParams(self):
         # This portion of the script updates the reference parameters for further analysis. The final_structures_dict
