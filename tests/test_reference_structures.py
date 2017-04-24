@@ -15,8 +15,6 @@ from qm_utils.qm_common import read_csv_to_dict, create_out_fname, diff_lines
 from qm_utils.reference_structures import local_min_reference_points, assign_TS_localmin_reference_groups, \
     transition_state_reference_points, igor_pathway_creator, analyze_ts_structure_dict, group_meaningful_organizor, \
     boltzmann_weighting_reference
-from qm_utils.structure_pairing import create_reference_cp_params, comparing_across_methods, \
-    sorting_for_matching_values, boltzmann_weighting_group, main, compute_rmsd_between_puckers
 
 __author__ = 'SPVicchio'
 

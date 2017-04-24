@@ -40,7 +40,7 @@ __author__ = 'SPVicchio'
 
 # # Default Parameters # #
 TOL_ARC_LENGTH = 0.1
-TOL_ARC_LENGTH_CROSS = 0.2
+TOL_ARC_LENGTH_CROSS = 0.2 # THIS WAS THE ORGINAL TOLERANCE6
 DEFAULT_TEMPERATURE = 298.15
 K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
 
@@ -59,6 +59,20 @@ GID = 'group ID'
 WEIGHT_GIBBS = 'Boltz Weight Gibbs'
 WEIGHT_ENTH = 'Boltz Weight Enth'
 CPK = 'closest group puck'
+FREQ = 'Freq 1'
+
+LM1_GROUP = 'group_lm1'
+LM2_GROUP = 'group_lm2'
+
+IRCF = 'ircf'
+IRCR = 'ircr'
+
+LMIRC_p1 = 'lm irc phi1'
+LMIRC_t1 = 'lm irc theta1'
+LMIRC_p2 = 'lm irc phi2'
+LMIRC_t2 = 'lm irc theta2'
+HSP_LM1  = 'HSP ref group lm1'
+HSP_LM2  = 'HSP ref group lm2'
 
 # # Default CP Params # #
 
@@ -104,7 +118,7 @@ CP_PARAMS = [{'PHI': '180', 'THETA': '180', 'Pucker': '1c4', 'Q': '0.57'},
              {'PHI': '360', 'THETA': '90', 'Pucker': '3obD', 'Q': '0.76'},
              {'PHI': '0', 'THETA': '125', 'Pucker': '3eD', 'Q': '0.45'}]
 
-# # Updated CP Params # #
+# # HSP REFERENCE POINTS # #
 
 BXYL_LM_PARAMS = {
     'group_11': {'phi': [328.3, 328.8], 'mean phi': 328.55, 'Boltz Weight Gibbs': 8.3503, 'files': ['puck24', 'puck26'],
@@ -291,14 +305,16 @@ BXYL_TS_PARAMS = {
 # # Script Functions # #
 
 def compute_rmsd_between_puckers(phi, theta, new_cp_params=None, q_val=1):
-    """"""
-    # Puckers in the middle of four puckers...
-    # phi = 43.76
-    # theta = 73.16
-
-    # Coordinates in the middle of two puckers...
-
-
+    """
+    This script computes the RMSD between a particular ordered pair of phi and theta values, and then IDs the arc length
+    to the closest pucker.
+    :param phi: phi value (0 to 360)
+    :param theta: theta value (180 to 0)
+    :param new_cp_params: any new reference points that you might want to include in the analysis.
+    :param q_val: the value of the radius on the surface of the sphere. Note that if that radius changes your results
+                    might change
+    :return: the pucker that is closely associated with the particular input structure, and the arc_length value
+    """
     arc_length_dict = {}
     min_arc_length = 100
 
@@ -320,188 +336,276 @@ def compute_rmsd_between_puckers(phi, theta, new_cp_params=None, q_val=1):
     for row in top_difference:
         print(row, arc_length_dict[row])
 
+    return top_difference[0], arc_length_dict[top_difference[0]]
+
+
+def separating_TS_and_IRC_information(method_dict):
+
+    ts_dict = []
+    lm_dict = []
+
+    for row in method_dict:
+        row_filename = row[FILE_NAME]
+        if float(row[FREQ]) < 0:
+            ts_dict.append(row)
+        elif float(row[FREQ]) > 0:
+            lm_dict.append(row)
+
+    return lm_dict, ts_dict
+
+
+def comparing_TS_structures_arc_length(ts_dict, reference_ts):
+
+    new_ts_dict = []
+
+    for row in ts_dict:
+        p1 = float(row[PHI])
+        t1 = float(row[THETA])
+        arc_length_dict = {}
+        for key, key_val in reference_ts.items():
+            p2 = float(key_val[MPHI])
+            t2 = float(key_val[MTHETA])
+            arc_length_dict[key] = arc_length_calculator(p1, t1, p2, t2)
+        top_difference = (sorted(arc_length_dict, key=arc_length_dict.get, reverse=False)[:5])
+
+        lowest_arc_length = {}
+        if arc_length_dict[top_difference[0]] > TOL_ARC_LENGTH_CROSS:
+            row['TS_compare_values'] = 'NONE'
+        else:
+            for top_row in top_difference:
+                if arc_length_dict[top_row] < TOL_ARC_LENGTH_CROSS:
+                    lowest_arc_length[top_row] = arc_length_dict[top_row]
+
+            row['TS_compare_values'] = lowest_arc_length
+
+        new_ts_dict.append(row)
+
+    if len(new_ts_dict) != len(ts_dict):
+        print('The length of the new TS dict does not equal the length of the old TS dict.')
+
+    return new_ts_dict
+
+
+def comparing_TS_pathways(ts_dict, lm_dict, reference_ts, reference_lm):
+
+    status_ircf = False
+    status_ircr = False
+    overall_ts_dict = []
+    matching_ts_dict = []
+    missing_ts_dict = []
+
+
+
+    for row_ts in ts_dict:
+        filename = row_ts[FILE_NAME]
+        ind_dict = {}
+        for row_lm in lm_dict:
+            if row_ts[FILE_NAME].split('_')[0] in row_lm[FILE_NAME] and row_ts[FILE_NAME].split('_')[1] in row_lm[FILE_NAME]:
+                if IRCF in row_lm[FILE_NAME]:
+                    lm_ircf_phi   = float(row_lm[PHI])
+                    lm_ircf_theta = float(row_lm[THETA])
+                    status_ircf = True
+                elif IRCR in row_lm[FILE_NAME]:
+                    lm_ircr_phi   = float(row_lm[PHI])
+                    lm_ircr_theta = float(row_lm[THETA])
+                    status_ircr = True
+
+                if status_ircf is True and status_ircr is True:
+                    status_ircf = False
+                    status_ircr = False
+                    break
+
+        match_status = {}
+        hsp_ts_arc_groups = row_ts['TS_compare_values']
+        if hsp_ts_arc_groups == 'NONE':
+            row_ts['HSP TS ref'] = 'missing'
+            missing_ts_dict.append(row_ts)
+        elif hsp_ts_arc_groups != 'NONE':
+            for arc_group_key in hsp_ts_arc_groups.keys():
+                hsp_pathway_lm1 = reference_ts[arc_group_key][LM1_GROUP][0]
+                hsp_pathway_lm2 = reference_ts[arc_group_key][LM2_GROUP][0]
+
+                hsp_path_lm1_phi = float(reference_lm[hsp_pathway_lm1][MPHI])
+                hsp_path_lm1_theta = float(reference_lm[hsp_pathway_lm1][MTHETA])
+                hsp_path_lm2_phi = float(reference_lm[hsp_pathway_lm2][MPHI])
+                hsp_path_lm2_theta = float(reference_lm[hsp_pathway_lm2][MTHETA])
+
+                # for IRCF
+                lm_ircf_lm1 = arc_length_calculator(lm_ircf_phi, lm_ircf_theta, hsp_path_lm1_phi, hsp_path_lm1_theta)
+                lm_ircf_lm2 = arc_length_calculator(lm_ircf_phi, lm_ircf_theta, hsp_path_lm2_phi, hsp_path_lm2_theta)
+
+                # for IRCR
+                lm_ircr_lm1 = arc_length_calculator(lm_ircr_phi, lm_ircr_theta, hsp_path_lm1_phi, hsp_path_lm1_theta)
+                lm_ircr_lm2 = arc_length_calculator(lm_ircr_phi, lm_ircr_theta, hsp_path_lm2_phi, hsp_path_lm2_theta)
+
+                if lm_ircf_lm1 < TOL_ARC_LENGTH_CROSS and lm_ircr_lm2 < TOL_ARC_LENGTH_CROSS:
+                    match_status[arc_group_key] = 'match'
+                    row_ts[LMIRC_p1] = lm_ircf_phi
+                    row_ts[LMIRC_t1] = lm_ircf_theta
+                    row_ts[LMIRC_p2] = lm_ircr_phi
+                    row_ts[LMIRC_t2] = lm_ircr_theta
+                    row_ts[HSP_LM1]  = reference_ts[arc_group_key][LM1_GROUP][0]
+                    row_ts[HSP_LM2]  = reference_ts[arc_group_key][LM2_GROUP][0]
+                elif lm_ircf_lm2 < TOL_ARC_LENGTH_CROSS and lm_ircr_lm1 < TOL_ARC_LENGTH_CROSS:
+                    match_status[arc_group_key] = 'match'
+                    row_ts[LMIRC_p1] = lm_ircf_phi
+                    row_ts[LMIRC_t1] = lm_ircf_theta
+                    row_ts[LMIRC_p2] = lm_ircr_phi
+                    row_ts[LMIRC_t2] = lm_ircr_theta
+                    row_ts[HSP_LM1]  = reference_ts[arc_group_key][LM1_GROUP][0]
+                    row_ts[HSP_LM2]  = reference_ts[arc_group_key][LM2_GROUP][0]
+                else:
+                    match_status[arc_group_key] = 'missing'
+
+            match = False
+            list_status_val = []
+            for status_keys, status_val in match_status.items():
+                list_status_val.append(status_val)
+                if status_val == 'match' and match is True:
+                    print('THERE WAS A DOUBLE MATCH!')
+                    print('Please checkout: {}'.format(row_ts[FILE_NAME]))
+                elif status_val == 'match':
+                    match = True
+                    row_ts['HSP TS ref'] = status_keys
+                    matching_ts_dict.append(row_ts)
+
+            if 'match' not in list_status_val and match is False:
+                    row_ts['HSP TS ref'] = status_val
+                    missing_ts_dict.append(row_ts)
+
+        overall_ts_dict.append(row_ts)
+
+    return overall_ts_dict, matching_ts_dict, missing_ts_dict
+
+
+def check_matching_missing_dicts(overall_ts_dict, match_ts_dict, missing_ts_dict):
+
+    list_match = []
+    list_missi = []
+
+    for row_match in match_ts_dict:
+        list_match.append(row_match[FILE_NAME])
+
+    for row_miss in missing_ts_dict:
+        list_missi.append(row_miss[FILE_NAME])
+
+    for row in overall_ts_dict:
+        filename = row[FILE_NAME]
+        if filename in list_match and filename in list_missi:
+            print("ERROR")
+
+
+    # status_error = False
+    #
+
+    #
+    # for row_ma in list_match:
+    #     if row_ma in list_miss:
+    #         print('ERROR')
+    #
+    # for row_mi in list_miss:
+    #     if row_mi in list_match:
+    #         print('ERROR')
+    #
+    # # for row_match in match_ts_dict:
+    # #     for row_miss in missing_ts_dict:
+    # #         if row_match[FILE_NAME] == row_miss[FILE_NAME]:
+    # #             status_error = True
+    # #         elif row_match[FILE_NAME] == row_miss[FILE_NAME]:
+    # #             pass
+    # #
+    # # for row_miss in missing_ts_dict:
+    # #     for row_match in match_ts_dict:
+    # #         if row_match[FILE_NAME] == row_miss[FILE_NAME]:
+    # #             status_error = True
+    # #         elif row_match[FILE_NAME] == row_miss[FILE_NAME]:
+    # #             pass
+
+
     return
 
 
-def create_reference_cp_params(data_dict, arc_tol=TOL_ARC_LENGTH, print_status='off'):
-    """
-    This script created different puckering groups for further analyze based on arc length calculations. If the
-    difference in arc length between two structures is small, then the structures are grouped together. Before, all
-    structures were grouped together simply based on their CP pucking designations. Now, the grouping are completed by
+def generate_matching_ts_dict_pathways(matching_ts_dict):
 
-    :param data_dict:
+    pathway_phi = []
+    pathway_theta = []
+    ts_phi = []
+    ts_theta = []
+    lm_phi = []
+    lm_theta = []
+
+    for row in matching_ts_dict:
+        ts0_phi   = round(float(row[PHI]),2)
+        ts0_theta = round(float(row[THETA]),2)
+        lm1_phi   = round(float(row[LMIRC_p1]),2)
+        lm1_theta = round(float(row[LMIRC_t1]),2)
+        lm2_phi   = round(float(row[LMIRC_p2]),2)
+        lm2_theta = round(float(row[LMIRC_t2]),2)
+
+        # Creates a list of all of the points so that they can be analyzed in Igor
+        ts_phi.append(ts0_phi)
+        ts_theta.append(ts0_theta)
+        lm_phi.append(lm1_phi)
+        lm_theta.append(lm1_theta)
+        lm_phi.append(lm2_phi)
+        lm_theta.append(lm2_theta)
+
+        # Creates all of the pathways in a way for Igor to udnerstand the vectors
+        pathway_phi.append(lm1_phi)
+        pathway_theta.append('')
+
+        pathway_phi.append(lm1_phi)
+        pathway_theta.append(lm1_theta)
+
+        pathway_phi.append(ts0_phi)
+        pathway_theta.append(ts0_theta)
+
+        pathway_phi.append(lm2_phi)
+        pathway_theta.append('')
+
+        pathway_phi.append(lm2_phi)
+        pathway_theta.append(lm2_theta)
+
+        pathway_phi.append(ts0_phi)
+        pathway_theta.append(ts0_theta)
+
+    return ts_phi, ts_theta, lm_phi, lm_theta, pathway_phi, pathway_theta
+
+
+def create_datadict(pathway_phi, pathway_theta, ts_phi, ts_theta, lm_phi, lm_theta):
+    """
+    This script simply creates the information for Igor to plot the phi and theta values associated with the pathways,
+    the TS, and the LMs.
+
+    :param pathway_phi: list of values for the phi pathways
+    :param pathway_theta: list of values for the theta pathways
+    :param ts_phi: list of values for the phi ts
+    :param ts_theta: list of values for the theta ts
+    :param lm_phi: list of values for the phi lm
+    :param lm_theta: list of values for the theta lm
     :return:
     """
-    structure_dict = {}
-    ind_dict = {}
+    data_dict = {}
 
-    for i in range(0, len(data_dict)):
-        if i == 0:
-            p1 = float(data_dict[i][PHI])
-            t1 = float(data_dict[i][THETA])
-            ind_dict[PHI] = [p1]
-            ind_dict[THETA] = [t1]
-            ind_dict['files'] = [data_dict[i][FILE_NAME]]
-            ind_dict['mean phi'] = st.mean(ind_dict[PHI])
-            ind_dict['mean theta'] = st.mean(ind_dict[THETA])
-            structure_dict['group' + '_' + str(0)] = ind_dict
-            pucker = data_dict[i][PUCKER]
-        else:
-            ind_dict = {}
-            for j in range(0, len(structure_dict)):
-                p1 = float(data_dict[i][PHI])
-                t1 = float(data_dict[i][THETA])
+    data_dict['compare_path_phi']   = pathway_phi
+    data_dict['compare_path_theta'] = pathway_theta
+    data_dict['compare_ts_phi']   = ts_phi
+    data_dict['compare_ts_theta'] = ts_theta
+    data_dict['compare_lm_phi']   = lm_phi
+    data_dict['compare_lm_theta'] = lm_theta
 
-                p2 = structure_dict['group' + '_' + str(j)]['mean phi']
-                t2 = structure_dict['group' + '_' + str(j)]['mean theta']
-
-                arc_length = arc_length_calculator(p1, t1, p2, t2)
-                if arc_length < arc_tol:
-                    structure_dict['group' + '_' + str(j)][PHI].append(p1)
-                    structure_dict['group' + '_' + str(j)][THETA].append(t1)
-                    structure_dict['group' + '_' + str(j)]['files'].append(data_dict[i][FILE_NAME])
-                    structure_dict['group' + '_' + str(j)]['mean phi'] = round(
-                        st.mean(structure_dict['group' + '_' + str(j)][PHI]), 6)
-                    structure_dict['group' + '_' + str(j)]['mean theta'] = round(
-                        st.mean(structure_dict['group' + '_' + str(j)][THETA]), 6)
-                    break
-                elif j == len(structure_dict) - 1:
-                    ind_dict[PHI] = [p1]
-                    ind_dict[THETA] = [t1]
-                    ind_dict['files'] = [data_dict[i][FILE_NAME]]
-                    ind_dict['mean phi'] = round(st.mean(ind_dict[PHI]), 6)
-                    ind_dict['mean theta'] = round(st.mean(ind_dict[THETA]), 6)
-                    structure_dict['group' + '_' + str(len(structure_dict))] = ind_dict
-    list_redo_groups = []
-    for s in range(0, len(data_dict)):
-        arc_length_dict = {}
-        p1 = float(data_dict[s][PHI])
-        t1 = float(data_dict[s][THETA])
-        for pucker_group_keys in structure_dict.keys():
-            p2 = structure_dict[pucker_group_keys]['mean phi']
-            t2 = structure_dict[pucker_group_keys]['mean theta']
-            arc_length_dict[pucker_group_keys] = arc_length_calculator(p1, t1, p2, t2)
-            if data_dict[s][FILE_NAME] in structure_dict[pucker_group_keys]['files']:
-                assigned_group = pucker_group_keys
-
-        top_difference = (sorted(arc_length_dict, key=arc_length_dict.get, reverse=False)[:2])
-
-        if arc_length_dict[top_difference[0]] < arc_tol and arc_length_dict[top_difference[1]] < arc_tol:
-            if top_difference[0] not in list_redo_groups:
-                list_redo_groups.append(top_difference[0])
-            elif top_difference[1] not in list_redo_groups:
-                list_redo_groups.append(top_difference[1])
-
-    list_redo_files = []
-    list_redo_data = []
-    for x in range(0, len(list_redo_groups)):
-        hi = list_redo_groups[x]
-        redo = structure_dict[list_redo_groups[x]]['files']
-        for y in redo:
-            list_redo_files.append(y)
-            for row in data_dict:
-                if y == row[FILE_NAME]:
-                    list_redo_data.append(row)
-        structure_dict.pop(list_redo_groups[x], None)
-
-
-    mod_structure_dict = {}
-    ind_dict = {}
-    for m in range(0, len(list_redo_files)):
-        if m == 0:
-            p1 = float(list_redo_data[m][PHI])
-            t1 = float(list_redo_data[m][THETA])
-            ind_dict[PHI] = [p1]
-            ind_dict[THETA] = [t1]
-            ind_dict['files'] = [list_redo_data[m][FILE_NAME]]
-            ind_dict['mean phi'] = st.mean(ind_dict[PHI])
-            ind_dict['mean theta'] = st.mean(ind_dict[THETA])
-            mod_structure_dict['group' + '_' + str(0)] = ind_dict
-            pucker = data_dict[i][PUCKER]
-        else:
-            ind_dict = {}
-            for n in range(0, len(mod_structure_dict)):
-                p1 = float(list_redo_data[m][PHI])
-                t1 = float(list_redo_data[m][THETA])
-
-                p2 = mod_structure_dict['group' + '_' + str(n)]['mean phi']
-                t2 = mod_structure_dict['group' + '_' + str(n)]['mean theta']
-
-                arc_length = arc_length_calculator(p1, t1, p2, t2)
-                if arc_length < arc_tol:
-                    mod_structure_dict['group' + '_' + str(n)][PHI].append(p1)
-                    mod_structure_dict['group' + '_' + str(n)][THETA].append(t1)
-                    mod_structure_dict['group' + '_' + str(n)]['files'].append(list_redo_data[m][FILE_NAME])
-                    mod_structure_dict['group' + '_' + str(n)]['mean phi'] = round(
-                        st.mean(mod_structure_dict['group' + '_' + str(n)][PHI]), 6)
-                    mod_structure_dict['group' + '_' + str(n)]['mean theta'] = round(
-                        st.mean(mod_structure_dict['group' + '_' + str(n)][THETA]), 6)
-                    break
-                elif n == len(mod_structure_dict) - 1:
-                    ind_dict[PHI] = [p1]
-                    ind_dict[THETA] = [t1]
-                    ind_dict['files'] = [list_redo_data[m][FILE_NAME]]
-                    ind_dict['mean phi'] = round(st.mean(ind_dict[PHI]), 6)
-                    ind_dict['mean theta'] = round(st.mean(ind_dict[THETA]), 6)
-                    mod_structure_dict['group' + '_' + str(len(mod_structure_dict))] = ind_dict
-
-
-    count = 0
-    final_structure_dict = {}
-    for struct_key in structure_dict.keys():
-        if count < 10:
-            new_key = 'group_0' + str(count)
-        else:
-            new_key = 'group_' + str(count)
-        final_structure_dict[new_key] = structure_dict[struct_key]
-        count += 1
-    for struct_key in mod_structure_dict.keys():
-        new_key = 'group_' + str(count)
-        final_structure_dict[new_key] = mod_structure_dict[struct_key]
-        count += 1
-
-
-    phi_mean = []
-    theta_mean = []
-    for structure_key in final_structure_dict.keys():
-        phi_mean.append(final_structure_dict[structure_key]['mean phi'])
-        theta_mean.append(final_structure_dict[structure_key]['mean theta'])
-        p1 = float(final_structure_dict[structure_key]['mean phi'])
-        t1 = float(final_structure_dict[structure_key]['mean theta'])
-        arc_length_key_dict = {}
-        for row in CP_PARAMS:
-            p2 = float(row['PHI'])
-            t2 = float(row['THETA'])
-            arc_length = arc_length_calculator(p1, t1, p2, t2)
-            arc_length_key_dict[row[PUCKER]] = arc_length
-            top_difference = (sorted(arc_length_key_dict, key=arc_length_key_dict.get, reverse=False)[:1])
-            final_structure_dict[structure_key]['closest group puck'] = top_difference
-
-    lowest_energy_dict = []
-    for row in data_dict:
-        for final_structure_keys in final_structure_dict.keys():
-            for file in final_structure_dict[final_structure_keys]['files']:
-                if row[FILE_NAME] == file:
-                    row[GID] = final_structure_keys
-
-        lowest_energy_dict.append(row)
-
-
-    boltzmann, qm_method = boltzmann_weighting_group(lowest_energy_dict, 'CCSDT')
-
-    for boltz_key in boltzmann.keys():
-        for final_structure_keys in final_structure_dict.keys():
-            if boltz_key == final_structure_keys:
-                final_structure_dict[boltz_key][GIBBS] = boltzmann[final_structure_keys]
-
-    if print_status != 'off':
-        print(phi_mean)
-        print(theta_mean)
-
-    return final_structure_dict, phi_mean, theta_mean
+    return data_dict
 
 
 def comparing_across_methods(method_dict, reference_dict, arc_tol=TOL_ARC_LENGTH_CROSS):
+    """
+    This script compared the structures generated from one particular method to the reference set of structures from HSP
+    :param method_dict: the list of dicts for a particular method
+    :param reference_dict: the reference dict to compare the puckers too
+    :param arc_tol: the tolerance for arc length (if below tolerance, the structures are then grouped together)
+    :return: updated_method_dict (contains the grouping solely based on arc length)
+    """
+
     arc_length_key_dict = {}
     grouping_dict = {}
     updated_method_dict = []
