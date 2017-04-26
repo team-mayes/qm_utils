@@ -11,7 +11,7 @@ import os
 import unittest
 
 from qm_utils.igor_mercator_organizer import write_file_data_dict
-from qm_utils.qm_common import read_csv_to_dict, create_out_fname
+from qm_utils.qm_common import read_csv_to_dict, create_out_fname, diff_lines
 import qm_utils.structure_pairing
 from qm_utils.reference_structures import local_min_reference_points
 
@@ -226,6 +226,7 @@ LIST_OF_CSV_FILES_BXYL = os.path.join(SUB_DATA_DIR, 'a_list_csv_files.txt')
 # Good output #
 GOOD_STRUCTURE_DICT_TS       = 14.46
 GOOD_COMPARING_TS_ARC_LENGTH = {'group_34': 0.06504834517869058, 'group_33': 0.11535002302291417}
+GOOD_TS_PATHWAYS             = os.path.join(SUB_DATA_DIR, 'igor_info_testing_DFTB_good.csv')
 # GOOD_UPDATED_METHOD_DICT =
 # GOOD_GROUP_FILE_DICT     =
 
@@ -279,18 +280,26 @@ class TestStructurePairingFunctions(unittest.TestCase):
             lm_dict, ts_dict = qm_utils.structure_pairing.separating_TS_and_IRC_information(method_dict)
             new_ts_dict = qm_utils.structure_pairing.comparing_TS_structures_arc_length(ts_dict, BXYL_TS_PARAMS)
             dict_one, matching_ts_dict, missing_ts_dict = qm_utils.structure_pairing.comparing_TS_pathways(new_ts_dict, lm_dict, BXYL_TS_PARAMS, BXYL_LM_PARAMS)
-
-            qm_utils.structure_pairing.check_matching_missing_dicts(dict_one, matching_ts_dict, missing_ts_dict)
-
-            ts_phi, ts_theta, lm_phi, lm_theta, pathway_phi, pathway_theta = qm_utils.structure_pairing.generate_matching_ts_dict_pathways(matching_ts_dict)
-
-            data_dict = qm_utils.structure_pairing.create_datadict(pathway_phi, pathway_theta, ts_phi, ts_theta, lm_phi, lm_theta)
-
+            data_dict = qm_utils.structure_pairing.generate_matching_ts_dict_pathways_full(matching_ts_dict)
             output_filename_pathway = create_out_fname('igor_info_' + 'testing' + '_' + str('DFTB'), base_dir=SUB_DATA_DIR, ext='.csv')
             write_file_data_dict(data_dict, output_filename_pathway)
 
+
+            qm_utils.structure_pairing.grouping_and_weighting_TS(matching_ts_dict, 'testing')
+
+
+            # polar_dict = qm_utils.structure_pairing.generate_igor_hemi_plots(matching_ts_dict, BXYL_LM_PARAMS)
+            #
+            # output_filename_polar = create_out_fname('igor_polar_' + 'testing' + '_' + str('DFTB'), base_dir=SUB_DATA_DIR, ext='.csv')
+            # write_file_data_dict(polar_dict, output_filename_polar)
+
+            new_lm_dict, hsp_puckering = qm_utils.structure_pairing.comparing_LM_structures_arc_length(lm_dict, BXYL_LM_PARAMS)
+
+            contribution_dict, qm_method = qm_utils.structure_pairing.boltzmann_weighting_group(new_lm_dict, 'testing')
+
+
         finally:
-            print('')
+            self.assertFalse(diff_lines(output_filename_pathway,GOOD_TS_PATHWAYS))
 
 
 
@@ -302,7 +311,7 @@ class TestStructurePairingFunctions(unittest.TestCase):
             #     finally:
             #         pass
 
-# class TestMain(unittest.TestCase):
-#     def testMainBxyl(self):
-#         test_input = ["-s", LIST_OF_CSV_FILES_BXYL, "-d", SUB_DATA_DIR, "-m", 'bxyl']
-#         qm_utils.structure_pairing.main(test_input)
+class TestMain(unittest.TestCase):
+    def testMainBxyl(self):
+        test_input = ["-s", LIST_OF_CSV_FILES_BXYL, "-d", SUB_DATA_DIR, "-m", 'bxyl']
+        qm_utils.structure_pairing.main(test_input)

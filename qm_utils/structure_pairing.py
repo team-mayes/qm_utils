@@ -14,11 +14,13 @@ import statistics as st
 import sys
 import pandas as pd
 import math
+import numpy as np
 
+from qm_utils.igor_mercator_organizer import write_file_data_dict
 from qm_utils.pucker_table import read_hartree_files_lowest_energy, sorting_job_types
 
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR, InvalidDataError, INVALID_DATA,
-                                INPUT_ERROR, arc_length_calculator)
+                                INPUT_ERROR, arc_length_calculator, read_csv_to_dict)
 
 try:
     # noinspection PyCompatibility
@@ -39,8 +41,9 @@ except ImportError:
 __author__ = 'SPVicchio'
 
 # # Default Parameters # #
+HARTREE_TO_KCALMOL = 627.5095
 TOL_ARC_LENGTH = 0.1
-TOL_ARC_LENGTH_CROSS = 0.2 # THIS WAS THE ORGINAL TOLERANCE6
+TOL_ARC_LENGTH_CROSS = 0.2  # THIS WAS THE ORGINAL TOLERANCE6
 DEFAULT_TEMPERATURE = 298.15
 K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
 
@@ -71,8 +74,13 @@ LMIRC_p1 = 'lm irc phi1'
 LMIRC_t1 = 'lm irc theta1'
 LMIRC_p2 = 'lm irc phi2'
 LMIRC_t2 = 'lm irc theta2'
-HSP_LM1  = 'HSP ref group lm1'
-HSP_LM2  = 'HSP ref group lm2'
+
+HSP_LM1 = 'HSP LM ref group 1'
+HSP_LM2 = 'HSP LM ref group 2'
+HSP_TS = 'HSP TS ref'
+
+HSP_LM_ID = 'LM_compare_values'
+MISSING = 'missing'
 
 # # Default CP Params # #
 
@@ -302,6 +310,7 @@ BXYL_TS_PARAMS = {
                  'Boltz Weight Gibbs': 12.099, 'closest group puck': ['5e'], 'theta': [126.7, 125.2, 125.8, 121.0],
                  'group_lm1': ['group_06'], 'mean theta': 124.675}}
 
+
 # # Script Functions # #
 
 def compute_rmsd_between_puckers(phi, theta, new_cp_params=None, q_val=1):
@@ -340,22 +349,32 @@ def compute_rmsd_between_puckers(phi, theta, new_cp_params=None, q_val=1):
 
 
 def separating_TS_and_IRC_information(method_dict):
-
     ts_dict = []
     lm_dict = []
+
+    low_energy_value = 100000000000
 
     for row in method_dict:
         row_filename = row[FILE_NAME]
         if float(row[FREQ]) < 0:
             ts_dict.append(row)
+            if float(row[GIBBS]) < low_energy_value:
+                low_energy_value = float(row[GIBBS])
         elif float(row[FREQ]) > 0:
             lm_dict.append(row)
+            if float(row[GIBBS]) < low_energy_value:
+                low_energy_value = float(row[GIBBS])
+
+    for ts_row in ts_dict:
+        ts_row[GIBBS] = (float(ts_row[GIBBS]) - low_energy_value) * HARTREE_TO_KCALMOL
+
+    for lm_row in lm_dict:
+        lm_row[GIBBS] = (float(lm_row[GIBBS]) - low_energy_value) * HARTREE_TO_KCALMOL
 
     return lm_dict, ts_dict
 
 
 def comparing_TS_structures_arc_length(ts_dict, reference_ts):
-
     new_ts_dict = []
 
     for row in ts_dict:
@@ -387,14 +406,30 @@ def comparing_TS_structures_arc_length(ts_dict, reference_ts):
 
 
 def comparing_TS_pathways(ts_dict, lm_dict, reference_ts, reference_lm):
+    """
+    This script completes the sorting for TS states while looking at pathways. The sorting is based on the following
+    criteria:
+    (1) For a particular TS, which HSP reference TS are within a predetermined arc length tolerance. All reference TSs
+    that meet this criteria are kept.
+    (2) Now, the LM associated with each HSP reference TS and the LM associated with a particular TS are compared.
+    Again, arc length calculations are computed and compared to the respective LM. If both LM are within a certain
+    arc length tolerance, then the HSP reference group is assigned as a match for the particular TS. This process is
+    repeated for all TS.
+    (3) If there exist multiple matches (a particular TS has multiple HSP reference TS), then the pathway with the
+    smaller arc length value is selected.
 
+    :param ts_dict: the TS dict associated for a particular method
+    :param lm_dict: the LM dict assiciated for a particular method
+    :param reference_ts: the HSP reference TS dict
+    :param reference_lm: the HSP reference LM dict
+    :return: overall_ts_dict (all information), matching_ts_dict (matching only), missing_ts_dict (missing only) ...
+    (note that the all of these dicts are updated with new information pertaining to their pathways and such).
+    """
     status_ircf = False
     status_ircr = False
     overall_ts_dict = []
     matching_ts_dict = []
     missing_ts_dict = []
-
-
 
     for row_ts in ts_dict:
         filename = row_ts[FILE_NAME]
@@ -402,11 +437,11 @@ def comparing_TS_pathways(ts_dict, lm_dict, reference_ts, reference_lm):
         for row_lm in lm_dict:
             if row_ts[FILE_NAME].split('_')[0] in row_lm[FILE_NAME] and row_ts[FILE_NAME].split('_')[1] in row_lm[FILE_NAME]:
                 if IRCF in row_lm[FILE_NAME]:
-                    lm_ircf_phi   = float(row_lm[PHI])
+                    lm_ircf_phi = float(row_lm[PHI])
                     lm_ircf_theta = float(row_lm[THETA])
                     status_ircf = True
                 elif IRCR in row_lm[FILE_NAME]:
-                    lm_ircr_phi   = float(row_lm[PHI])
+                    lm_ircr_phi = float(row_lm[PHI])
                     lm_ircr_theta = float(row_lm[THETA])
                     status_ircr = True
 
@@ -416,12 +451,14 @@ def comparing_TS_pathways(ts_dict, lm_dict, reference_ts, reference_lm):
                     break
 
         match_status = {}
+        match_info = {}
         hsp_ts_arc_groups = row_ts['TS_compare_values']
         if hsp_ts_arc_groups == 'NONE':
-            row_ts['HSP TS ref'] = 'missing'
+            row_ts[HSP_TS] = 'missing'
             missing_ts_dict.append(row_ts)
         elif hsp_ts_arc_groups != 'NONE':
             for arc_group_key in hsp_ts_arc_groups.keys():
+                match_cp_params = {}
                 hsp_pathway_lm1 = reference_ts[arc_group_key][LM1_GROUP][0]
                 hsp_pathway_lm2 = reference_ts[arc_group_key][LM2_GROUP][0]
 
@@ -440,45 +477,95 @@ def comparing_TS_pathways(ts_dict, lm_dict, reference_ts, reference_lm):
 
                 if lm_ircf_lm1 < TOL_ARC_LENGTH_CROSS and lm_ircr_lm2 < TOL_ARC_LENGTH_CROSS:
                     match_status[arc_group_key] = 'match'
-                    row_ts[LMIRC_p1] = lm_ircf_phi
-                    row_ts[LMIRC_t1] = lm_ircf_theta
-                    row_ts[LMIRC_p2] = lm_ircr_phi
-                    row_ts[LMIRC_t2] = lm_ircr_theta
-                    row_ts[HSP_LM1]  = reference_ts[arc_group_key][LM1_GROUP][0]
-                    row_ts[HSP_LM2]  = reference_ts[arc_group_key][LM2_GROUP][0]
+                    match_cp_params[LMIRC_p1] = lm_ircf_phi
+                    match_cp_params[LMIRC_t1] = lm_ircf_theta
+                    match_cp_params[LMIRC_p2] = lm_ircr_phi
+                    match_cp_params[LMIRC_t2] = lm_ircr_theta
+                    match_cp_params[HSP_LM1] = reference_ts[arc_group_key][LM1_GROUP][0]
+                    match_cp_params[HSP_LM2] = reference_ts[arc_group_key][LM2_GROUP][0]
+                    match_info[arc_group_key] = match_cp_params
                 elif lm_ircf_lm2 < TOL_ARC_LENGTH_CROSS and lm_ircr_lm1 < TOL_ARC_LENGTH_CROSS:
                     match_status[arc_group_key] = 'match'
-                    row_ts[LMIRC_p1] = lm_ircf_phi
-                    row_ts[LMIRC_t1] = lm_ircf_theta
-                    row_ts[LMIRC_p2] = lm_ircr_phi
-                    row_ts[LMIRC_t2] = lm_ircr_theta
-                    row_ts[HSP_LM1]  = reference_ts[arc_group_key][LM1_GROUP][0]
-                    row_ts[HSP_LM2]  = reference_ts[arc_group_key][LM2_GROUP][0]
+                    match_cp_params[LMIRC_p1] = lm_ircr_phi
+                    match_cp_params[LMIRC_t1] = lm_ircr_theta
+                    match_cp_params[LMIRC_p2] = lm_ircf_phi
+                    match_cp_params[LMIRC_t2] = lm_ircf_theta
+                    match_cp_params[HSP_LM1] = reference_ts[arc_group_key][LM1_GROUP][0]
+                    match_cp_params[HSP_LM2] = reference_ts[arc_group_key][LM2_GROUP][0]
+                    match_info[arc_group_key] = match_cp_params
                 else:
                     match_status[arc_group_key] = 'missing'
 
-            match = False
             list_status_val = []
             for status_keys, status_val in match_status.items():
                 list_status_val.append(status_val)
-                if status_val == 'match' and match is True:
-                    print('THERE WAS A DOUBLE MATCH!')
-                    print('Please checkout: {}'.format(row_ts[FILE_NAME]))
-                elif status_val == 'match':
-                    match = True
-                    row_ts['HSP TS ref'] = status_keys
-                    matching_ts_dict.append(row_ts)
 
-            if 'match' not in list_status_val and match is False:
-                    row_ts['HSP TS ref'] = status_val
-                    missing_ts_dict.append(row_ts)
+            num_match = list_status_val.count('match')
+
+            if num_match == 0:
+                row_ts[HSP_TS] = status_val
+                missing_ts_dict.append(row_ts)
+
+            elif num_match == 1:
+                for status_keys, status_val in match_status.items():
+                    if status_val == 'match':
+                        row_ts[HSP_TS] = status_keys
+                        row_ts.update(match_info[status_keys])
+                        matching_ts_dict.append(row_ts)
+                        break
+
+            elif num_match > 1:
+                arc_length_lm2_dict = {}
+                top_diff = None
+                for status_keys, status_val in match_status.items():
+                    value_storage = {}
+
+                    hsp_pathway_lm1 = reference_ts[status_keys][LM1_GROUP][0]
+                    hsp_pathway_lm2 = reference_ts[status_keys][LM2_GROUP][0]
+
+                    hsp_path_lm1_phi = float(reference_lm[hsp_pathway_lm1][MPHI])
+                    hsp_path_lm1_theta = float(reference_lm[hsp_pathway_lm1][MTHETA])
+                    hsp_path_lm2_phi = float(reference_lm[hsp_pathway_lm2][MPHI])
+                    hsp_path_lm2_theta = float(reference_lm[hsp_pathway_lm2][MTHETA])
+
+                    if status_val == 'match':
+                        p1_lm1 = float(match_info[status_keys][LMIRC_p1])
+                        t1_lm1 = float(match_info[status_keys][LMIRC_t1])
+                        p2_lm2 = float(match_info[status_keys][LMIRC_p2])
+                        t2_lm2 = float(match_info[status_keys][LMIRC_t2])
+
+                        arc_length_lm1 = arc_length_calculator(p1_lm1, t1_lm1, hsp_path_lm1_phi, hsp_path_lm1_theta)
+                        arc_length_lm2 = arc_length_calculator(p2_lm2, t2_lm2, hsp_path_lm2_phi, hsp_path_lm2_theta)
+
+                        arc_length_lm2_dict[status_keys] = arc_length_lm2
+
+                top_diff = (sorted(arc_length_lm2_dict, key=arc_length_lm2_dict.get, reverse=False)[:1])
+                row_ts[HSP_TS] = top_diff[0]
+                row_ts.update(match_info[top_diff[0]])
+                matching_ts_dict.append(row_ts)
 
         overall_ts_dict.append(row_ts)
+
+    error_status = check_matching_missing_dicts(overall_ts_dict, matching_ts_dict, missing_ts_dict)
+
+    if error_status is True:
+        print('Something wrong happened! There is an error in the sorting of TS and matching TSs...')
 
     return overall_ts_dict, matching_ts_dict, missing_ts_dict
 
 
 def check_matching_missing_dicts(overall_ts_dict, match_ts_dict, missing_ts_dict):
+    """
+    The only purpose of this script is to check the overall, matching, and missing TS dict to ensure that they were
+    formulated properly. There was an issue that too many TS were being found (there existed duplicates).
+
+    :param overall_ts_dict: all of the TS structures
+    :param match_ts_dict: only the matching TS structures (contains the matching pathway)
+    :param missing_ts_dict: the missing TS structures (missing the matching pathway)
+    :return: error_status to see if any issues arise...
+    """
+
+    error_status = None
 
     list_match = []
     list_missi = []
@@ -492,41 +579,20 @@ def check_matching_missing_dicts(overall_ts_dict, match_ts_dict, missing_ts_dict
     for row in overall_ts_dict:
         filename = row[FILE_NAME]
         if filename in list_match and filename in list_missi:
-            print("ERROR")
+            error_status = True
+
+    if (len(overall_ts_dict) - len(match_ts_dict) - len(missing_ts_dict)) != 0:
+        error_status = True
+
+    return error_status
 
 
-    # status_error = False
-    #
-
-    #
-    # for row_ma in list_match:
-    #     if row_ma in list_miss:
-    #         print('ERROR')
-    #
-    # for row_mi in list_miss:
-    #     if row_mi in list_match:
-    #         print('ERROR')
-    #
-    # # for row_match in match_ts_dict:
-    # #     for row_miss in missing_ts_dict:
-    # #         if row_match[FILE_NAME] == row_miss[FILE_NAME]:
-    # #             status_error = True
-    # #         elif row_match[FILE_NAME] == row_miss[FILE_NAME]:
-    # #             pass
-    # #
-    # # for row_miss in missing_ts_dict:
-    # #     for row_match in match_ts_dict:
-    # #         if row_match[FILE_NAME] == row_miss[FILE_NAME]:
-    # #             status_error = True
-    # #         elif row_match[FILE_NAME] == row_miss[FILE_NAME]:
-    # #             pass
-
-
-    return
-
-
-def generate_matching_ts_dict_pathways(matching_ts_dict):
-
+def generate_matching_ts_dict_pathways_full(matching_ts_dict):
+    """
+    Creates the Igor CSV file so that the file can easily be created in Igor for to visualize the pathways.
+    :param matching_ts_dict: The matching_ts_dict parameters.
+    :return: the data dict for this particular method
+    """
     pathway_phi = []
     pathway_theta = []
     ts_phi = []
@@ -535,12 +601,12 @@ def generate_matching_ts_dict_pathways(matching_ts_dict):
     lm_theta = []
 
     for row in matching_ts_dict:
-        ts0_phi   = round(float(row[PHI]),2)
-        ts0_theta = round(float(row[THETA]),2)
-        lm1_phi   = round(float(row[LMIRC_p1]),2)
-        lm1_theta = round(float(row[LMIRC_t1]),2)
-        lm2_phi   = round(float(row[LMIRC_p2]),2)
-        lm2_theta = round(float(row[LMIRC_t2]),2)
+        ts0_phi = round(float(row[PHI]), 2)
+        ts0_theta = round(float(row[THETA]), 2)
+        lm1_phi = round(float(row[LMIRC_p1]), 2)
+        lm1_theta = round(float(row[LMIRC_t1]), 2)
+        lm2_phi = round(float(row[LMIRC_p2]), 2)
+        lm2_theta = round(float(row[LMIRC_t2]), 2)
 
         # Creates a list of all of the points so that they can be analyzed in Igor
         ts_phi.append(ts0_phi)
@@ -569,7 +635,72 @@ def generate_matching_ts_dict_pathways(matching_ts_dict):
         pathway_phi.append(ts0_phi)
         pathway_theta.append(ts0_theta)
 
-    return ts_phi, ts_theta, lm_phi, lm_theta, pathway_phi, pathway_theta
+    data_dict = create_datadict(pathway_phi, pathway_theta, ts_phi, ts_theta, lm_phi, lm_theta)
+
+    return data_dict
+
+
+def generate_igor_hemi_plots(matching_ts_dict, reference_lm):
+    """"""
+
+    group_keys = []
+
+    for key_lm, val_lm in reference_lm.items():
+        if val_lm[CPK][0] == '4c1':
+            group_keys.append(key_lm)
+        elif val_lm[CPK][0] == '1c4':
+            group_keys.append(key_lm)
+
+    polar_dict = {}
+    for hemi_points in group_keys:
+        lm_phi_values = []
+        lm_proj_values = []
+        ts_phi_values = []
+        ts_proj_values = []
+        pathways_phi = []
+        pathways_proj = []
+        for row in matching_ts_dict:
+            if row[HSP_LM1] == hemi_points or row[HSP_LM2] == hemi_points:
+                lm1_phi = float(row[LMIRC_p1])
+                lm2_phi = float(row[LMIRC_p2])
+                tso_phi = float(row[THETA])
+
+                lm1_proj = np.sin(math.radians(float(row[LMIRC_t1])))
+                lm2_proj = np.sin(math.radians(float(row[LMIRC_t2])))
+                tso_proj = np.sin(math.radians(float(row[THETA])))
+
+                lm_phi_values.append(lm1_phi)
+                lm_phi_values.append(lm2_phi)
+                lm_proj_values.append(lm1_proj)
+                lm_proj_values.append(lm2_proj)
+
+                ts_phi_values.append(tso_phi)
+                ts_proj_values.append(tso_proj)
+
+                pathways_phi.append(lm1_phi)
+                pathways_proj.append('')
+
+                pathways_phi.append(lm1_phi)
+                pathways_proj.append(lm1_proj)
+                pathways_phi.append(tso_phi)
+                pathways_proj.append(tso_proj)
+
+                pathways_phi.append(lm2_phi)
+                pathways_proj.append('')
+
+                pathways_phi.append(lm2_phi)
+                pathways_proj.append(lm2_proj)
+                pathways_phi.append(tso_phi)
+                pathways_proj.append(tso_proj)
+
+        polar_dict[str('lm_phi_values_') + str(hemi_points)] = lm_phi_values
+        polar_dict[str('lm_proj_values_') + str(hemi_points)] = lm_proj_values
+        polar_dict[str('ts_phi_values_') + str(hemi_points)] = ts_phi_values
+        polar_dict[str('ts_proj_values_') + str(hemi_points)] = ts_proj_values
+        polar_dict[str('pathways_phi_') + str(hemi_points)] = pathways_phi
+        polar_dict[str('pathways_proj_') + str(hemi_points)] = pathways_proj
+
+    return polar_dict
 
 
 def create_datadict(pathway_phi, pathway_theta, ts_phi, ts_theta, lm_phi, lm_theta):
@@ -587,16 +718,217 @@ def create_datadict(pathway_phi, pathway_theta, ts_phi, ts_theta, lm_phi, lm_the
     """
     data_dict = {}
 
-    data_dict['compare_path_phi']   = pathway_phi
+    data_dict['compare_path_phi'] = pathway_phi
     data_dict['compare_path_theta'] = pathway_theta
-    data_dict['compare_ts_phi']   = ts_phi
+    data_dict['compare_ts_phi'] = ts_phi
     data_dict['compare_ts_theta'] = ts_theta
-    data_dict['compare_lm_phi']   = lm_phi
+    data_dict['compare_lm_phi'] = lm_phi
     data_dict['compare_lm_theta'] = lm_theta
 
     return data_dict
 
 
+def comparing_LM_structures_arc_length(lm_dict, reference_lm):
+
+    new_lm_dict = []
+    hsp_puckering = []
+
+    for row in lm_dict:
+        p1 = float(row[PHI])
+        t1 = float(row[THETA])
+        arc_length_dict = {}
+        for key, key_val in reference_lm.items():
+            p2 = float(key_val[MPHI])
+            t2 = float(key_val[MTHETA])
+            arc_length_dict[key] = arc_length_calculator(p1, t1, p2, t2)
+
+        top_difference = (sorted(arc_length_dict, key=arc_length_dict.get, reverse=False)[:1])
+
+        if arc_length_dict[top_difference[0]] > TOL_ARC_LENGTH_CROSS:
+            row[GID] = MISSING
+        elif arc_length_dict[top_difference[0]] < TOL_ARC_LENGTH_CROSS:
+            row[GID] = top_difference[0]
+            if top_difference[0] not in hsp_puckering:
+                hsp_puckering.append(top_difference[0])
+
+        new_lm_dict.append(row)
+
+    hsp_puckering.sort()
+
+    if len(new_lm_dict) != len(lm_dict):
+        print('The length of the new TS dict does not equal the length of the old TS dict.')
+
+    return new_lm_dict, hsp_puckering
+
+
+def boltzmann_weighting_group(low_energy_job_dict, qm_method):
+    list_groupings = []
+    isolation_dict = {}
+    dict_of_dict = {}
+    group_total_weight_gibbs = {}
+    contribution_dict = {}
+
+    for row in low_energy_job_dict:
+        row_grouping = row[GID]
+        if row_grouping != MISSING:
+            row_filename = row[FILE_NAME]
+            dict_of_dict[row_filename] = row
+            if row_grouping in list_groupings:
+                isolation_dict[row_grouping].append(row_filename)
+            elif row_grouping not in list_groupings:
+                list_groupings.append(row_grouping)
+                isolation_dict[row_grouping] = []
+                isolation_dict[row_grouping].append(row_filename)
+                group_total_weight_gibbs[row_grouping] = float(0)
+                contribution_dict[row_grouping] = float(0)
+
+    for group_key in isolation_dict.keys():
+        if group_key != MISSING:
+            for group_file in isolation_dict[group_key]:
+                for main_file in low_energy_job_dict:
+                    if group_file == main_file[FILE_NAME]:
+                        group_type = main_file[GID]
+                        try:
+                            gibbs_energy = float(main_file[GIBBS])
+                            enth_energy = float(main_file[ENTH])
+                            weight_gibbs = math.exp(-gibbs_energy / (DEFAULT_TEMPERATURE * K_B))
+                            weight_enth = math.exp(-enth_energy / (DEFAULT_TEMPERATURE * K_B))
+                            main_file[WEIGHT_GIBBS] = weight_gibbs
+                            main_file[WEIGHT_ENTH] = weight_enth
+                        finally:
+                            group_total_weight_gibbs[group_type] += weight_gibbs
+
+    for group_key in isolation_dict.keys():
+        if group_key != 'NONE':
+            total_weight = group_total_weight_gibbs[group_key]
+            for main_file in low_energy_job_dict:
+                if main_file[GID] == group_key:
+                    contribution_dict[group_key] = \
+                        round(contribution_dict[group_key] + (main_file[WEIGHT_GIBBS] / total_weight)
+                              * float(main_file[GIBBS]), 2)
+
+    return contribution_dict, qm_method
+
+
+def grouping_and_weighting_TS(low_energy_job_dict, qm_method):
+    file_dict = {}
+    TS_group_dict = {}
+    initial = None
+
+    for row in low_energy_job_dict:
+        file_dict[row[FILE_NAME]] = row
+        hsp_ts_group_num = row[HSP_TS]
+        if initial is None:
+            TS_group_dict[hsp_ts_group_num] = [row[FILE_NAME]]
+            initial = 'good'
+        else:
+            if hsp_ts_group_num not in TS_group_dict.keys():
+                TS_group_dict[hsp_ts_group_num] = [row[FILE_NAME]]
+            elif hsp_ts_group_num in TS_group_dict.keys():
+                TS_group_dict[hsp_ts_group_num].append(row[FILE_NAME])
+
+    count = -1
+    unique_ts_pathway = {}
+    for group_keys, group_files in TS_group_dict.items():
+        match_status = {}
+        status = 'good'
+        if len(group_files) == 1:
+            count += 1
+            unique_ts_pathway[str('pathway_' + str(count).rjust(2, '0'))] = [group_files[0]]
+        elif len(group_files) > 1:
+            for i in range(0, len(group_files)):
+                for j in range(i + 1, len(group_files)):
+                    if file_dict[group_files[i]][HSP_TS] != file_dict[group_files[j]][HSP_TS]:
+                        print('SOMETHING IS WRONG HERE!!')
+                    elif file_dict[group_files[i]][HSP_TS] == file_dict[group_files[j]][HSP_TS]:
+                        i_lm1 = file_dict[group_files[i]][HSP_LM1]
+                        i_lm2 = file_dict[group_files[i]][HSP_LM2]
+                        j_lm1 = file_dict[group_files[j]][HSP_LM1]
+                        j_lm2 = file_dict[group_files[j]][HSP_LM2]
+                        if i_lm1 == j_lm1 and i_lm2 == j_lm2:
+                            match_status[str(str(i) + '-' + str(j))] = 'match'
+                        else:
+                            match_status[str(str(i) + '-' + str(j))] = 'missing'
+                            status = 'bad'
+
+            if status != 'bad':
+                count += 1
+                unique_ts_pathway[str('pathway_' + str(count).rjust(2, '0'))] = group_files
+
+                # # # STARTS THE BOLTZMANN WEIGHTING FOR THE TS PATHWAYS # # #
+
+    group_total_weight_gibbs = {}
+    contribution_dict = {}
+
+    for unique_group in unique_ts_pathway.keys():
+        group_total_weight_gibbs[unique_group] = float(0)
+        contribution_dict[unique_group] = float(0)
+
+    for group_key in unique_ts_pathway.keys():
+        if group_key != MISSING:
+            for group_file in unique_ts_pathway[group_key]:
+                for main_file in low_energy_job_dict:
+                    if group_file == main_file[FILE_NAME]:
+                        try:
+                            gibbs_energy = float(main_file[GIBBS])
+                            enth_energy = float(main_file[ENTH])
+                            weight_gibbs = math.exp(-gibbs_energy / (DEFAULT_TEMPERATURE * K_B))
+                            weight_enth = math.exp(-enth_energy / (DEFAULT_TEMPERATURE * K_B))
+                            main_file[WEIGHT_GIBBS] = weight_gibbs
+                            main_file[WEIGHT_ENTH] = weight_enth
+                        finally:
+                            group_total_weight_gibbs[group_key] += weight_gibbs
+
+    for pathway_key in unique_ts_pathway.keys():
+        if pathway_key != 'NONE':
+            total_weight = group_total_weight_gibbs[pathway_key]
+            for main_file in unique_ts_pathway[pathway_key]:
+                contribution_dict[pathway_key] = round(
+                    contribution_dict[pathway_key] + (file_dict[main_file][WEIGHT_GIBBS] / total_weight)
+                    * float(file_dict[main_file][GIBBS]), 2)
+
+    return contribution_dict, unique_ts_pathway
+
+
+def job_id(file_name):
+    file_parts = file_name.split('-')
+
+    if file_parts[0] != 'z_dataset':
+        status = 'error'
+
+    job_type = file_parts[2]
+
+    method = file_parts[3].split('.')[0]
+
+    return job_type, method
+
+
+def generating_lm_structures(dict):
+
+    data_dict = {}
+    lm_phi_match = []
+    lm_theta_match = []
+    lm_phi_missi = []
+    lm_theta_missi = []
+
+
+    for row in dict:
+        if row[GID] is 'missing':
+            lm_phi_missi.append(row[PHI])
+            lm_theta_missi.append(row[THETA])
+        else:
+            lm_phi_match.append(row[PHI])
+            lm_theta_match.append(row[THETA])
+
+    data_dict['lm_match_phi'] = lm_phi_match
+    data_dict['lm_match_theta'] = lm_theta_match
+    data_dict['lm_missing_phi'] = lm_phi_missi
+    data_dict['lm_mising_theta'] = lm_theta_missi
+
+    return data_dict
+
+
+# # # # OLDER FUNCTIONS # # # #
 def comparing_across_methods(method_dict, reference_dict, arc_tol=TOL_ARC_LENGTH_CROSS):
     """
     This script compared the structures generated from one particular method to the reference set of structures from HSP
@@ -670,63 +1002,13 @@ def sorting_for_matching_values(updated_method_dict, print_status='off'):
     return phi_values_good, theta_values_good, phi_values_ungrouped, theta_values_ungrouped
 
 
-def boltzmann_weighting_group(low_energy_job_dict, qm_method):
-    list_groupings = []
-    isolation_dict = {}
-    dict_of_dict = {}
-    group_total_weight_gibbs = {}
-    contribution_dict = {}
-
-    for row in low_energy_job_dict:
-        row_grouping = row[GID]
-        if row_grouping != 'NONE':
-            row_filename = row[FILE_NAME]
-            dict_of_dict[row_filename] = row
-            if row_grouping in list_groupings:
-                isolation_dict[row_grouping].append(row_filename)
-            elif row_grouping not in list_groupings:
-                list_groupings.append(row_grouping)
-                isolation_dict[row_grouping] = []
-                isolation_dict[row_grouping].append(row_filename)
-                group_total_weight_gibbs[row_grouping] = float(0)
-                contribution_dict[row_grouping] = float(0)
-
-    for group_key in isolation_dict.keys():
-        if group_key != 'NONE':
-            for group_file in isolation_dict[group_key]:
-                for main_file in low_energy_job_dict:
-                    if group_file == main_file[FILE_NAME]:
-                        group_type = main_file[GID]
-                        try:
-                            gibbs_energy = float(main_file[GIBBS])
-                            enth_energy = float(main_file[ENTH])
-                            weight_gibbs = math.exp(-gibbs_energy / (DEFAULT_TEMPERATURE * K_B))
-                            weight_enth = math.exp(-enth_energy / (DEFAULT_TEMPERATURE * K_B))
-                            main_file[WEIGHT_GIBBS] = weight_gibbs
-                            main_file[WEIGHT_ENTH] = weight_enth
-                        finally:
-                            group_total_weight_gibbs[group_type] += weight_gibbs
-
-    for group_key in isolation_dict.keys():
-        if group_key != 'NONE':
-            total_weight = group_total_weight_gibbs[group_key]
-            for main_file in low_energy_job_dict:
-                if main_file[GID] == group_key:
-                    contribution_dict[group_key] = \
-                        round(contribution_dict[group_key] + (main_file[WEIGHT_GIBBS] / total_weight)
-                              * float(main_file[GIBBS]), 2)
-
-    return contribution_dict, qm_method
-
-
 def modifying_contribution_dict(contribution_dict, reference_groups):
-
     final_contribution_dict = {}
 
     for contr_key in contribution_dict.keys():
         for reference_key in reference_groups.keys():
             if contr_key in reference_key:
-                key = str(reference_key + ' (' + str(reference_groups[reference_key][CPK][0]) +')')
+                key = str(reference_key + ' (' + str(reference_groups[reference_key][CPK][0]) + ')')
                 final_contribution_dict[key] = contribution_dict[contr_key]
 
     return final_contribution_dict
@@ -741,8 +1023,8 @@ def writing_xlsx_files(lm_table_dict, ts_table_dict, output_filename):
     :return: excel file with the required information
     """
 
-    df_lm = pd.DataFrame(lm_table_dict)#, index=LIST_PUCKER)
-    df_ts = pd.DataFrame(ts_table_dict)#, index=LIST_PUCKER)
+    df_lm = pd.DataFrame(lm_table_dict)  # , index=LIST_PUCKER)
+    df_ts = pd.DataFrame(ts_table_dict)  # , index=LIST_PUCKER)
     writer = pd.ExcelWriter(output_filename, engine='xlsxwriter')
     df_lm.to_excel(writer, sheet_name='local min')
     df_ts.to_excel(writer, sheet_name='transition state')
@@ -787,11 +1069,11 @@ def writing_csv_files(lm_table_dict, ts_table_dict, molecule, sum_file_location)
     path_lm = create_out_fname(sum_file_location, prefix=prefix_lm, remove_prefix='a_list_csv_files', ext='.csv')
     path_ts = create_out_fname(sum_file_location, prefix=prefix_ts, remove_prefix='a_list_csv_files', ext='.csv')
 
-    df_lm = pd.DataFrame(lm_table_dict)#, index=LIST_PUCKER)
-    df_ts = pd.DataFrame(ts_table_dict)#, index=LIST_PUCKER)
+    df_lm = pd.DataFrame(lm_table_dict)  # , index=LIST_PUCKER)
+    df_ts = pd.DataFrame(ts_table_dict)  # , index=LIST_PUCKER)
 
-    df_lm.to_csv(path_lm)#, index=LIST_PUCKER)
-    df_ts.to_csv(path_ts)#, index=LIST_PUCKER)
+    df_lm.to_csv(path_lm)  # , index=LIST_PUCKER)
+    df_ts.to_csv(path_ts)  # , index=LIST_PUCKER)
 
 
 ## Command Line Parse ##
@@ -868,12 +1150,15 @@ def main(argv=None):
         lm_dict = {}
         ts_dict = {}
         if 'bxyl' == args.molecule:
+            HSP_LM_REFERENCE = BXYL_LM_PARAMS
+            HSP_TS_REFERENCE = BXYL_TS_PARAMS
             for row in BXYL_LM_PARAMS.keys():
                 lm_key = str(str(row) + ' (' + str(BXYL_LM_PARAMS[row][CPK][0]) + ')')
-                lm_dict[lm_key] = round(BXYL_LM_PARAMS[row]['G298 (Hartrees)'],2)
+                lm_dict[lm_key] = round(BXYL_LM_PARAMS[row]['Boltz Weight Gibbs'], 2)
+
             for row in BXYL_TS_PARAMS.keys():
                 ts_key = str(str(row) + ' (' + str(BXYL_TS_PARAMS[row][CPK][0]) + ')')
-                ts_dict[ts_key] = round(BXYL_TS_PARAMS[row]['G298 (Hartrees)'],2)
+                ts_dict[ts_key] = round(BXYL_TS_PARAMS[row]['Boltz Weight Gibbs'], 2)
 
         lm_level_dict['CCSDT' + "-lm"] = lm_dict
         ts_level_dict['CCSDT' + "-ts"] = ts_dict
@@ -881,33 +1166,48 @@ def main(argv=None):
         with open(args.sum_file) as f:
             for csv_file_read_newline in f:
                 csv_file_read = csv_file_read_newline.strip("\n")
-                hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(csv_file_read,
-                                                                                                  args.dir_hartree)
-                lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
 
-                lm_jobs_updated, lm_group_file_dict, lm_ungrouped_files = comparing_across_methods(lm_jobs,
-                                                                                                   BXYL_LM_PARAMS)
-                ts_jobs_updated, ts_group_file_dict, ts_ungrouped_files = comparing_across_methods(ts_jobs,
-                                                                                                   BXYL_TS_PARAMS)
+                # creates a dictionary of all of the meaninful information
+                method_dict = read_csv_to_dict(os.path.join(args.dir_hartree, csv_file_read), mode='r')
 
-                contribution_dict_lm, qm_method = boltzmann_weighting_group(lm_jobs_updated, qm_method)
-                contribution_dict_ts, qm_method = boltzmann_weighting_group(ts_jobs_updated, qm_method)
+                job_type, method = job_id(csv_file_read)
 
-                final_contribution_dict_lm = modifying_contribution_dict(contribution_dict_lm, BXYL_LM_PARAMS)
-                final_contribution_dict_ts = modifying_contribution_dict(contribution_dict_ts, BXYL_TS_PARAMS)
+                if job_type == 'TS':
 
-                lm_level_dict[qm_method + "-lm"] = final_contribution_dict_lm
-                ts_level_dict[qm_method + "-ts"] = final_contribution_dict_ts
-                overall_level_dict[qm_method + "-ts"] = final_contribution_dict_ts
-                overall_level_dict[qm_method + "-lm"] = final_contribution_dict_lm
+                    # splits the information based on LM and TS structures
+                    lm_irc_dict, ts_dict = separating_TS_and_IRC_information(method_dict)
 
-            prefix = 'a_table_lm-ts_' + str(args.molecule)
+                    # compares all of the TS structures (contains the HSP reference TS that is within tolerance values)
+                    new_ts_dict = comparing_TS_structures_arc_length(ts_dict, HSP_TS_REFERENCE)
 
-            list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
-                                           base_dir=os.path.dirname(args.sum_file), ext='.xlsx')
+                    # compares different TS to find whether or not the pathways are included
+                    dict_one, matching_ts_dict, missing_ts_dict = comparing_TS_pathways(new_ts_dict, lm_irc_dict,
+                                                                                        HSP_TS_REFERENCE,
+                                                                                        HSP_LM_REFERENCE)
 
-            writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
-            writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)
+                    # generates the information associated with each pathway
+                    data_dict = generate_matching_ts_dict_pathways_full(matching_ts_dict)
+
+                    # performs the boltzmann weighting for the TS
+                    contribution_dict, unique_ts_pathway = grouping_and_weighting_TS(matching_ts_dict, method)
+
+                    output_filename_pathway = create_out_fname('igor_info_' + job_type + '_' + str(method), base_dir=args.dir_hartree, ext='.csv')
+                    write_file_data_dict(data_dict, output_filename_pathway)
+
+                if job_type == 'LM':
+
+                    new_lm_dict, hsp_puckering = comparing_LM_structures_arc_length(method_dict, HSP_LM_REFERENCE)
+
+                    contribution_dict, qm_method = boltzmann_weighting_group(new_lm_dict, method)
+
+                    # generates the information associated with each pathway
+                    data_dict = generating_lm_structures(new_lm_dict)
+
+                    output_filename_pathway = create_out_fname('igor_info_' + job_type + '_' + str(method), base_dir=args.dir_hartree, ext='.csv')
+                    write_file_data_dict(data_dict, output_filename_pathway)
+
+
+
 
     except IOError as e:
         warning(e)
@@ -922,3 +1222,37 @@ def main(argv=None):
 if __name__ == '__main__':
     status = main()
     sys.exit(status)
+
+
+    #     data_dict = qm_utils.structure_pairing.generate_matching_ts_dict_pathways_full(matching_ts_dict)
+    #     output_filename_pathway = create_out_fname('igor_info_' + 'testing' + '_' + str('DFTB'), base_dir=SUB_DATA_DIR, ext='.csv')
+    #     write_file_data_dict(data_dict, output_filename_pathway)
+    #
+    #
+    #     hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(csv_file_read,
+    #                                                                                       args.dir_hartree)
+    #     lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
+    #
+    #     lm_jobs_updated, lm_group_file_dict, lm_ungrouped_files = comparing_across_methods(lm_jobs,
+    #                                                                                        BXYL_LM_PARAMS)
+    #     ts_jobs_updated, ts_group_file_dict, ts_ungrouped_files = comparing_across_methods(ts_jobs,
+    #                                                                                        BXYL_TS_PARAMS)
+    #
+    #     contribution_dict_lm, qm_method = boltzmann_weighting_group(lm_jobs_updated, qm_method)
+    #     contribution_dict_ts, qm_method = boltzmann_weighting_group(ts_jobs_updated, qm_method)
+    #
+    #     final_contribution_dict_lm = modifying_contribution_dict(contribution_dict_lm, BXYL_LM_PARAMS)
+    #     final_contribution_dict_ts = modifying_contribution_dict(contribution_dict_ts, BXYL_TS_PARAMS)
+    #
+    #     lm_level_dict[qm_method + "-lm"] = final_contribution_dict_lm
+    #     ts_level_dict[qm_method + "-ts"] = final_contribution_dict_ts
+    #     overall_level_dict[qm_method + "-ts"] = final_contribution_dict_ts
+    #     overall_level_dict[qm_method + "-lm"] = final_contribution_dict_lm
+    #
+    # prefix = 'a_table_lm-ts_' + str(args.molecule)
+    #
+    # list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
+    #                                base_dir=os.path.dirname(args.sum_file), ext='.xlsx')
+    #
+    # writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
+    # writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)

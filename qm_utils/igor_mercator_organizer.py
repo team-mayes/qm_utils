@@ -324,7 +324,7 @@ def creating_igor_pathway(dict_of_dicts):
     return pathway_dict, pathway_table_list
 
 
-def pathway_polar_creator(pathway_table_list,dict_of_dict, key_pucker='4c1'):
+def pathway_polar_creator(pathway_table_list, dict_of_dict, key_pucker='4c1'):
 
 
     count = 0
