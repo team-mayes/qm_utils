@@ -12,6 +12,8 @@ import argparse
 import os
 import statistics as st
 import sys
+
+import csv
 import pandas as pd
 import math
 import numpy as np
@@ -758,6 +760,21 @@ def comparing_LM_structures_arc_length(lm_dict, reference_lm):
     if len(new_lm_dict) != len(lm_dict):
         print('The length of the new TS dict does not equal the length of the old TS dict.')
 
+    low_energy_value = 100000000000
+
+    for row in new_lm_dict:
+        row_filename = row[FILE_NAME]
+        if float(row[FREQ]) < 0:
+            print('ERROR - a LM Freq is less than 0.')
+        elif float(row[FREQ]) > 0:
+            lm_dict.append(row)
+            if float(row[GIBBS]) < low_energy_value:
+                low_energy_value = float(row[GIBBS])
+
+    for lm_row in new_lm_dict:
+        lm_row[GIBBS] = (float(lm_row[GIBBS]) - low_energy_value) * HARTREE_TO_KCALMOL
+
+
     return new_lm_dict, hsp_puckering
 
 
@@ -811,6 +828,8 @@ def boltzmann_weighting_group(low_energy_job_dict, qm_method):
 
 
 def grouping_and_weighting_TS(low_energy_job_dict, qm_method):
+
+
     file_dict = {}
     TS_group_dict = {}
     initial = None
@@ -834,7 +853,8 @@ def grouping_and_weighting_TS(low_energy_job_dict, qm_method):
         status = 'good'
         if len(group_files) == 1:
             count += 1
-            unique_ts_pathway[str('pathway_' + str(count).rjust(2, '0'))] = [group_files[0]]
+            # unique_ts_pathway[str('pathway_' + str(count).rjust(2, '0'))] = [group_files[0]]
+            unique_ts_pathway[group_keys] = [group_files[0]]
         elif len(group_files) > 1:
             for i in range(0, len(group_files)):
                 for j in range(i + 1, len(group_files)):
@@ -853,7 +873,8 @@ def grouping_and_weighting_TS(low_energy_job_dict, qm_method):
 
             if status != 'bad':
                 count += 1
-                unique_ts_pathway[str('pathway_' + str(count).rjust(2, '0'))] = group_files
+                # unique_ts_pathway[str('pathway_' + str(count).rjust(2, '0'))] = group_files
+                unique_ts_pathway[group_keys] = group_files
 
                 # # # STARTS THE BOLTZMANN WEIGHTING FOR THE TS PATHWAYS # # #
 
@@ -927,6 +948,126 @@ def generating_lm_structures(dict):
 
     return data_dict
 
+
+def rmsd_calculator(rmsd_dict, lm_dict, ts_dict):
+    """
+
+    Performs all of the RMSD between HSP reference grouping and the method in question.
+
+    :param rmsd_dict: the dict containing all of the relative Gibbs free energies for the group
+    :param lm_dict: the reference HSP LM group
+    :param ts_dict: the reference HSP TS group
+    :return: the RMSD information for each method-job type combination
+    """
+
+    lm_rmsd_val = {}
+    ts_rmsd_val = {}
+
+    overall_dict = {}
+
+    for rmsd_job_id, rmsd_data in rmsd_dict.items():
+        rmsd_info = rmsd_job_id.split('-')
+        diff_squared = 0
+        ind_dict = {}
+        max_diff = -10
+        if rmsd_info[0] in 'LM':
+            for rmsd_key, rmsd_energy in rmsd_data.items():
+                for hsp_key in lm_dict.keys():
+                    if rmsd_key == hsp_key:
+                        diff_squared += math.pow(float(rmsd_energy) - float(lm_dict[hsp_key][WEIGHT_GIBBS]), 2)
+                        diff = abs(float(rmsd_energy) - float(lm_dict[hsp_key][WEIGHT_GIBBS]))
+                        if diff > max_diff:
+                            max_diff = diff
+                        break
+            rmsd_val = math.sqrt(diff_squared/len(rmsd_data))
+            ind_dict['RMSD val'] = round(rmsd_val, 1)
+            ind_dict['diff_squared'] = round(diff_squared, 1)
+            ind_dict['match number'] = len(rmsd_data)
+            ind_dict['max_diff'] = round(max_diff, 1)
+
+            overall_dict[rmsd_job_id] = ind_dict
+
+        elif rmsd_info[0] in 'TS':
+            pass
+            rmsd_info = rmsd_job_id.split('-')
+            diff_squared = 0
+            for rmsd_key, rmsd_energy in rmsd_data.items():
+                for hsp_key in ts_dict.keys():
+                    if rmsd_key == hsp_key:
+                        diff_squared += math.pow(float(rmsd_energy) - float(ts_dict[hsp_key][WEIGHT_GIBBS]), 2)
+                        diff = abs(float(rmsd_energy) - float(ts_dict[hsp_key][WEIGHT_GIBBS]))
+                        if diff > max_diff:
+                            max_diff = diff
+                        break
+            rmsd_val = math.sqrt(diff_squared/len(rmsd_data))
+            ind_dict['RMSD val'] = round(rmsd_val, 1)
+            ind_dict['diff_squared'] = round(diff_squared, 1)
+            ind_dict['match number'] = len(rmsd_data)
+            ind_dict['max_diff'] = round(max_diff, 1)
+
+            overall_dict[rmsd_job_id] = ind_dict
+
+
+    return overall_dict
+
+
+def writer_rmsd_information(overall_dict, dir_data):
+    """
+    This script writes the information so things can easily be manipulated into Igor for further analysis.
+
+    :param overall_dict: the RMSD information for each method-job type combination
+    :param dir_data: the location to write the output file to
+    :return: outputs a file containing all of the RMSD information for Igor
+    """
+
+    output_filename_ = create_out_fname('igor_overall_rmsd', base_dir=dir_data, ext='.csv')
+
+    list_method = []
+
+    for keys in overall_dict.keys():
+        info = keys.split('-')
+        if info[1] not in list_method:
+            list_method.append(info[1])
+
+    list_method.sort()
+
+    Titles = ["rmsd_method", "rmsd_lm", "rmsd_ts", "rmsd_total", "rmsd_max_diff"]
+
+    with open(output_filename_, 'w') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows([Titles])
+        list_info = []
+
+        for method_eval in list_method:
+            max_diff = 0
+            total_diff = 0
+            match_count = 0
+            job_complete = []
+            for data_key, data_val in overall_dict.items():
+                if data_key.split('-')[1] == method_eval and data_key.split('-')[0] not in job_complete:
+                    job_complete.append(data_key.split('-')[0])
+
+                    if data_key.split('-')[0] == 'LM':
+                        rmsd_lm = data_val['RMSD val']
+                        total_diff += data_val['diff_squared']
+                        match_count += data_val['match number']
+                        if data_val['max_diff'] > max_diff:
+                            max_diff = data_val['max_diff']
+                    elif data_key.split('-')[0] == 'TS':
+                        rmsd_ts = data_val['RMSD val']
+                        total_diff += data_val['diff_squared']
+                        match_count += data_val['match number']
+                        if data_val['max_diff'] > max_diff:
+                            max_diff = data_val['max_diff']
+
+            total_rmsd = round(math.sqrt((total_diff/match_count)),1)
+
+            list_info.append([method_eval, rmsd_lm, rmsd_ts, total_rmsd, max_diff])
+
+
+        writer.writerows(list_info)
+
+    return
 
 # # # # OLDER FUNCTIONS # # # #
 def comparing_across_methods(method_dict, reference_dict, arc_tol=TOL_ARC_LENGTH_CROSS):
@@ -1164,6 +1305,9 @@ def main(argv=None):
         ts_level_dict['CCSDT' + "-ts"] = ts_dict
 
         with open(args.sum_file) as f:
+
+            RMSD_data = {}
+
             for csv_file_read_newline in f:
                 csv_file_read = csv_file_read_newline.strip("\n")
 
@@ -1191,20 +1335,35 @@ def main(argv=None):
                     # performs the boltzmann weighting for the TS
                     contribution_dict, unique_ts_pathway = grouping_and_weighting_TS(matching_ts_dict, method)
 
+                    # output the pathways for the local min and TS structures
                     output_filename_pathway = create_out_fname('igor_info_' + job_type + '_' + str(method), base_dir=args.dir_hartree, ext='.csv')
                     write_file_data_dict(data_dict, output_filename_pathway)
 
                 if job_type == 'LM':
 
+                    # assigns the local min groups for each of the unique local min structures
                     new_lm_dict, hsp_puckering = comparing_LM_structures_arc_length(method_dict, HSP_LM_REFERENCE)
 
+                    # performs the Boltzmann weight for the local min structures
                     contribution_dict, qm_method = boltzmann_weighting_group(new_lm_dict, method)
 
                     # generates the information associated with each pathway
                     data_dict = generating_lm_structures(new_lm_dict)
 
+                    # outputs the phi and theta files for matching and missing local min structures
                     output_filename_pathway = create_out_fname('igor_info_' + job_type + '_' + str(method), base_dir=args.dir_hartree, ext='.csv')
                     write_file_data_dict(data_dict, output_filename_pathway)
+
+                RMSD_data[str(job_type + '-' + method)] = contribution_dict
+
+        rmsd_overall_dict = rmsd_calculator(RMSD_data, HSP_LM_REFERENCE, HSP_TS_REFERENCE)
+
+
+        writer_rmsd_information(rmsd_overall_dict, args.dir_hartree)
+
+
+
+
 
 
 
@@ -1223,36 +1382,3 @@ if __name__ == '__main__':
     status = main()
     sys.exit(status)
 
-
-    #     data_dict = qm_utils.structure_pairing.generate_matching_ts_dict_pathways_full(matching_ts_dict)
-    #     output_filename_pathway = create_out_fname('igor_info_' + 'testing' + '_' + str('DFTB'), base_dir=SUB_DATA_DIR, ext='.csv')
-    #     write_file_data_dict(data_dict, output_filename_pathway)
-    #
-    #
-    #     hartree_headers, lowest_energy_dict, qm_method = read_hartree_files_lowest_energy(csv_file_read,
-    #                                                                                       args.dir_hartree)
-    #     lm_jobs, ts_jobs, qm_method = sorting_job_types(lowest_energy_dict, qm_method)
-    #
-    #     lm_jobs_updated, lm_group_file_dict, lm_ungrouped_files = comparing_across_methods(lm_jobs,
-    #                                                                                        BXYL_LM_PARAMS)
-    #     ts_jobs_updated, ts_group_file_dict, ts_ungrouped_files = comparing_across_methods(ts_jobs,
-    #                                                                                        BXYL_TS_PARAMS)
-    #
-    #     contribution_dict_lm, qm_method = boltzmann_weighting_group(lm_jobs_updated, qm_method)
-    #     contribution_dict_ts, qm_method = boltzmann_weighting_group(ts_jobs_updated, qm_method)
-    #
-    #     final_contribution_dict_lm = modifying_contribution_dict(contribution_dict_lm, BXYL_LM_PARAMS)
-    #     final_contribution_dict_ts = modifying_contribution_dict(contribution_dict_ts, BXYL_TS_PARAMS)
-    #
-    #     lm_level_dict[qm_method + "-lm"] = final_contribution_dict_lm
-    #     ts_level_dict[qm_method + "-ts"] = final_contribution_dict_ts
-    #     overall_level_dict[qm_method + "-ts"] = final_contribution_dict_ts
-    #     overall_level_dict[qm_method + "-lm"] = final_contribution_dict_lm
-    #
-    # prefix = 'a_table_lm-ts_' + str(args.molecule)
-    #
-    # list_f_name = create_out_fname(args.sum_file, prefix=prefix, remove_prefix='a_list_csv_files',
-    #                                base_dir=os.path.dirname(args.sum_file), ext='.xlsx')
-    #
-    # writing_csv_files(lm_level_dict, ts_level_dict, args.molecule, args.sum_file)
-    # writing_xlsx_files(lm_level_dict, ts_level_dict, list_f_name)
