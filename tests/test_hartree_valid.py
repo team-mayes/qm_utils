@@ -1,10 +1,9 @@
 import os
 import unittest
 
-# Directories #
 import pandas as pd
 
-from qm_utils.hartree_valid import verify_same_cols, verify_transition_state, verify_local_minimum
+from qm_utils.old_scripts.hartree_valid import verify_same_cols, verify_transition_state, verify_local_minimum
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'test_data', 'group_puckers')
 

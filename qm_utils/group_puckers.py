@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import pandas as pd
 
-from qm_utils.hartree_valid import verify_local_minimum, verify_transition_state
+from qm_utils.old_scripts.hartree_valid import verify_local_minimum, verify_transition_state
 from qm_utils.qm_common import warning, create_out_fname, InvalidDataError, write_csv
 
 """

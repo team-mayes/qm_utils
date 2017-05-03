@@ -10,7 +10,7 @@ import logging
 import os
 import unittest
 
-from qm_utils.dipole_cluster import main, hartree_sum_pucker_cluster, check_before_after_sorting
+from qm_utils.old_scripts.dipole_cluster import main, hartree_sum_pucker_cluster, check_before_after_sorting
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 
