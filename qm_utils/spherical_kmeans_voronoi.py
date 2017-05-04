@@ -12,6 +12,8 @@ from __future__ import print_function
 
 import os
 import sys
+
+import csv
 import numpy as np
 from qm_utils.qm_common import read_csv_to_dict, create_out_fname
 from spherecluster import SphericalKMeans
@@ -43,15 +45,15 @@ __author__ = 'SPVicchio'
 
 
 
-def read_csv_data(filename, dir):
+def read_csv_data(filename, dir_):
     """
     Reads the CSV file with the information
     :param filename: the filename of the CSV file
-    :param dir: the directory
+    :param dir_: the directory
     :return: data points (np array containing the x, y, z coordinates), phi_raw (phi coords), theta_raw (theta coords)
     """
 
-    file_sample_lm = os.path.join(dir, filename)
+    file_sample_lm = os.path.join(dir_, filename)
     data_dict_lm = read_csv_to_dict(file_sample_lm, mode='r')
 
     data_points = []
@@ -76,6 +78,30 @@ def read_csv_data(filename, dir):
         data_points.append(np.array([x, y, z]))
 
     return data_points, phi_raw, theta_raw, energy
+
+
+def read_csv_canonical_designations(filename, dir_):
+    """
+    This script reads in the canonical designations from a csv file
+    :param filename: filename containing the canonical designations
+    :param dir_: the directory where the file is located
+    :return: the puckers, the phi values, and the theta values
+    """
+
+    file_cano = os.path.join(dir_, filename)
+
+    phi_cano = []
+    theta_cano = []
+    pucker = []
+
+    with open(file_cano, 'r') as csvfile:
+        data = csv.reader(csvfile)
+        for row in data:
+            phi_cano.append(row[1])
+            theta_cano.append(row[2])
+            pucker.append(row[0])
+
+    return pucker, phi_cano, theta_cano
 
 
 def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, energy):
@@ -156,25 +182,36 @@ def matplotlib_printing_normal(data_dict, dir, save_status='no'):
     phi_vertices   = data_dict['phi_sv_centers']
     theta_vertices = data_dict['theta_sv_centers']
 
+    # Canonical Designations
+    pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir)
+
+
     fig, ax = plt.subplots(facecolor='white')
 
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax.set_xticks(major_ticksx)
+    ax.set_xticks(minor_ticksx, minor=True)
 
-    major_ticks = np.arange(0, 372, 60)
-    minor_ticks = np.arange(0, 372, 12)
+    major_ticksy = np.arange(0,182, 30)
+    minor_ticksy = np.arange(0,182, 10)
+    ax.set_yticks(major_ticksy)
+    ax.set_yticks(minor_ticksy, minor=True)
 
-    ax.set_xticks(major_ticks)
-    ax.set_xticks(minor_ticks, minor=True)
+    ax.set_xlim([-5, 365])
+    ax.set_ylim([185, -5])
+    ax.set_xlabel('Phi (degrees)')
+    ax.set_ylabel('Theta (degrees)')
 
     hsp = ax.scatter(phi_raw, theta_raw, s=60, c='blue', marker='o')
     kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h')
     voronoi = ax.scatter(phi_vertices, theta_vertices, s=60, c='green', marker='s')
-    ax.set_ylim([180, 0])
-    ax.set_xlabel('Phi (degrees)')
-    ax.set_ylabel('Theta (degrees)')
+    cano = ax.scatter(phi_cano, theta_cano, s=60, c='black', marker='+')
 
-    leg = ax.legend((hsp, kmeans, voronoi),
-              ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')', 'voronoi vertice'),
-                scatterpoints = 1, fontsize = 12, frameon='false')
+    leg = ax.legend((hsp, kmeans, voronoi, cano),
+              ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')', 'voronoi vertice',
+               'canonical designation'),
+                scatterpoints=1, fontsize=12, frameon='false')
 
     leg.get_frame().set_linewidth(0.0)
 
@@ -183,7 +220,6 @@ def matplotlib_printing_normal(data_dict, dir, save_status='no'):
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
         plt.show()
-
 
     return
 
@@ -199,6 +235,7 @@ def matplotlib_printing_size(data_dict, dir, save_status='no'):
     theta_vertices = data_dict['theta_sv_centers']
     energy         = data_dict['energy']
 
+    # Generating the marker size based on energy
     max_energy = float(max(energy))
     med_energy = float(st.median(energy))
     size = []
@@ -207,26 +244,38 @@ def matplotlib_printing_size(data_dict, dir, save_status='no'):
         size.append(80 * (1 - (float(row) / max_energy)))
         # size.append(60 * float(row) / med_energy)
 
+    # Canonical Designations
+    pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir)
+
     fig, ax = plt.subplots(facecolor='white')
 
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax.set_xticks(major_ticksx)
+    ax.set_xticks(minor_ticksx, minor=True)
 
-    major_ticks = np.arange(0, 372, 60)
-    minor_ticks = np.arange(0, 372, 12)
+    major_ticksy = np.arange(0,182, 30)
+    minor_ticksy = np.arange(0,182, 10)
+    ax.set_yticks(major_ticksy)
+    ax.set_yticks(minor_ticksy, minor=True)
 
-    ax.set_xticks(major_ticks)
-    ax.set_xticks(minor_ticks, minor=True)
-
-
-
-    kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h')
-    hsp = ax.scatter(phi_raw, theta_raw, s=size, c='blue', marker='o')
-    ax.set_ylim([180, 0])
+    ax.set_xlim([-5, 365])
+    ax.set_ylim([185, -5])
     ax.set_xlabel('Phi (degrees)')
     ax.set_ylabel('Theta (degrees)')
 
+    hsp = ax.scatter(phi_raw, theta_raw, s=size, c='blue', marker='o')
+    kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h')
+    cano = ax.scatter(phi_cano, theta_cano, s=60, c='black', marker='+')
+
+    for i, txt in enumerate(pucker):
+        if 'D' not in txt:
+            ax.annotate(txt, xy=(phi_cano[i], theta_cano[i]), xytext=(phi_cano[i], float(theta_cano[i]) - 5))
+
     leg = ax.legend((hsp, kmeans),
-                    ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')', 'voronoi vertice'),
-                    scatterpoints = 1, fontsize = 12, frameon='false')
+                    ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')',
+                     'voronoi vertice', 'canonical designation'),
+                    scatterpoints=1, fontsize=12, frameon='false')
 
     leg.get_frame().set_linewidth(0.0)
 

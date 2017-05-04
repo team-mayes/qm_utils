@@ -13,7 +13,7 @@ import unittest
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 from qm_utils.spherical_kmeans_voronoi import read_csv_data, spherical_kmeans_voronoi, \
-    matplotlib_printing_size, matplotlib_printing_normal
+    matplotlib_printing_size, matplotlib_printing_normal, read_csv_canonical_designations
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -32,6 +32,7 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'spherical_kmeans_voronoi')
 
 # Input files #
 HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
+CANO_DESIGN   = 'CP_params.csv'
 
 # Good output
 PHI_RAW_GOOD    = [249.1, 327.3, 30.0, 66.5, 44.9, 195.7, 274.2, 272.4, 264.8, 278.3, 113.5, 155.5, 19.0, 17.0, 14.7,
@@ -58,6 +59,14 @@ class TestSphereicalKmeansVoronoi(unittest.TestCase):
         finally:
             self.assertEqual(data_dict['number_clusters'], NUMBER_CLUSTERS)
 
+
+    def testImportCanonicalDesignation(self):
+        try:
+            pucker, phi_cano, theta_cano = read_csv_canonical_designations(CANO_DESIGN, SUB_DATA_DIR)
+        finally:
+            self.assertEqual(pucker[0], '1c4')
+
+
     def testMatplotlibPrinting(self):
         data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
         data_dict = spherical_kmeans_voronoi(7, data_points, phi_raw, theta_raw, energy)
@@ -74,5 +83,5 @@ class MainRun(unittest.TestCase):
             # Running
             data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
             data_dict = spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, energy)
-            matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status='no')
+            # matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status='no')
             matplotlib_printing_size(data_dict, SUB_DATA_DIR, save_status='no')
