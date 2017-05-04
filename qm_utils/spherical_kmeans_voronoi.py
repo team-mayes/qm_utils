@@ -172,6 +172,8 @@ def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, e
     ind_dict['theta_sv_centers'] = theta_vertices
     ind_dict['vertices_sv_xyz'] = sv.vertices
 
+    # HI JUSTIN
+
     return ind_dict
 
 
