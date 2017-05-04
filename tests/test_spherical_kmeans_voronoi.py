@@ -53,9 +53,8 @@ class TestSphereicalKmeansVoronoi(unittest.TestCase):
 
     def testSphericalKmeansVoronoi(self):
         try:
-            data_points, phi_raw, theta_raw = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
-            data_dict = spherical_kmeans_voronoi(7, data_points, phi_raw, theta_raw)
-            print(data_dict)
+            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            data_dict = spherical_kmeans_voronoi(7, data_points, phi_raw, theta_raw, energy)
         finally:
             self.assertEqual(data_dict['number_clusters'], NUMBER_CLUSTERS)
 

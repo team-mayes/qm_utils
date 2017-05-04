@@ -126,6 +126,7 @@ def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, e
     skm.fit(data_points)
     skm_centers = skm.cluster_centers_
     ind_dict['number_clusters'] = number_clusters
+    ind_dict['labels'] = skm.labels_
 
     # Converting the skm centers to phi and theta coordinates
     for center_coord in skm_centers:
@@ -268,9 +269,9 @@ def matplotlib_printing_size(data_dict, dir, save_status='no'):
     kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h')
     cano = ax.scatter(phi_cano, theta_cano, s=60, c='black', marker='+')
 
-    for i, txt in enumerate(pucker):
-        if 'D' not in txt:
-            ax.annotate(txt, xy=(phi_cano[i], theta_cano[i]), xytext=(phi_cano[i], float(theta_cano[i]) - 5))
+
+    ax.annotate(pucker[25], xy=(phi_cano[25],theta_cano[25]))
+    # ax.annotate(, (,))
 
     leg = ax.legend((hsp, kmeans),
                     ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')',
