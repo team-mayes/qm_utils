@@ -126,7 +126,8 @@ def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, e
     skm.fit(data_points)
     skm_centers = skm.cluster_centers_
     ind_dict['number_clusters'] = number_clusters
-    ind_dict['labels'] = skm.labels_
+
+    ind_dict['skm_centers_xyz'] = skm_centers
 
     # Converting the skm centers to phi and theta coordinates
     for center_coord in skm_centers:
@@ -169,6 +170,7 @@ def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, e
 
     ind_dict['phi_sv_centers'] = phi_vertices
     ind_dict['theta_sv_centers'] = theta_vertices
+    ind_dict['vertices_sv_xyz'] = sv.vertices
 
     return ind_dict
 
