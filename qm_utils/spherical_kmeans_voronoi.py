@@ -25,6 +25,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib import colors
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+
 
 try:
     # noinspection PyCompatibility
@@ -158,6 +160,7 @@ def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, e
 
     # Spherical Voronoi for the centers
     sv = SphericalVoronoi(skm_centers, radius, center)
+    sv.sort_vertices_of_regions()
 
     # Generating the important base datasets for spherical voronoi
     r_vertices = []
@@ -179,6 +182,7 @@ def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, e
     ind_dict['phi_sv_vertices'] = phi_vertices
     ind_dict['theta_sv_vertices'] = theta_vertices
     ind_dict['vertices_sv_xyz'] = sv.vertices
+    ind_dict['regions_sv_labels'] = sv.regions
 
     return ind_dict
 
@@ -318,6 +322,361 @@ def boltzmann_weighting_mini(energies):
 
     return round(weighted_gibbs_free_energy,3)
 
+
+########################################################################################################################
+
+# # # Justin's Functions # # #
+
+# REQUIRES: arclength < PI*radius
+# MODIFIES: nothing
+# EFFECTS: returns a vector of phi & theta values for the voronoi edges
+def arc_coords(vert_1, vert_2):
+    """
+
+    :param vert_1: one vertex of an edge
+    :param vert_2: other vertex of an edge
+    :return: returns a vector of phi & theta values for the voronoi edges
+    """
+
+    # desired number of pts in arclength & line
+    NUM_PTS = 10
+
+    # endpts of the line
+    x_0 = vert_1[0]
+    y_0 = vert_1[1]
+    z_0 = vert_1[2]
+    x_f = vert_2[0]
+    y_f = vert_2[1]
+    z_f = vert_2[2]
+
+    # eqn for parametric eqns of x, y, & z respectively
+    a = x_f - x_0
+    b = y_f - y_0
+    c = z_f - z_0
+
+    # incrementing variable for parametric equations
+    # normalized to allow for input to be number of desired pts
+    # if clause to prevent division by zero
+    if(a != 0):
+        t_0 = abs(((x_f - x_0) / a) / NUM_PTS)
+    elif(b != 0):
+        t_0 = abs(((y_f - y_0) / b) / NUM_PTS)
+    else:
+        t_0 = abs(((z_f - z_0) / c) / NUM_PTS)
+
+    t = t_0
+    t_f = t_0 * NUM_PTS
+
+    # converts the cartesian coords to polar
+    def get_arc_coord(x, y, z):
+        theta = np.rad2deg(np.arctan2(np.sqrt(x ** 2 + y ** 2), z))
+        phi = np.rad2deg(np.arctan2(y, x))
+
+        while theta < 0:
+            theta += 360
+        while phi < 0:
+            phi += 360
+
+        return(phi, theta)
+
+    # initialize the theta and phi vectors
+    coords = get_arc_coord(x_0, y_0, z_0)
+    arc_coords = [[coords[0]], [coords[1]]]
+
+    # increments over t to give desired number of pts
+    while (t < t_f):
+        # parametric eqns
+        x = x_0 + t*a
+        y = y_0 + t*b
+        z = z_0 + t*c
+
+        # pushes polar coords into the arclength
+        coords = get_arc_coord(x, y, z)
+        arc_coords[0].append(coords[0])
+        arc_coords[1].append(coords[1])
+
+        t += t_0
+
+    # pushes final coords into the arclength
+    coords = get_arc_coord(x_f, y_f, z_f)
+    arc_coords[0].append(coords[0])
+    arc_coords[1].append(coords[1])
+
+    return arc_coords
+
+# converts polar coords to cartesian
+def pol2cart(vert):
+    phi = np.deg2rad(vert[0])
+    theta = np.deg2rad(vert[1])
+    r = vert[2]
+
+    x = r * np.sin(theta) * np.cos(phi)
+    y = r * np.sin(theta) * np.sin(phi)
+    z = r * np.cos(theta)
+
+    return [x, y, z]
+
+
+# # # Plotting # # #
+
+
+def matplotlib_edge_printing(data_dict, dir, save_status = 'no'):
+    # The data from the previous
+    phi_raw = data_dict['phi_raw']
+    theta_raw = data_dict['theta_raw']
+    phi_centers = data_dict['phi_skm_centers']
+    theta_centers = data_dict['theta_skm_centers']
+    phi_vertices = data_dict['phi_sv_vertices']
+    theta_vertices = data_dict['theta_sv_vertices']
+
+    # Canonical Designations
+    pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir)
+
+    fig, ax = plt.subplots(facecolor='white')
+    fig_3d = plt.figure()
+    ax_3d = fig_3d.gca(projection='3d')
+
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax.set_xticks(major_ticksx)
+    ax.set_xticks(minor_ticksx, minor=True)
+
+    major_ticksy = np.arange(0, 182, 30)
+    minor_ticksy = np.arange(0, 182, 10)
+    ax.set_yticks(major_ticksy)
+    ax.set_yticks(minor_ticksy, minor=True)
+
+    ax.set_xlim([-5, 365])
+    ax.set_ylim([185, -5])
+    ax.set_xlabel('Phi (degrees)')
+    ax.set_ylabel('Theta (degrees)')
+
+    hsp = ax.scatter(phi_raw, theta_raw, s=60, c='blue', marker='o')
+    kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h')
+    voronoi = ax.scatter(phi_vertices, theta_vertices, s=60, c='green', marker='s')
+    cano = ax.scatter(phi_cano, theta_cano, s=60, c='black', marker='+')
+
+
+    #### TEST PURPOSES ####
+    # cano_centers = []
+    #
+    # # converts strings to ints
+    # for i in range(len(phi_cano)):
+    #     phi_cano[i] = float(phi_cano[i])
+    #     theta_cano[i] = float(theta_cano[i])
+    #
+    # # creating cartesian cano_centers
+    # for i in range(len(phi_cano)):
+    #     vert_test = pol2cart([phi_cano[i], theta_cano[i], 1])
+    #     vert_test = np.asarray(vert_test)
+    #
+    #     cano_centers.append(vert_test)
+    #
+    # # Default parameters for spherical voronoi
+    # radius = 1
+    # center = np.array([0, 0, 0])
+    #
+    # cano_centers = np.asarray(cano_centers)
+    #
+    # # Spherical Voronoi for the centers
+    #
+    # sv_test = SphericalVoronoi(cano_centers, radius, center)
+    # sv_test.sort_vertices_of_regions()
+    # test_dict = {}
+    #
+    # test_dict['number_clusters'] = len(phi_cano)
+    # test_dict['vertices_sv_xyz'] = sv_test.vertices
+    # test_dict['regions_sv_labels'] = sv_test.regions
+    #
+    # plots wireframe sphere
+    # theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
+    # THETA, PHI = np.meshgrid(theta, phi)
+    # R = 1.0
+    # X = R * np.sin(PHI) * np.cos(THETA)
+    # Y = R * np.sin(PHI) * np.sin(THETA)
+    # Z = R * np.cos(PHI)
+    # ax_3d.plot_wireframe(X, Y, Z, color="lightblue")
+    #
+    # # settings for 3d graph
+    # ax_3d.legend()
+    # ax_3d.set_xlim([-1, 1])
+    # ax_3d.set_ylim([-1, 1])
+    # ax_3d.set_zlim([-1, 1])
+    #
+    # plot_regions(ax_3d, ax, test_dict)
+    #
+    # #### TEST PURPOSES ####
+
+    plot_regions(ax_3d, ax, data_dict)
+
+    leg = ax.legend((hsp, kmeans, voronoi, cano),
+                    ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')', 'voronoi vertice',
+                     'canonical designation'),
+                    scatterpoints = 1, fontsize = 12, frameon = 'false')
+
+    leg.get_frame().set_linewidth(0.0)
+
+    if save_status != 'no':
+        filename = create_out_fname('bxyl-k' + str(data_dict['number_clusters']) + '-normal.png', base_dir=dir)
+        plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
+    else:
+        plt.show()
+
+    return
+
+
+# helper function for plotting a single voronoi section (input is the vertices of the section)
+def plot_vor_sec(ax_3d, ax, verts):
+    """
+
+    :param ax: plot being added to
+    :param verts: all vertices of the voronoi section
+    :return: nothing
+    """
+
+    pairs = []
+
+    for i in range(len(verts)):
+        # first vertex gets paired to last vertex
+        if i == len(verts) - 1:
+            curr_pair = [verts[i], verts[0]]
+        else:
+            curr_pair = [verts[i], verts[i + 1]]
+
+        pairs.append(curr_pair)
+
+    for i in range(len(pairs)):
+        # vector of phi & theta vectors
+        edge = arc_coords(pairs[i][0], pairs[i][1])
+
+        plot_3d(ax_3d, pairs[i][0], pairs[i][1])
+
+        if(is_end(edge)):
+            two_edges = split_in_two(edge)
+
+            ax.plot(two_edges[0][0], two_edges[0][1], color='green')
+            ax.plot(two_edges[1][0], two_edges[1][1], color='green')
+        else:
+            ax.plot(edge[0], edge[1], color='green')
+
+    return
+
+# plots all voronoi sections
+def plot_regions(ax_3d, ax, data_dict):
+    for i in range(len(data_dict['regions_sv_labels'])):
+        verts = []
+
+        for j in range(len(data_dict['regions_sv_labels'][i])):
+            verts.append(data_dict['vertices_sv_xyz'][data_dict['regions_sv_labels'][i][j]])
+
+        plot_vor_sec(ax_3d, ax, verts)
+
+    return
+
+# plots lines individually on a sphere
+def plot_3d(ax_3d, vert_1, vert_2):
+    mpl.rcParams['legend.fontsize'] = 10
+
+    # endpts of the line
+    x_0 = vert_1[0]
+    y_0 = vert_1[1]
+    z_0 = vert_1[2]
+    x_f = vert_2[0]
+    y_f = vert_2[1]
+    z_f = vert_2[2]
+
+    # polar coords to be changed to cartesian
+    raw_coords = arc_coords(vert_1, vert_2)
+
+    # converts the polar coords to cartesian with r = 1
+    def get_arc_coord(phi, theta):
+        phi = np.deg2rad(phi)
+        theta = np.deg2rad(theta)
+
+        x = np.sin(theta) * np.cos(phi)
+        y = np.sin(theta) * np.sin(phi)
+        z = np.cos(theta)
+
+        return (x, y, z)
+
+    # initializes the cartesian coordinates for the arclength
+    vec_x = [x_0]
+    vec_y = [y_0]
+    vec_z = [z_0]
+
+    # increments over the raw coords to get cartesian coords
+    for i in range(len(raw_coords[0])):
+        arc_coord = get_arc_coord(raw_coords[0][i], raw_coords[1][i])
+
+        # pushes coords into the arclength
+        vec_x.append(arc_coord[0])
+        vec_y.append(arc_coord[1])
+        vec_z.append(arc_coord[2])
+
+        i += 1
+
+    # pushes final coord into the arclength
+    vec_x.append(x_f)
+    vec_y.append(y_f)
+    vec_z.append(z_f)
+
+    # plots line
+    #ax_3d.plot([x_0, x_f], [y_0, y_f], [z_0, z_f], label='parametric line', color='green')
+    # plots arclength
+    ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color='green')
+
+    # helper function for plot_vor_sec
+# returns a bool for if a coord pair is not already in the set of coord pairs
+def not_in_pairs(pairs, curr_pair):
+    for i in range(len(pairs)):
+        if curr_pair == pairs[i] or \
+            (curr_pair[0] == pairs[i][1] and curr_pair[1] == pairs[i][0]):
+
+            return False
+
+    return True
+
+# helper function to determine if an edge goes across the end
+# (i.e - crosses from 0 to 360)
+def is_end(edge):
+    has_0 = False
+    has_360 = False
+
+    for i in range(len(edge[0])):
+        if edge[0][i] < 5:
+            has_0 = True
+        if edge[0][i] > 355:
+            has_360 = True
+
+    return has_0 and has_360
+
+# helper function to split an edge into two based on
+# the 0 / 360 degree split
+def split_in_two(edge):
+    """
+
+    :param edge: [[phi], [theta]]
+    :return: two edges
+    """
+    edge_one_phi = []
+    edge_one_theta = []
+    edge_two_phi = []
+    edge_two_theta = []
+
+    for i in range(len(edge[0])):
+        if edge[0][i] < 180:
+            edge_one_phi.append(edge[0][i])
+            edge_one_theta.append(edge[1][i])
+        elif edge[0][i] >= 180:
+            edge_two_phi.append(edge[0][i])
+            edge_two_theta.append(edge[1][i])
+
+    edge_one = [edge_one_phi, edge_one_theta]
+    edge_two = [edge_two_phi, edge_two_theta]
+
+    two_edges = [edge_one, edge_two]
+
+    return two_edges
 
 ########################################################################################################################
 

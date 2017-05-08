@@ -10,13 +10,17 @@ import logging
 import os
 import unittest
 import pandas as pd
+import matplotlib as mpl
+import numpy as np
+import matplotlib.pyplot as plt
 
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 from qm_utils.spherical_kmeans_voronoi import read_csv_data, spherical_kmeans_voronoi, \
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
-    assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini
+    assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, arc_coords, \
+    matplotlib_edge_printing
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -81,6 +85,98 @@ class TestSphereicalKmeansVoronoi(unittest.TestCase):
         final_groups = organizing_information_from_spherical_kmeans(data_dict)
         matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status='off')
 
+    def testArcCoords(self):
+        def plot(vert_1, vert_2):
+            mpl.rcParams['legend.fontsize'] = 10
+
+            ax = fig.gca(projection='3d')
+
+            # endpts of the line
+            x_0 = vert_1[0]
+            y_0 = vert_1[1]
+            z_0 = vert_1[2]
+            x_f = vert_2[0]
+            y_f = vert_2[1]
+            z_f = vert_2[2]
+
+            # polar coords to be changed to cartesian
+            raw_coords = arc_coords(vert_1, vert_2)
+
+            print(raw_coords)
+
+            # converts the polar coords to cartesian with r = 1
+            def get_arc_coord(phi, theta):
+                phi = np.deg2rad(phi)
+                theta = np.deg2rad(theta)
+
+                x = np.sin(theta) * np.cos(phi)
+                y = np.sin(theta) * np.sin(phi)
+                z = np.cos(theta)
+
+                return (x, y, z)
+
+            # initializes the cartesian coordinates for the arclength
+            vec_x = [x_0]
+            vec_y = [y_0]
+            vec_z = [z_0]
+
+            # increments over the raw coords to get cartesian coords
+            for i in range(len(raw_coords[0])):
+                arc_coord = get_arc_coord(raw_coords[0][i], raw_coords[1][i])
+
+                # pushes coords into the arclength
+                vec_x.append(arc_coord[0])
+                vec_y.append(arc_coord[1])
+                vec_z.append(arc_coord[2])
+
+                i += 1
+
+            # pushes final coord into the arclength
+            vec_x.append(x_f)
+            vec_y.append(y_f)
+            vec_z.append(z_f)
+
+            # plots line
+            ax.plot([x_0, x_f], [y_0, y_f], [z_0, z_f], label='parametric line')
+            # plots arclength
+            ax.plot(vec_x, vec_y, vec_z, label='arclength')
+            ax.legend()
+            ax.set_xlim([-1,1])
+            ax.set_ylim([-1,1])
+            ax.set_zlim([-1,1])
+
+            # plots wireframe sphere
+            theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
+            THETA, PHI = np.meshgrid(theta, phi)
+            R = 1.0
+            X = R * np.sin(PHI) * np.cos(THETA)
+            Y = R * np.sin(PHI) * np.sin(THETA)
+            Z = R * np.cos(PHI)
+            ax.plot_wireframe(X, Y, Z, color="lightblue")
+
+        # simple case for 2D
+        fig = plt.figure()
+        plot([0, 0, 1], [0, 1, 0])
+        plt.show()
+
+        # edge case for actual data
+        fig = plt.figure()
+        plot([-0.5911, -0.5402, -0.5990], [0.2574, 0.7223, -.6419])
+        plt.show()
+
+        # edge case for actual data
+        fig = plt.figure()
+        plot([0.3666, -0.6591, -0.6567], [0.2574, 0.7223, -.6419])
+        plt.show()
+
+        fig = plt.figure()
+        plot([0.1531, 0.7313, 0.6647], [-0.5932, 0.5122, 0.6210])
+        plot([-0.6509, 0.4637, -0.6011], [0.2574, 0.7223, -0.6419])
+        plot([0.1531, 0.7313, 0.6647], [0.2574, 0.7223, -0.6419])
+        plot([-0.6509, 0.4637, -0.6011], [-0.5932, 0.5122, 0.6210])
+        plt.show()
+
+
 class MainRun(unittest.TestCase):
     def testMainRun(self):
         try:
@@ -97,9 +193,10 @@ class MainRun(unittest.TestCase):
             df.to_csv(out_file_name)
 
             # Plotting Commands #
-            matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status)
-            matplotlib_printing_size_bxyl_lm(data_dict, SUB_DATA_DIR, save_status=save_status)
-            matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status=save_status)
+            # matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status)
+            # matplotlib_printing_size_bxyl_lm(data_dict, SUB_DATA_DIR, save_status=save_status)
+            # matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status=save_status)
+            matplotlib_edge_printing(data_dict, SUB_DATA_DIR, save_status=save_status)
 
             # Testing #
             if number_clusters == 9:
@@ -123,7 +220,7 @@ class MainRun(unittest.TestCase):
             # Comparing the LM structures #
             data_points, phi_raw, theta_raw, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
             assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
-            # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+            matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
             matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
 
             # Grouping the TS #
