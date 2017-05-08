@@ -423,6 +423,56 @@ def pol2cart(vert):
 
 # # # Plotting # # #
 
+# vector of edges
+def vor_edges(data_dict):
+    return get_regions(data_dict)
+
+
+# gets lines of particular region
+def get_vor_sec(verts):
+    pairs = []
+
+    for i in range(len(verts)):
+        # first vertex gets paired to last vertex
+        if i == len(verts) - 1:
+            curr_pair = [verts[i], verts[0]]
+        else:
+            curr_pair = [verts[i], verts[i + 1]]
+
+        pairs.append(curr_pair)
+
+    lines = []
+
+    for i in range(len(pairs)):
+        # vector of phi & theta vectors
+        edge = arc_coords(pairs[i][0], pairs[i][1])
+
+        if(is_end(edge)):
+            two_edges = split_in_two(edge)
+            lines.append(two_edges[0])
+            lines.append(two_edges[1])
+        else:
+            lines.append(edge)
+
+    return lines
+
+
+# gets lines of all regions
+def get_regions(data_dict):
+    lines = []
+
+    for i in range(len(data_dict['regions_sv_labels'])):
+        verts = []
+
+        for j in range(len(data_dict['regions_sv_labels'][i])):
+            verts.append(data_dict['vertices_sv_xyz'][data_dict['regions_sv_labels'][i][j]])
+
+        lines.extend(get_vor_sec(verts))
+
+    return lines
+
+
+# plots 2D and 3D voronoi edges
 def matplotlib_edge_printing(data_dict, dir_, save_status ='no'):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
@@ -461,54 +511,54 @@ def matplotlib_edge_printing(data_dict, dir_, save_status ='no'):
 
 
     #### TEST PURPOSES ####
-    # cano_centers = []
-    #
-    # # converts strings to ints
-    # for i in range(len(phi_cano)):
-    #     phi_cano[i] = float(phi_cano[i])
-    #     theta_cano[i] = float(theta_cano[i])
-    #
-    # # creating cartesian cano_centers
-    # for i in range(len(phi_cano)):
-    #     vert_test = pol2cart([phi_cano[i], theta_cano[i], 1])
-    #     vert_test = np.asarray(vert_test)
-    #
-    #     cano_centers.append(vert_test)
-    #
-    # # Default parameters for spherical voronoi
-    # radius = 1
-    # center = np.array([0, 0, 0])
-    #
-    # cano_centers = np.asarray(cano_centers)
-    #
-    # # Spherical Voronoi for the centers
-    #
-    # sv_test = SphericalVoronoi(cano_centers, radius, center)
-    # sv_test.sort_vertices_of_regions()
-    # test_dict = {}
-    #
-    # test_dict['number_clusters'] = len(phi_cano)
-    # test_dict['vertices_sv_xyz'] = sv_test.vertices
-    # test_dict['regions_sv_labels'] = sv_test.regions
-    #
+    cano_centers = []
+
+    # converts strings to ints
+    for i in range(len(phi_cano)):
+        phi_cano[i] = float(phi_cano[i])
+        theta_cano[i] = float(theta_cano[i])
+
+    # creating cartesian cano_centers
+    for i in range(len(phi_cano)):
+        vert_test = pol2cart([phi_cano[i], theta_cano[i], 1])
+        vert_test = np.asarray(vert_test)
+
+        cano_centers.append(vert_test)
+
+    # Default parameters for spherical voronoi
+    radius = 1
+    center = np.array([0, 0, 0])
+
+    cano_centers = np.asarray(cano_centers)
+
+    # Spherical Voronoi for the centers
+
+    sv_test = SphericalVoronoi(cano_centers, radius, center)
+    sv_test.sort_vertices_of_regions()
+    test_dict = {}
+
+    test_dict['number_clusters'] = len(phi_cano)
+    test_dict['vertices_sv_xyz'] = sv_test.vertices
+    test_dict['regions_sv_labels'] = sv_test.regions
+
+    plot_regions(ax_3d, ax, test_dict)
+
+    #### TEST PURPOSES ####
+
     # plots wireframe sphere
-    # theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
-    # THETA, PHI = np.meshgrid(theta, phi)
-    # R = 1.0
-    # X = R * np.sin(PHI) * np.cos(THETA)
-    # Y = R * np.sin(PHI) * np.sin(THETA)
-    # Z = R * np.cos(PHI)
-    # ax_3d.plot_wireframe(X, Y, Z, color="lightblue")
-    #
-    # # settings for 3d graph
-    # ax_3d.legend()
-    # ax_3d.set_xlim([-1, 1])
-    # ax_3d.set_ylim([-1, 1])
-    # ax_3d.set_zlim([-1, 1])
-    #
-    # plot_regions(ax_3d, ax, test_dict)
-    #
-    # #### TEST PURPOSES ####
+    theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
+    THETA, PHI = np.meshgrid(theta, phi)
+    R = 1.0
+    X = R * np.sin(PHI) * np.cos(THETA)
+    Y = R * np.sin(PHI) * np.sin(THETA)
+    Z = R * np.cos(PHI)
+    ax_3d.plot_wireframe(X, Y, Z, color="lightblue")
+
+    # settings for 3d graph
+    ax_3d.legend()
+    ax_3d.set_xlim([-1, 1])
+    ax_3d.set_ylim([-1, 1])
+    ax_3d.set_zlim([-1, 1])
 
     plot_regions(ax_3d, ax, data_dict)
 
@@ -1116,12 +1166,11 @@ def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, vorono
     # for key, value in group_dict.items():
     raw_data = ax.scatter(phi_ts_lm, theta_ts_lm, s=60, c='cyan', marker='o', edgecolor='face')
     kmeans = ax.scatter(phi_values, theta_values, s=60, c='red', marker='h', edgecolor='face')
-    voronoi = ax.scatter(phi_sv, theta_sv, s=60, c='green', marker='o', edgecolor='face')
-#TODO: Justin look here...
+    #voronoi = ax.scatter(phi_sv, theta_sv, s=60, c='green', marker='o', edgecolor='face')
+    voronoi_edges = vor_edges(voronoi_info)
 
-    """
-    voronoi_edges = ax.plot(x,y....)
-    """
+    for i in range(len(voronoi_edges)):
+        voronoi = ax.plot(voronoi_edges[i][0], voronoi_edges[i][1], color='green')
 
     for key, key_val in groups.items():
         phi_group_val = list(map(float, key_val['phi']))

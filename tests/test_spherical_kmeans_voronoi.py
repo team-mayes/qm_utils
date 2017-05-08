@@ -196,7 +196,7 @@ class MainRun(unittest.TestCase):
             # matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status)
             # matplotlib_printing_size_bxyl_lm(data_dict, SUB_DATA_DIR, save_status=save_status)
             # matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status=save_status)
-            matplotlib_edge_printing(data_dict, SUB_DATA_DIR, save_status=save_status)
+            matplotlib_edge_printing(data_dict, SUB_DATA_DIR, save_status='no')
 
             # Testing #
             if number_clusters == 9:
@@ -214,7 +214,7 @@ class MainRun(unittest.TestCase):
 
             # Input Parameters #
             number_cluster = 25
-            save_status = True
+            save_status = False
             hsp_lm_dict = pd.read_csv(HSP_LM_DF_GOOD)
         finally:
             # Comparing the LM structures #
