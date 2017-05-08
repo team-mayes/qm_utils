@@ -15,7 +15,8 @@ from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, captur
     write_csv, list_to_dict, read_csv_to_dict
 from qm_utils.spherical_kmeans_voronoi import read_csv_data, spherical_kmeans_voronoi, \
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
-    organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS
+    organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
+    assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -95,29 +96,43 @@ class MainRun(unittest.TestCase):
             out_file_name = create_out_fname('a_HSP_lm_reference_groups', base_dir=SUB_DATA_DIR, ext='.csv')
             df.to_csv(out_file_name)
 
-            # Testing #
-            self.assertFalse(diff_lines(out_file_name, HSP_LM_DF_GOOD))
-            silent_remove(out_file_name)
-
             # Plotting Commands #
             matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status)
             matplotlib_printing_size_bxyl_lm(data_dict, SUB_DATA_DIR, save_status=save_status)
             matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status=save_status)
-            print('\n Done \n ')
-            pass
+
+            # Testing #
+            if number_clusters == 9:
+                self.assertFalse(diff_lines(out_file_name, HSP_LM_DF_GOOD))
+                silent_remove(out_file_name)
+            else:
+                silent_remove(out_file_name)
+                pass
+
 
     def testMainRunTS(self):
         try:
+            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            data_dict = spherical_kmeans_voronoi(9, data_points, phi_raw, theta_raw, energy)
+
             # Input Parameters #
             number_cluster = 25
-            save_status = 'yes'
+            save_status = True
             hsp_lm_dict = pd.read_csv(HSP_LM_DF_GOOD)
-
         finally:
-            # Running #
-            read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
+            # Comparing the LM structures #
+            data_points, phi_raw, theta_raw, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
+            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
+            # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+            matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+
+            # Grouping the TS #
+            data_dict_ts = spherical_kmeans_voronoi(number_cluster, data_points, phi_raw, theta_raw, energy)
+
+            pass
+
         #     data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_TRANS_STA, SUB_DATA_DIR)
-        #     data_dict = spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, energy)
+
         #     final_ts_groups = organizing_information_from_spherical_kmeans(data_dict)
         #     matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status, voronoi_status='no', ts_status='yes')
         #     print('\n Done \n ')
