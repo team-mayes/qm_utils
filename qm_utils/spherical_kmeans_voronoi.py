@@ -327,12 +327,11 @@ def boltzmann_weighting_mini(energies):
 
 # # # Justin's Functions # # #
 
-# REQUIRES: arclength < PI*radius
-# MODIFIES: nothing
-# EFFECTS: returns a vector of phi & theta values for the voronoi edges
 def arc_coords(vert_1, vert_2):
     """
-
+    REQUIRES: arclength < PI*radius
+    MODIFIES: nothing
+    EFFECTS: returns a vector of phi & theta values for the voronoi edges
     :param vert_1: one vertex of an edge
     :param vert_2: other vertex of an edge
     :return: returns a vector of phi & theta values for the voronoi edges
@@ -404,8 +403,13 @@ def arc_coords(vert_1, vert_2):
 
     return arc_coords
 
-# converts polar coords to cartesian
+
 def pol2cart(vert):
+    """
+    converts polar coords to cartesian
+    :param vert:
+    :return:
+    """
     phi = np.deg2rad(vert[0])
     theta = np.deg2rad(vert[1])
     r = vert[2]
@@ -419,8 +423,7 @@ def pol2cart(vert):
 
 # # # Plotting # # #
 
-
-def matplotlib_edge_printing(data_dict, dir, save_status = 'no'):
+def matplotlib_edge_printing(data_dict, dir_, save_status ='no'):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
     theta_raw = data_dict['theta_raw']
@@ -430,7 +433,7 @@ def matplotlib_edge_printing(data_dict, dir, save_status = 'no'):
     theta_vertices = data_dict['theta_sv_vertices']
 
     # Canonical Designations
-    pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir)
+    pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir_)
 
     fig, ax = plt.subplots(facecolor='white')
     fig_3d = plt.figure()
@@ -517,7 +520,7 @@ def matplotlib_edge_printing(data_dict, dir, save_status = 'no'):
     leg.get_frame().set_linewidth(0.0)
 
     if save_status != 'no':
-        filename = create_out_fname('bxyl-k' + str(data_dict['number_clusters']) + '-normal.png', base_dir=dir)
+        filename = create_out_fname('bxyl-k' + str(data_dict['number_clusters']) + '-normal.png', base_dir=dir_)
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
         plt.show()
@@ -525,10 +528,9 @@ def matplotlib_edge_printing(data_dict, dir, save_status = 'no'):
     return
 
 
-# helper function for plotting a single voronoi section (input is the vertices of the section)
 def plot_vor_sec(ax_3d, ax, verts):
     """
-
+    helper function for plotting a single voronoi section (input is the vertices of the section)
     :param ax: plot being added to
     :param verts: all vertices of the voronoi section
     :return: nothing
@@ -561,8 +563,15 @@ def plot_vor_sec(ax_3d, ax, verts):
 
     return
 
-# plots all voronoi sections
+
 def plot_regions(ax_3d, ax, data_dict):
+    """
+    plots all voronoi sections
+    :param ax_3d:
+    :param ax:
+    :param data_dict:
+    :return:
+    """
     for i in range(len(data_dict['regions_sv_labels'])):
         verts = []
 
@@ -573,8 +582,15 @@ def plot_regions(ax_3d, ax, data_dict):
 
     return
 
-# plots lines individually on a sphere
+
 def plot_3d(ax_3d, vert_1, vert_2):
+    """
+    plots lines individually on a sphere
+    :param ax_3d:
+    :param vert_1:
+    :param vert_2:
+    :return:
+    """
     mpl.rcParams['legend.fontsize'] = 10
 
     # endpts of the line
@@ -625,9 +641,17 @@ def plot_3d(ax_3d, vert_1, vert_2):
     # plots arclength
     ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color='green')
 
-    # helper function for plot_vor_sec
-# returns a bool for if a coord pair is not already in the set of coord pairs
+
 def not_in_pairs(pairs, curr_pair):
+    """
+    helper function for plot_vor_sec
+    returns a bool for if a coord pair is not already in the set of coord pairs
+    :param pairs:
+    :param curr_pair:
+    :return:
+    """
+
+
     for i in range(len(pairs)):
         if curr_pair == pairs[i] or \
             (curr_pair[0] == pairs[i][1] and curr_pair[1] == pairs[i][0]):
@@ -636,9 +660,14 @@ def not_in_pairs(pairs, curr_pair):
 
     return True
 
-# helper function to determine if an edge goes across the end
-# (i.e - crosses from 0 to 360)
+
 def is_end(edge):
+    """
+    helper function to determine if an edge goes across the end
+    (i.e - crosses from 0 to 360)
+    :param edge:
+    :return:
+    """
     has_0 = False
     has_360 = False
 
@@ -650,11 +679,10 @@ def is_end(edge):
 
     return has_0 and has_360
 
-# helper function to split an edge into two based on
-# the 0 / 360 degree split
+
 def split_in_two(edge):
     """
-
+    helper function to split an edge into two based on the 0 / 360 degree split
     :param edge: [[phi], [theta]]
     :return: two edges
     """
