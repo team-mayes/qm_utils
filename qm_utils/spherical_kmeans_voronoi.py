@@ -1054,7 +1054,7 @@ def matplotlib_printing_ts_local_min(groups, phi_ts_lm, theta_ts_lm, voronoi_inf
 
 def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, voronoi_info, dir_, save_status=False):
 
-    #TODO: add in the edge's form Justin work to complete the image...
+    #TODO: add in the edge's from Justin work to complete the image...
 
     phi_sv = voronoi_info['phi_sv_vertices']
     theta_sv = voronoi_info['theta_sv_vertices']
@@ -1089,7 +1089,11 @@ def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, vorono
     raw_data = ax.scatter(phi_ts_lm, theta_ts_lm, s=60, c='cyan', marker='o', edgecolor='face')
     kmeans = ax.scatter(phi_values, theta_values, s=60, c='red', marker='h', edgecolor='face')
     voronoi = ax.scatter(phi_sv, theta_sv, s=60, c='green', marker='o', edgecolor='face')
+#TODO: Justin look here...
 
+    """
+    voronoi_edges = ax.plot(x,y....)
+    """
 
     for key, key_val in groups.items():
         phi_group_val = list(map(float, key_val['phi']))
