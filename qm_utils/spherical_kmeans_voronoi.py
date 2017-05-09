@@ -51,6 +51,271 @@ TLM1 = 'theta_lm1'
 PLM2 = 'phi_lm2'
 TLM2 = 'theta_lm2'
 
+# # # Helper Functions # # #
+# converts a vertex from polar to cartesian
+def pol2cart(vert):
+    """
+    converts polar coords to cartesian
+    :param vert:
+    :return:
+    """
+    phi = np.deg2rad(vert[0])
+    theta = np.deg2rad(vert[1])
+    r = 1
+
+    x = r * np.sin(theta) * np.cos(phi)
+    y = r * np.sin(theta) * np.sin(phi)
+    z = r * np.cos(theta)
+
+    return [x, y, z]
+
+# converts a vertex from cartesian to polar
+def cart2pol(vert):
+    return
+
+# plots a line between two points given in polar coordinates
+def plot_line(ax, vert_1, vert_2):
+    vert_1 = pol2cart(vert_1)
+    vert_2 = pol2cart(vert_2)
+
+    line = get_pol_coords(vert_1, vert_2)
+
+    ax.plot(line[0], line[1])
+
+    return
+
+# # # Helper Functions # # #
+
+# # # Classes # # #
+
+class Local_Minima():
+    def __init__(self, number_clusters_in, data_points_in, phi_raw_in, theta_raw_in, energy):
+        self.sv_kmeans_dict = {}
+        self.groups_dict = {}
+
+        self.populate_sv_kmeans_dict(number_clusters_in, data_points_in, phi_raw_in, theta_raw_in, energy)
+        self.populate_groups_dict()
+
+    def populate_sv_kmeans_dict(self, number_clusters, data_points, phi_raw, theta_raw, energy):
+        # Generating the important lists
+        phi_centers = []
+        theta_centers = []
+
+        self.sv_kmeans_dict['phi_raw'] = phi_raw
+        self.sv_kmeans_dict['theta_raw'] = theta_raw
+        if energy is not None:
+            self.sv_kmeans_dict['energy'] = energy
+
+        # Uses packages to calculate the k-means spherical centers
+        skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
+        skm.fit(data_points)
+        skm_centers = skm.cluster_centers_
+        self.sv_kmeans_dict['number_clusters'] = number_clusters
+
+        self.sv_kmeans_dict['skm_centers_xyz'] = skm_centers
+
+        # Converting the skm centers to phi and theta coordinates
+        for center_coord in skm_centers:
+            r = np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2 + center_coord[2] ** 2)
+            theta_new = np.rad2deg(
+                np.arctan2(np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2), center_coord[2]))
+            phi_new = np.rad2deg(np.arctan2(center_coord[1], center_coord[0]))
+            if phi_new < 0:
+                phi_new += 360
+
+            phi_centers.append(round(phi_new, 1))
+            theta_centers.append(round(theta_new, 1))
+
+        self.sv_kmeans_dict['phi_skm_centers'] = phi_centers
+        self.sv_kmeans_dict['theta_skm_centers'] = theta_centers
+        self.sv_kmeans_dict['labels_skm_centers'] = skm.labels_
+
+        # Default parameters for spherical voronoi
+        radius = 1
+        center = np.array([0, 0, 0])
+
+        # Spherical Voronoi for the centers
+        sv = SphericalVoronoi(skm_centers, radius, center)
+        sv.sort_vertices_of_regions()
+
+        # Generating the important base datasets for spherical voronoi
+        r_vertices = []
+        phi_vertices = []
+        theta_vertices = []
+
+        # Computing the Spherical Voronoi vertices to spherical coordinates
+        for value in sv.vertices:
+            r = np.sqrt(value[0] ** 2 + value[1] ** 2 + value[2] ** 2)
+            theta_new = np.rad2deg(np.arctan2(np.sqrt(value[0] ** 2 + value[1] ** 2), value[2]))
+            phi_new = np.rad2deg(np.arctan2(value[1], value[0]))
+            if phi_new < 0:
+                phi_new += 360
+
+            r_vertices.append(round(r, 1))
+            phi_vertices.append(round(phi_new, 1))
+            theta_vertices.append(round(theta_new, 1))
+
+        self.sv_kmeans_dict['phi_sv_vertices'] = phi_vertices
+        self.sv_kmeans_dict['theta_sv_vertices'] = theta_vertices
+        self.sv_kmeans_dict['vertices_sv_xyz'] = sv.vertices
+        self.sv_kmeans_dict['regions_sv_labels'] = sv.regions
+
+        return
+
+    def populate_groups_dict(self):
+        temp_groups = {}
+        groups = {}
+
+        for g in range(0, self.sv_kmeans_dict['number_clusters']):
+            temp_dict = {}
+            temp_dict['assignment_key'] = g
+            temp_groups[str('temp_group_' + str(g))] = temp_dict
+
+        for key, key_value in temp_groups.items():
+            temp_dict = {}
+            energies = []
+            theta = []
+            phi = []
+            mean_phi = None
+            mean_theta = None
+            for i in range(0, len(self.sv_kmeans_dict['labels_skm_centers'])):
+                if key_value['assignment_key'] == self.sv_kmeans_dict['labels_skm_centers'][i]:
+                    if len(self.sv_kmeans_dict['energy']) != 0:
+                        energies.append(self.sv_kmeans_dict['energy'][i])
+                    theta.append(self.sv_kmeans_dict['theta_raw'][i])
+                    phi.append(self.sv_kmeans_dict['phi_raw'][i])
+                    mean_phi = self.sv_kmeans_dict['phi_skm_centers'][key_value['assignment_key']]
+                    mean_theta = self.sv_kmeans_dict['theta_skm_centers'][key_value['assignment_key']]
+
+            boltzman_weighted_energies = boltzmann_weighting_mini(energies)
+
+            temp_dict['energies'] = energies
+            temp_dict['mean_phi'] = str(mean_phi)
+            temp_dict['mean_theta'] = str(mean_theta)
+            temp_dict['phi'] = phi
+            temp_dict['theta'] = theta
+            temp_dict['weighted_gibbs'] = boltzman_weighted_energies
+
+            groups[key] = temp_dict
+
+        # dict for the class info
+        self.groups_dict = correcting_group_order(groups)
+
+        return
+
+class Transition_States():
+    def __init__(self, uniq_ts_paths_in):
+        # groups by the unique transition state paths
+        self.uniq_ts_paths = uniq_ts_paths_in
+
+        # makes average path for each unique transition state pathway
+        for ts_group in (self.uniq_ts_paths).values():
+            self.make_avg_path(ts_group)
+
+    # makes average path for given unique transition state pathway (described by ts_group)
+    def make_avg_path(self, ts_group):
+        wt_phi = 0
+        wt_theta = 0
+        # weighted Gibb's free energy
+        wt_gibbs = 0
+
+        ind_boltz = []
+        total_boltz = 0
+
+        # finding Boltzmann weight
+        for i in range(len(ts_group['origin_groups'])):
+            e_val = ts_group['origin_groups'][i]['energy (A.U.)']
+            component = math.exp(-float(e_val) / (K_B * DEFAULT_TEMPERATURE))
+            ind_boltz.append(component)
+            total_boltz += component
+
+        for i in range(len(ts_group['origin_groups'])):
+            wt_gibbs += (ind_boltz[i] / total_boltz) * ts_group['origin_groups'][i]['energy (A.U.)']
+            wt_phi += (ind_boltz[i] / total_boltz) * ts_group['raw_phi'][i]
+            wt_theta += (ind_boltz[i] / total_boltz) * ts_group['raw_theta'][i]
+
+        self.uniq_ts_paths['weighted_gibbs'] = round(wt_gibbs, 3)
+        self.uniq_ts_paths['phi'] = round(wt_phi, 3)
+        self.uniq_ts_paths['theta'] = round(wt_theta, 3)
+
+        return
+
+    # plots desired transition state pathways
+    def plot_ts_group(self, ts_group, ax):
+        """
+        
+        :param ts_group: transition state group name
+        :param ax: plot being added to
+        :return: 
+        """
+
+        for key in self.uniq_ts_paths:
+            if self.uniq_ts_paths[key]['ts_group'] == ts_group:
+                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm1_vert'])
+                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm2_vert'])
+
+        return
+
+    # plots desired local minimum group pathways
+    def plot_loc_min_group(self, ax, lm1, lm2):
+        """
+        
+        :param ax: plot being added to
+        :param lm1: vertex of a local min
+        :param lm2: vertex of the other local min
+        :return: 
+        """
+        for key in self.uniq_ts_paths:
+            # if the key contains the local min group, plot it
+            if (self.uniq_ts_paths[key]['lm1'] == lm1 and self.uniq_ts_paths[key]['lm2'] == lm2)\
+                or (self.uniq_ts_paths[key]['lm1'] == lm2 and self.uniq_ts_paths[key]['lm2'] == lm1):
+
+                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm1_vert'])
+                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm2_vert'])
+
+        return
+
+    # plots desired unqie transition state pathway
+    def plot_uniq_ts_path(self, ax, uniq_ts_path):
+        """
+        
+        :param ax: plot being added to
+        :param uniq_ts_path: name of uniq_ts_path
+        :return: 
+        """
+        # particular unique transition state pathway
+        path = self.uniq_ts_paths[uniq_ts_path]
+
+        for i in range(len(path['origin_groups'])):
+            plot_line(ax, path['raw_ts_verts'][i], path['lm1_vert'])
+            plot_line(ax, path['raw_ts_verts'][i], path['lm2_vert'])
+
+        return
+
+    # plots all pathways
+    def plot_all(self, ax):
+        for key in self.uniq_ts_paths:
+            self.plot_uniq_ts_path(ax, key)
+
+        return
+
+
+class Voronoi_plotting(Local_Minima):
+    def __init__(self):
+        # list of vertices for region
+        self.sv_region_indices = []
+        # list of sv_region_indices
+        self.sv_regions = []
+
+# plots modify anything?
+class Plotting():
+    def __init__(self, groups_in):
+        # list of groups
+        self.groups = groups_in
+
+
+# # # Class # # #
+
 
 ########################################################################################################################
 
@@ -233,7 +498,7 @@ def organizing_information_from_spherical_kmeans(data_dict):
 
     return final_groups
 
-
+# helper fxn for organizing_information_from_spherical_kmeans(data_dict)
 def correcting_group_order(groups):
     """
     Organizes in a logical manner
@@ -302,7 +567,7 @@ def correcting_group_order(groups):
 
     return final_dict
 
-
+# helper fxn for organizing_information_from_spherical_kmeans(data_dict)
 def boltzmann_weighting_mini(energies):
     """
     Performs boltzmann weighting on the groups
@@ -328,11 +593,12 @@ def boltzmann_weighting_mini(energies):
 
 # # # Justin's Functions # # #
 
-def arc_coords(vert_1, vert_2):
+def get_pol_coords(vert_1, vert_2):
     """
     REQUIRES: arclength < PI*radius
     MODIFIES: nothing
     EFFECTS: returns a vector of phi & theta values for the voronoi edges
+    (cartesian coord inputs)
     :param vert_1: one vertex of an edge
     :param vert_2: other vertex of an edge
     :return: returns a vector of phi & theta values for the voronoi edges
@@ -404,24 +670,6 @@ def arc_coords(vert_1, vert_2):
 
     return arc_coords
 
-
-def pol2cart(vert):
-    """
-    converts polar coords to cartesian
-    :param vert:
-    :return:
-    """
-    phi = np.deg2rad(vert[0])
-    theta = np.deg2rad(vert[1])
-    r = vert[2]
-
-    x = r * np.sin(theta) * np.cos(phi)
-    y = r * np.sin(theta) * np.sin(phi)
-    z = r * np.cos(theta)
-
-    return [x, y, z]
-
-
 # # # Plotting # # #
 
 # vector of edges
@@ -446,7 +694,7 @@ def get_vor_sec(verts):
 
     for i in range(len(pairs)):
         # vector of phi & theta vectors
-        edge = arc_coords(pairs[i][0], pairs[i][1])
+        edge = get_pol_coords(pairs[i][0], pairs[i][1])
 
         if(is_end(edge)):
             two_edges = split_in_two(edge)
@@ -600,7 +848,7 @@ def plot_vor_sec(ax_3d, ax, verts):
 
     for i in range(len(pairs)):
         # vector of phi & theta vectors
-        edge = arc_coords(pairs[i][0], pairs[i][1])
+        edge = get_pol_coords(pairs[i][0], pairs[i][1])
 
         plot_3d(ax_3d, pairs[i][0], pairs[i][1])
 
@@ -653,7 +901,7 @@ def plot_3d(ax_3d, vert_1, vert_2):
     z_f = vert_2[2]
 
     # polar coords to be changed to cartesian
-    raw_coords = arc_coords(vert_1, vert_2)
+    raw_coords = get_pol_coords(vert_1, vert_2)
 
     # converts the polar coords to cartesian with r = 1
     def get_arc_coord(phi, theta):
@@ -867,16 +1115,30 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
     return assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm
 
 
+def return_lowest_value(value1, value2):
+
+    if float(value1) < float(value2):
+        lowest_val = value1
+        highest_val = value2
+    elif float(value2) < float(value1):
+        lowest_val = value2
+        highest_val = value1
+    elif float(value1) == float(value2):
+        lowest_val = value1
+        highest_val = value2
+
+    return lowest_val, highest_val
+
+
 def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_raw):
 
     data_dict_ts = spherical_kmeans_voronoi(number_cluster, data_points, phi_raw, theta_raw)
 
-    for i in range(0, len(data_dict_ts['labels_skm_centers'])):
+    for i in range(len(data_dict_ts['labels_skm_centers'])):
         dict_ts[i]['assign_ts_origin'] = str('group_'+ str(data_dict_ts['labels_skm_centers'][i]).rjust(2, '0'))
 
     organized_dict = []
     massive_dict = {}
-
 
     for k in range(0, data_dict_ts['number_clusters']):
         temp_list_match = []
@@ -886,21 +1148,28 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
                 temp_list_match.append(row)
 
         if len(temp_list_match) is 1:
-            temp_list_match[0]['assigned_ts'] = group_id + '_00'
-            organized_dict.append(temp_list_match[0])
-            massive_dict[group_id + '_00'] = temp_list_match
+            origin_list = []
+            low, high = return_lowest_value(temp_list_match[0]['assign_lm1'].split("_")[1], temp_list_match[0]['assign_lm2'].split("_")[1])
+            origin_list.append(temp_list_match[0])
+            inner_dict['origin_groups'] = origin_list
+            massive_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
         else:
             pathway_align_dict = {}
             for s in range(0, len(temp_list_match)):
                 if s is 0:
-                    pathway_align_dict[group_id + '_' + str(s).rjust(2, '0')] = temp_list_match[s]
+                    origin_list = []
+                    inner_dict = {}
+                    low, high = return_lowest_value(temp_list_match[s]['assign_lm1'].split("_")[1], temp_list_match[s]['assign_lm2'].split("_")[1])
+                    origin_list.append(temp_list_match[s])
+                    inner_dict['origin_groups'] = origin_list
+                    pathway_align_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
                 else:
-                    lm1_assign = temp_list_match[s]['assign_lm1']
-                    lm2_assign = temp_list_match[s]['assign_lm2']
+                    lm1_assign = temp_list_match[s]['assign_lm1'].split('_')[1]
+                    lm2_assign = temp_list_match[s]['assign_lm2'].split('_')[1]
                     assign_status = False
                     for key, key_val in pathway_align_dict.items():
-                        pathway_lm1 = key_val['assign_lm1']
-                        pathway_lm2 = key_val['assign_lm2']
+                        pathway_lm1 = key.split('-')[1].split('_')[0]
+                        pathway_lm2 = key.split('-')[1].split('_')[1]
                         if pathway_lm1 == lm1_assign and pathway_lm2 == lm2_assign:
                             assign_status = True
                             break
@@ -911,14 +1180,26 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
                             assign_status = False
 
                     if assign_status is False:
-                        pathway_align_dict[group_id + '_' + str(len(pathway_align_dict.keys())).rjust(2, '0')] = temp_list_match[s]
-                        print('\nNO MATCH HERE')
-                        print('{}, {} \n {},{}\n'.format(lm1_assign, lm2_assign, pathway_lm1, pathway_lm2))
+                        origin_list = []
+                        inner_dict = {}
+                        low, high = return_lowest_value(temp_list_match[s]['assign_lm1'].split("_")[1], temp_list_match[s]['assign_lm2'].split("_")[1])
+                        origin_list.append(temp_list_match[s])
+                        inner_dict['origin_groups'] = origin_list
+                        pathway_align_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
                     elif assign_status is True:
-                        print('\nThere was a successful match!')
+                        pathway_align_dict[key]['origin_groups'].append(temp_list_match[s])
 
+            for key_, key_val_ in pathway_align_dict.items():
+                massive_dict[key_] = key_val_
 
+    count = 0
 
+    for hi, himom in massive_dict.items():
+        count += len(himom['origin_groups'])
+
+        print(len(himom['origin_groups']), himom['origin_groups'])
+
+    print(count)
 
     return data_dict_ts
 
