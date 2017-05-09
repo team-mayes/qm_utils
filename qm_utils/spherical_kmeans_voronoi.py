@@ -877,7 +877,6 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
     organized_dict = []
     massive_dict = {}
 
-
     for k in range(0, data_dict_ts['number_clusters']):
         temp_list_match = []
         group_id = 'group_'+ str(k).rjust(2, '0')
@@ -886,21 +885,28 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
                 temp_list_match.append(row)
 
         if len(temp_list_match) is 1:
-            temp_list_match[0]['assigned_ts'] = group_id + '_00'
-            organized_dict.append(temp_list_match[0])
-            massive_dict[group_id + '_00'] = temp_list_match
+            origin_list = []
+            low, high = return_lowest_value(temp_list_match[0]['assign_lm1'].split("_")[1], temp_list_match[0]['assign_lm2'].split("_")[1])
+            origin_list.append(temp_list_match[0])
+            inner_dict['origin_groups'] = origin_list
+            massive_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
         else:
             pathway_align_dict = {}
             for s in range(0, len(temp_list_match)):
                 if s is 0:
-                    pathway_align_dict[group_id + '_' + str(s).rjust(2, '0')] = temp_list_match[s]
+                    origin_list = []
+                    inner_dict = {}
+                    low, high = return_lowest_value(temp_list_match[s]['assign_lm1'].split("_")[1], temp_list_match[s]['assign_lm2'].split("_")[1])
+                    origin_list.append(temp_list_match[s])
+                    inner_dict['origin_groups'] = origin_list
+                    pathway_align_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
                 else:
-                    lm1_assign = temp_list_match[s]['assign_lm1']
-                    lm2_assign = temp_list_match[s]['assign_lm2']
+                    lm1_assign = temp_list_match[s]['assign_lm1'].split('_')[1]
+                    lm2_assign = temp_list_match[s]['assign_lm2'].split('_')[1]
                     assign_status = False
                     for key, key_val in pathway_align_dict.items():
-                        pathway_lm1 = key_val['assign_lm1']
-                        pathway_lm2 = key_val['assign_lm2']
+                        pathway_lm1 = key.split('-')[1].split('_')[0]
+                        pathway_lm2 = key.split('-')[1].split('_')[1]
                         if pathway_lm1 == lm1_assign and pathway_lm2 == lm2_assign:
                             assign_status = True
                             break
@@ -911,16 +917,56 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
                             assign_status = False
 
                     if assign_status is False:
-                        pathway_align_dict[group_id + '_' + str(len(pathway_align_dict.keys())).rjust(2, '0')] = temp_list_match[s]
-                        print('\nNO MATCH HERE')
-                        print('{}, {} \n {},{}\n'.format(lm1_assign, lm2_assign, pathway_lm1, pathway_lm2))
+                        origin_list = []
+                        inner_dict = {}
+                        low, high = return_lowest_value(temp_list_match[s]['assign_lm1'].split("_")[1], temp_list_match[s]['assign_lm2'].split("_")[1])
+                        origin_list.append(temp_list_match[s])
+                        inner_dict['origin_groups'] = origin_list
+                        pathway_align_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
                     elif assign_status is True:
-                        print('\nThere was a successful match!')
+                        pathway_align_dict[key]['origin_groups'].append(temp_list_match[s])
+
+            for key_, key_val_ in pathway_align_dict.items():
+                massive_dict[key_] = key_val_
 
 
 
+    count = 0
+
+    list_puckers = []
+
+    for hi, himom in massive_dict.items():
+        for row in himom['origin_groups']:
+            list_puckers.append(row['File Name'])
+
+
+    for row_check in dict_ts:
+        status_found = False
+        for file in list_puckers:
+            if file == row_check['File Name']:
+                status_found = True
+                break
+
+        if status_found is False:
+            print('Missing: {}'.format(row_check['File Name']))
 
     return data_dict_ts
+
+
+def return_lowest_value(value1, value2):
+
+    if float(value1) < float(value2):
+        lowest_val = value1
+        highest_val = value2
+    elif float(value2) < float(value1):
+        lowest_val = value2
+        highest_val = value1
+    elif float(value1) == float(value2):
+        lowest_val = value1
+        highest_val = value2
+
+    return lowest_val, highest_val
+
 
 ########################################################################################################################
 
