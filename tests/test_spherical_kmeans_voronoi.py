@@ -13,6 +13,7 @@ import pandas as pd
 import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.spatial import SphericalVoronoi
 
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
@@ -20,7 +21,7 @@ from qm_utils.spherical_kmeans_voronoi import read_csv_data, spherical_kmeans_vo
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, arc_coords, \
-    matplotlib_edge_printing, sorting_TS_into_groups
+    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -177,6 +178,47 @@ class TestSphereicalKmeansVoronoi(unittest.TestCase):
         plt.show()
 
 
+    # def testCanonicalDesignationCenters(self):
+    #
+    #     # Canonical Designations
+    #     pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir_)
+    #
+    #     #### TEST PURPOSES ####
+    #     cano_centers = []
+    #
+    #     # converts strings to ints
+    #     for i in range(len(phi_cano)):
+    #         phi_cano[i] = float(phi_cano[i])
+    #         theta_cano[i] = float(theta_cano[i])
+    #
+    #     # creating cartesian cano_centers
+    #     for i in range(len(phi_cano)):
+    #         vert_test = pol2cart([phi_cano[i], theta_cano[i], 1])
+    #         vert_test = np.asarray(vert_test)
+    #
+    #         cano_centers.append(vert_test)
+    #
+    #     # Default parameters for spherical voronoi
+    #     radius = 1
+    #     center = np.array([0, 0, 0])
+    #
+    #     cano_centers = np.asarray(cano_centers)
+    #
+    #     # Spherical Voronoi for the centers
+    #
+    #     sv_test = SphericalVoronoi(cano_centers, radius, center)
+    #     sv_test.sort_vertices_of_regions()
+    #     test_dict = {}
+    #
+    #     test_dict['number_clusters'] = len(phi_cano)
+    #     test_dict['vertices_sv_xyz'] = sv_test.vertices
+    #     test_dict['regions_sv_labels'] = sv_test.regions
+    #
+    #     plot_regions(ax_3d, ax, test_dict)
+    #
+    #     #### TEST PURPOSES ####
+
+
 class MainRun(unittest.TestCase):
     def testMainRun(self):
         try:
@@ -225,7 +267,7 @@ class MainRun(unittest.TestCase):
 
             # Grouping the TS #
             sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
-            matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
+            # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
             pass
 

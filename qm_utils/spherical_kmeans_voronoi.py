@@ -912,8 +912,11 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
 
                     if assign_status is False:
                         pathway_align_dict[group_id + '_' + str(len(pathway_align_dict.keys())).rjust(2, '0')] = temp_list_match[s]
+                        print('\nNO MATCH HERE')
+                        print('{}, {} \n {},{}\n'.format(lm1_assign, lm2_assign, pathway_lm1, pathway_lm2))
                     elif assign_status is True:
-                        print('There was a successful match!')
+                        print('\nThere was a successful match!')
+
 
 
 
@@ -1188,8 +1191,6 @@ def matplotlib_printing_ts_local_min(groups, phi_ts_lm, theta_ts_lm, voronoi_inf
 
 def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, voronoi_info, dir_, save_status=False):
 
-    #TODO: add in the edge's from Justin work to complete the image...
-
     phi_sv = voronoi_info['phi_sv_vertices']
     theta_sv = voronoi_info['theta_sv_vertices']
 
@@ -1223,12 +1224,13 @@ def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, vorono
     raw_data = ax.scatter(phi_ts_lm, theta_ts_lm, s=60, c='cyan', marker='o', edgecolor='face')
     kmeans = ax.scatter(phi_values, theta_values, s=60, c='red', marker='h', edgecolor='face')
     voronoi = ax.scatter(phi_sv, theta_sv, s=60, c='green', marker='o', edgecolor='face')
+
+    # connecting the dots between the voronoi edges
     voronoi_edges = vor_edges(voronoi_info)
-
     green_line = mlines.Line2D([], [], color='green', label='voronoi tessellation')
-
     for i in range(len(voronoi_edges)):
         voronoi_lines = ax.plot(voronoi_edges[i][0], voronoi_edges[i][1], color='green')
+
 
     for key, key_val in groups.items():
         phi_group_val = list(map(float, key_val['phi']))
