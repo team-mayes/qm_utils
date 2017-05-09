@@ -114,7 +114,7 @@ def read_csv_canonical_designations(filename, dir_):
     return pucker, phi_cano, theta_cano
 
 
-def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, energy):
+def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, energy=None):
     """
     Performs the spherical kmeans and voronoi for the data set
     :param number_clusters: number of clusters that are necessary here
@@ -126,13 +126,13 @@ def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, e
     phi_centers = []
     theta_centers = []
 
-    #
     ind_dict['phi_raw'] = phi_raw
     ind_dict['theta_raw'] = theta_raw
-    ind_dict['energy'] = energy
+    if energy is not None:
+        ind_dict['energy'] = energy
 
     # Uses packages to calculate the k-means spherical centers
-    skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=20)
+    skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
     skm.fit(data_points)
     skm_centers = skm.cluster_centers_
     ind_dict['number_clusters'] = number_clusters
@@ -816,13 +816,63 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
     return assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm
 
 
+def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_raw):
 
+    data_dict_ts = spherical_kmeans_voronoi(number_cluster, data_points, phi_raw, theta_raw)
+
+    for i in range(0, len(data_dict_ts['labels_skm_centers'])):
+        dict_ts[i]['assign_ts_origin'] = str('group_'+ str(data_dict_ts['labels_skm_centers'][i]).rjust(2, '0'))
+
+    organized_dict = []
+    massive_dict = {}
+
+
+    for k in range(0, data_dict_ts['number_clusters']):
+        temp_list_match = []
+        group_id = 'group_'+ str(k).rjust(2, '0')
+        for row in dict_ts:
+            if row['assign_ts_origin'] == group_id:
+                temp_list_match.append(row)
+
+        if len(temp_list_match) is 1:
+            temp_list_match[0]['assigned_ts'] = group_id + '_00'
+            organized_dict.append(temp_list_match[0])
+            massive_dict[group_id + '_00'] = temp_list_match
+        else:
+            pathway_align_dict = {}
+            for s in range(0, len(temp_list_match)):
+                if s is 0:
+                    pathway_align_dict[group_id + '_' + str(s).rjust(2, '0')] = temp_list_match[s]
+                else:
+                    lm1_assign = temp_list_match[s]['assign_lm1']
+                    lm2_assign = temp_list_match[s]['assign_lm2']
+                    assign_status = False
+                    for key, key_val in pathway_align_dict.items():
+                        pathway_lm1 = key_val['assign_lm1']
+                        pathway_lm2 = key_val['assign_lm2']
+                        if pathway_lm1 == lm1_assign and pathway_lm2 == lm2_assign:
+                            assign_status = True
+                            break
+                        elif pathway_lm1 == lm2_assign and pathway_lm2 == lm1_assign:
+                            assign_status = True
+                            break
+                        else:
+                            assign_status = False
+
+                    if assign_status is False:
+                        pathway_align_dict[group_id + '_' + str(len(pathway_align_dict.keys())).rjust(2, '0')] = temp_list_match[s]
+                    elif assign_status is True:
+                        print('There was a successful match!')
+
+
+
+    return data_dict_ts
 
 ########################################################################################################################
 
  # # # Plotting Functions # # #
 
-def matplotlib_printing_normal(data_dict, dir_, save_status='no', voronoi_status='yes', ts_status='no'):
+def matplotlib_printing_normal(data_dict, dir_, save_status=False, voronoi_status=True, ts_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
     theta_raw = data_dict['theta_raw']
@@ -851,32 +901,37 @@ def matplotlib_printing_normal(data_dict, dir_, save_status='no', voronoi_status
     ax.set_xlabel('Phi (degrees)')
     ax.set_ylabel('Theta (degrees)')
 
-    hsp = ax.scatter(phi_raw, theta_raw, s=60, c='blue', marker='o', edgecolor='face')
-    kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h', edgecolor='face')
-    if voronoi_status == 'yes':
+
+    if voronoi_status is True:
         voronoi = ax.scatter(phi_vertices, theta_vertices, s=60, c='green', marker='s', edgecolor='face')
     cano = ax.scatter(phi_cano, theta_cano, s=60, c='black', marker='+', edgecolor='face')
+    hsp = ax.scatter(phi_raw, theta_raw, s=60, c='blue', marker='o', edgecolor='face')
+    kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h', edgecolor='face')
 
+    if ts_status is False:
+        point = 'HSP local minima'
+    elif ts_status is True:
+        point = 'HSP trans. state'
 
-    if voronoi_status =='yes':
+    if voronoi_status is True:
         leg = ax.legend((hsp, kmeans, voronoi, cano),
-                        ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')',
+                        (point, 'k-means center (k = ' + str(data_dict['number_clusters']) + ')',
                          'voronoi vertice',
                          'canonical designation'),
                         scatterpoints=1, fontsize=12, frameon='false')
     else:
         leg = ax.legend((hsp, kmeans, cano),
-                        ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')',
+                        (point, 'k-means center (k = ' + str(data_dict['number_clusters']) + ')',
                          'canonical designation'),
                         scatterpoints=1, fontsize=12, frameon='false')
 
     leg.get_frame().set_linewidth(0.0)
 
-    if save_status != 'no':
-        if ts_status == 'no':
+    if save_status is True:
+        if ts_status is False:
             filename = create_out_fname('bxyl-k' + str(data_dict['number_clusters']) + '-normal.png', base_dir=dir_)
             plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
-        elif ts_status == 'yes':
+        elif ts_status is True:
             filename = create_out_fname('bxyl-TS-k' + str(data_dict['number_clusters']) + '-normal.png', base_dir=dir_)
             plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
@@ -885,7 +940,7 @@ def matplotlib_printing_normal(data_dict, dir_, save_status='no', voronoi_status
     return
 
 
-def matplotlib_printing_size_bxyl_lm(data_dict, dir, save_status='no'):
+def matplotlib_printing_size_bxyl_lm(data_dict, dir, save_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
     theta_raw = data_dict['theta_raw']
@@ -953,7 +1008,7 @@ def matplotlib_printing_size_bxyl_lm(data_dict, dir, save_status='no'):
 
     leg.get_frame().set_linewidth(0.0)
 
-    if save_status != 'no':
+    if save_status is not False:
         filename = create_out_fname('bxyl-k' + str(data_dict['number_clusters']) + '-size.png', base_dir=dir)
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
@@ -962,7 +1017,7 @@ def matplotlib_printing_size_bxyl_lm(data_dict, dir, save_status='no'):
     return
 
 
-def matplotlib_printing_group_labels(groups, dir_, save_status='no'):
+def matplotlib_printing_group_labels(groups, dir_, save_status=False):
 
     phi_values = []
     theta_values = []
@@ -1006,7 +1061,7 @@ def matplotlib_printing_group_labels(groups, dir_, save_status='no'):
 
 
 
-    if save_status != 'off':
+    if save_status is not False:
         filename = create_out_fname('bxyl-k' + str(len(groups)) + '-groups.png', base_dir=dir_)
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
