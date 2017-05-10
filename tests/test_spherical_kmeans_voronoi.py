@@ -272,6 +272,7 @@ class MainRun(unittest.TestCase):
             lm_lm_dict = sorting_TS_into_groups(data_dict_ts)
             # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
+<<<<<<< HEAD
             ts_class = Transition_States(data_dict_ts)
 
             fig, ax = plt.subplots(facecolor='white')
@@ -296,6 +297,10 @@ class MainRun(unittest.TestCase):
 
 
             # multiple_plots(sorted_data_dict_ts)
+=======
+
+            multiple_plots(lm_lm_dict)
+>>>>>>> b34899d7aab4da277565ca1cadcb445c9421ad5e
 
             pass
 

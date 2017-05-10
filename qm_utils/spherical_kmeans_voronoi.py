@@ -1616,32 +1616,38 @@ def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, vorono
     return
 
 
+
 def multiple_plots(data):
 
-
+# Generating the information for the plots
     fig = plt.figure(facecolor='white', dpi=100)
-
     gs = gridspec.GridSpec(2, 2)
     ax1 = plt.subplot(gs[0, 0], projection='polar')
     ax2 = plt.subplot(gs[0, 1], projection='polar')
     ax3 = plt.subplot(gs[1, :])
+    thetaticks = np.arange(0,360,30)
 
-    r = np.arange(0, 1, 0.01)
-    theta = 2 * np.pi * r
-    ax1.plot(theta, r)
-    # set the locations and labels of the radial gridlines and labels
-
-
-    ax1.set_rmax(1.05)
+    # Setup for the Northern Plot
+    ax1g.set_rmax(1.05)
     ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
     ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-    ax1.set_title("Northern Hemisphere", va='bottom')
+    ax1.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
+    ax1.set_theta_zero_location("N")
+    ax1.set_yticklabels([])
+    ax1.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
+    ax1.set_theta_direction(-1)
 
+    # Setup for the Southern Plot
+    ax2.set_rmax(1.05)
+    ax2.set_rticks([0, 0.5, 1.05])  # less radial ticks
+    ax2.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+    ax2.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
+    ax2.set_theta_zero_location("N")
+    ax2.set_yticklabels([])
+    ax2.set_thetagrids(thetaticks, frac=1.15)
+    ax2.set_theta_direction(-1)
 
-    ax2.set_title("Southern Hemisphere", va='bottom')
-
-
-    # Setup for the bottom plot
+    # Setup for the Equatorial Plot
     major_ticksx = np.arange(0, 372, 60)
     minor_ticksx = np.arange(0, 372, 12)
     ax3.set_xticks(major_ticksx)
@@ -1654,7 +1660,9 @@ def multiple_plots(data):
     ax3.set_ylim([125, 55])
     ax3.set_xlabel('Phi (degrees)')
     ax3.set_ylabel('Theta (degrees)')
+    ax3.set_title("Equatorial", ha='center', va='bottom', loc='left', fontsize=12)
 
+# Plotting the information
 
     plt.show()
 
