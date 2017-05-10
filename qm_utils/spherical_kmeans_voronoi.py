@@ -869,7 +869,7 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
     return assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm
 
 
-def sorting_TS_into_groups_2(data_points, show_status=True):
+def sorting_TS_into_groups_2(data_points, show_status=False):
 
 
     local_min_structure = {}
@@ -899,6 +899,7 @@ def sorting_TS_into_groups_2(data_points, show_status=True):
         lm_phi_vals = []
         lm_theta_vals = []
         xyz_data = []
+        energies = []
         for row in group_info['origin_files']:
             ts_phi_vals.append(float(row['phi']))
             ts_theta_vals.append(float(row['theta']))
@@ -906,6 +907,7 @@ def sorting_TS_into_groups_2(data_points, show_status=True):
             lm_phi_vals.append(float(row['phi_lm2']))
             lm_theta_vals.append(float(row['theta_lm1']))
             lm_theta_vals.append(float(row['theta_lm2']))
+            energies.append(float(row['G298 (Hartrees)']))
 
             ts_phi = float(row['phi'])
             ts_theta = float(row['theta'])
@@ -953,6 +955,7 @@ def sorting_TS_into_groups_2(data_points, show_status=True):
         inner_dict['ts_vals_theta'] = ts_theta_vals
         inner_dict['skm_labels'] = skm.labels_
         inner_dict['num_clusters'] = skm.n_clusters
+        inner_dict['gibbs_energy'] = energies
 
         lm_lm_dict[group_key] = inner_dict
 
