@@ -208,6 +208,9 @@ class Local_Minima():
 
         return
 
+    def plot_local_min(self):
+        plotting_local_minima(self.groups_dict)
+
 
 class Transition_States():
     def __init__(self, ts_data_in):
@@ -283,10 +286,10 @@ class Transition_States():
     # plots desired local minimum group pathways
     def plot_loc_min_group(self, ax, lm_key_in):
         """
-        
+
         :param ax: plot being added to
         :param lm_key_in: local min group key
-        :return: 
+        :return:
         """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
@@ -318,6 +321,8 @@ class Transition_States():
                 plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm2_vert'])
 
         return
+
+
 
 
 class Voronoi_plotting(Local_Minima):
@@ -1274,9 +1279,26 @@ def return_lowest_value(value1, value2):
 
 ########################################################################################################################
 
+# # # New plotting Functions # # #
+
+def plotting_local_minima(data_dict, dir_=None, save_status=False, voronoi_status=True):
+
+
+    phi_vals = []
+    theta_vals = []
+    for key, key_val in data_dict.items():
+
+        phi_vals.append(key_val['phi'])
+
+
+
+    return
+
+
+
  # # # Plotting Functions # # #
 
-def matplotlib_printing_normal(data_dict, dir_, save_status=False, voronoi_status=True, ts_status=False):
+def matplotlib_printing_normal(data_dict, dir_=None, save_status=False, voronoi_status=True, ts_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
     theta_raw = data_dict['theta_raw']
@@ -1331,7 +1353,7 @@ def matplotlib_printing_normal(data_dict, dir_, save_status=False, voronoi_statu
 
     leg.get_frame().set_linewidth(0.0)
 
-    if save_status is True:
+    if save_status is True and dir_ is not None:
         if ts_status is False:
             filename = create_out_fname('bxyl-k' + str(data_dict['number_clusters']) + '-normal.png', base_dir=dir_)
             plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
@@ -1344,7 +1366,7 @@ def matplotlib_printing_normal(data_dict, dir_, save_status=False, voronoi_statu
     return
 
 
-def matplotlib_printing_size_bxyl_lm(data_dict, dir, save_status=False):
+def matplotlib_printing_size_bxyl_lm(data_dict, dir_, save_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
     theta_raw = data_dict['theta_raw']
@@ -1704,45 +1726,4 @@ def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, 
     return
 
 
-def matplotlib_printing_lm_keys(lm_lm_dict, group_key):
-
-    pass
-    #
-    # if group_key not in lm_lm_dict.keys():
-    #     print('your key is missing!')
-    # else:
-    #     data = lm_lm_dict[group_key]
-    #
-    # fig, ax = plt.subplots(facecolor='white')
-    #
-    # major_ticksx = np.arange(0, 372, 60)
-    # minor_ticksx = np.arange(0, 372, 12)
-    # ax.set_xticks(major_ticksx)
-    # ax.set_xticks(minor_ticksx, minor=True)
-    #
-    # major_ticksy = np.arange(0, 182, 30)
-    # minor_ticksy = np.arange(0, 182, 10)
-    # ax.set_yticks(major_ticksy)
-    # ax.set_yticks(minor_ticksy, minor=True)
-    #
-    # ax.set_xlim([-10, 370])
-    # ax.set_ylim([185, -5])
-    # ax.set_xlabel('Phi (degrees)')
-    # ax.set_ylabel('Theta (degrees)')
-    #
-    # lm_raw = ax.scatter(data[], data[], s=60, c='green', marker='o', edgecolor='face')
-    #
-    # # lm_raw = ax.scatter(lm_phi, lm_theta, s=60, c='green', marker='o', edgecolor='face')
-    # # ts_raw = ax.scatter(ts_phi, ts_theta, s=60, c='blue', marker='s', edgecolor='face')
-    # # kmeans = ax.scatter(phi_new, theta_new, s=60, c='red', marker='h', edgecolor='face')
-    # #
-    # # leg = ax.legend((lm_raw, ts_raw, kmeans),
-    # #                 ('local minima', 'transitions state', 'k-means centers (k = ' + str (len(theta_new)) + ')'),
-    # #                 scatterpoints=1, fontsize=12, frameon='false')
-    # #
-    # #
-    # # leg.get_frame().set_linewidth(0.0)
-    #
-    #
-    # plt.show()
 

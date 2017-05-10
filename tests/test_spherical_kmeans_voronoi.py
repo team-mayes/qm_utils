@@ -23,7 +23,7 @@ from qm_utils.spherical_kmeans_voronoi import Transition_States, read_csv_data, 
     organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
     matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots, sorting_TS_into_groups, \
-    matplotlib_printing_lm_keys
+    Local_Minima
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -237,9 +237,9 @@ class MainRun(unittest.TestCase):
             df.to_csv(out_file_name)
 
             # Plotting Commands #
-            # matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status)
-            # matplotlib_printing_size_bxyl_lm(data_dict, SUB_DATA_DIR, save_status=save_status)
-            # matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status=save_status)
+            matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status)
+            matplotlib_printing_size_bxyl_lm(data_dict, SUB_DATA_DIR, save_status=save_status)
+            matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status=save_status)
             matplotlib_edge_printing(data_dict, SUB_DATA_DIR, save_status='no')
 
             # Testing #
@@ -272,7 +272,6 @@ class MainRun(unittest.TestCase):
             lm_lm_dict = sorting_TS_into_groups(data_dict_ts)
             # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
-<<<<<<< HEAD
             ts_class = Transition_States(data_dict_ts)
 
             fig, ax = plt.subplots(facecolor='white')
@@ -295,12 +294,7 @@ class MainRun(unittest.TestCase):
             ts_class.plot_uniq_ts_path(ax, '03_04', 'ts_group_0', 'ts_0')
             plt.show()
 
-
-            # multiple_plots(sorted_data_dict_ts)
-=======
-
             multiple_plots(lm_lm_dict)
->>>>>>> b34899d7aab4da277565ca1cadcb445c9421ad5e
 
             pass
 
@@ -310,3 +304,14 @@ class MainRun(unittest.TestCase):
         #     matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status, voronoi_status='no', ts_status='yes')
         #     print('\n Done \n ')
         #     pass
+
+    def TestLocMin(self):
+        data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+
+        data = Local_Minima(9, data_points, phi_raw, theta_raw, energy)
+
+        himom = data.groups_dict
+
+        data.plot_local_min()
+
+        pass
