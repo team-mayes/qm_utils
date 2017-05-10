@@ -27,6 +27,8 @@ from matplotlib import colors
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.lines as mlines
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 
 
 try:
@@ -75,12 +77,15 @@ def cart2pol(vert):
 
 # plots a line between two points given in polar coordinates
 def plot_line(ax, vert_1, vert_2):
-    vert_1 = pol2cart(vert_1)
-    vert_2 = pol2cart(vert_2)
-
     line = get_pol_coords(vert_1, vert_2)
 
-    ax.plot(line[0], line[1])
+    if (is_end(line)):
+        two_edges = split_in_two(line)
+
+        ax.plot(two_edges[0][0], two_edges[0][1])
+        ax.plot(two_edges[1][0], two_edges[1][1])
+    else:
+        ax.plot(line[0], line[1])
 
     return
 
@@ -203,36 +208,77 @@ class Local_Minima():
 
         return
 
+
 class Transition_States():
-    def __init__(self, ts_groups_in):
+    def __init__(self, ts_data_in):
         # groups by the unique transition state paths
-        self.ts_groups = ts_groups_in
+        __unorg_groups = sorting_TS_into_groups(ts_data_in)
 
-        # makes average path for each unique transition state pathway
-        for ts_group in (self.ts_groups).values():
-            self.kmeans_on_ts_group(ts_group)
+        self.ts_groups = self.reorg_groups(__unorg_groups)
 
-    # makes average path for given unique transition state pathway (described by ts_group)
-    def set_weighted_gibbs(self, ts_group):
-        # weighted Gibb's free energy
-        wt_gibbs = 0
+        # # makes average path for each unique transition state pathway
+        # for ts_group in self.ts_groups:
+        #     self.set_weighted_gibbs(ts_group)
 
-        ind_boltz = []
-        total_boltz = 0
+    def reorg_groups(self, unorg_groups):
+        temp_ts_groups = {}
 
-        # finding Boltzmann weight
-        for key in self.ts_groups['ts_group']:
-            e_val = self.ts_groups['ts_group'][key]['energy (A.U.)']
-            component = math.exp(-float(e_val) / (K_B * DEFAULT_TEMPERATURE))
-            ind_boltz.append(component)
-            total_boltz += component
+        # creating new dict of lm_groups
+        for lm_key in unorg_groups:
+            curr_lm_group = unorg_groups[lm_key]
+            temp_ts_group = {}
 
-        for i in range(len(self.ts_groups['ts_group'])):
-            wt_gibbs += (ind_boltz[i] / total_boltz) * self.ts_groups['ts_group'][i]['energy (A.U.)']
+            for i in range(curr_lm_group['num_clusters']):
+                # storing the kmeans ts vertex
+                ts_vert = [curr_lm_group['center_phi'][i],
+                                      curr_lm_group['center_theta'][i]]
 
-        self.ts_groups['weighted_gibbs'] = round(wt_gibbs, 3)
+                temp_ts_group['ts_group_' + str(i)] = {}
+                temp_ts_group['ts_group_' + str(i)]['ts_vert'] = np.asarray(pol2cart(ts_vert))
 
-        return
+                # creating a dict of uniq ts's
+                temp_ts_group['ts_group_' + str(i)]['ts_group'] = {}
+
+                # creating a dict for each unique transition state
+                for j in range(len(curr_lm_group['gibbs_energy'])):
+                    if curr_lm_group['skm_labels'][j] == i:
+                        uniq_ts = {}
+
+                        uniq_ts['energy (A.U.)'] = curr_lm_group['gibbs_energy'][j]
+                        uniq_ts['uniq_ts_vert'] = np.asarray(pol2cart([curr_lm_group['ts_vals_phi'][j],
+                                                              curr_lm_group['ts_vals_theta'][j]]))
+
+                        # storing the lm verts for specific ts
+                        uniq_ts['lm1_vert'] = np.asarray(pol2cart([curr_lm_group['lm_vals_phi'][j][0],
+                                                                curr_lm_group['lm_vals_theta'][j][0]]))
+                        uniq_ts['lm2_vert'] = np.asarray(pol2cart([curr_lm_group['lm_vals_phi'][j][1],
+                                                                curr_lm_group['lm_vals_theta'][j][1]]))
+
+                    temp_ts_group['ts_group_' + str(i)]['ts_group']['ts_' + str(j)] = uniq_ts
+
+                wt_gibbs = 0
+
+                ind_boltz = []
+                total_boltz = 0
+
+                # finding Boltzmann weighted Gibb's free energy
+                for key in temp_ts_group['ts_group_' + str(i)]['ts_group']:
+                    e_val = temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['energy (A.U.)']
+                    component = math.exp(-float(e_val) / (K_B * DEFAULT_TEMPERATURE))
+                    ind_boltz.append(component)
+                    total_boltz += component
+
+                k = 0
+                for key in temp_ts_group['ts_group_' + str(i)]['ts_group']:
+                    wt_gibbs += (ind_boltz[k] / total_boltz) * temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['energy (A.U.)']
+
+                    k += 1
+
+                temp_ts_group['ts_group_' + str(i)]['ts_group']['weighted_gibbs'] = round(wt_gibbs, 3)
+
+            temp_ts_groups[lm_key] = temp_ts_group
+
+        return temp_ts_groups
 
     # plots desired local minimum group pathways
     def plot_loc_min_group(self, ax, lm_key_in):
@@ -254,7 +300,12 @@ class Transition_States():
         return
 
     # plots desired unique transition state pathway
-    def plot_uniq_ts_path(self, ax, lm_key_in, ts_key_in):
+    def plot_uniq_ts_path(self, ax, lm_key_in, ts_group_key_in, ts_key_in):
+        path = self.ts_groups[lm_key_in][ts_group_key_in]['ts_group'][ts_key_in]
+
+        plot_line(ax, path['uniq_ts_vert'], path['lm1_vert'])
+        plot_line(ax, path['uniq_ts_vert'], path['lm2_vert'])
+
         return
 
     # plots all pathways
@@ -467,7 +518,7 @@ def organizing_information_from_spherical_kmeans(data_dict):
 
     return final_groups
 
-# helper fxn for organizing_information_from_spherical_kmeans(data_dict)
+
 def correcting_group_order(groups):
     """
     Organizes in a logical manner
@@ -536,7 +587,7 @@ def correcting_group_order(groups):
 
     return final_dict
 
-# helper fxn for organizing_information_from_spherical_kmeans(data_dict)
+
 def boltzmann_weighting_mini(energies):
     """
     Performs boltzmann weighting on the groups
@@ -567,14 +618,13 @@ def get_pol_coords(vert_1, vert_2):
     REQUIRES: arclength < PI*radius
     MODIFIES: nothing
     EFFECTS: returns a vector of phi & theta values for the voronoi edges
-    (cartesian coord inputs)
     :param vert_1: one vertex of an edge
     :param vert_2: other vertex of an edge
     :return: returns a vector of phi & theta values for the voronoi edges
     """
 
     # desired number of pts in arclength & line
-    NUM_PTS = 10
+    NUM_PTS = 100
 
     # endpts of the line
     x_0 = vert_1[0]
@@ -638,6 +688,24 @@ def get_pol_coords(vert_1, vert_2):
     arc_coords[1].append(coords[1])
 
     return arc_coords
+
+
+def pol2cart(vert):
+    """
+    converts polar coords to cartesian
+    :param vert:
+    :return:
+    """
+    phi = np.deg2rad(vert[0])
+    theta = np.deg2rad(vert[1])
+    r = 1
+
+    x = r * np.sin(theta) * np.cos(phi)
+    y = r * np.sin(theta) * np.sin(phi)
+    z = r * np.cos(theta)
+
+    return [x, y, z]
+
 
 # # # Plotting # # #
 
@@ -1084,6 +1152,111 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
     return assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm
 
 
+def sorting_TS_into_groups(data_points, show_status=False):
+
+
+    local_min_structure = {}
+
+    for row in data_points:
+        first, second = return_lowest_value(row['assign_lm1'].split('_')[1], row['assign_lm2'].split('_')[1])
+
+        if str(first) + '_' + str(second) not in local_min_structure.keys():
+            inner_dict = {}
+            inner_dict['origin_files'] = [row]
+            local_min_structure[str(first) + '_' + str(second)] = inner_dict
+        else:
+            local_min_structure[str(first) + '_' + str(second)]['origin_files'].append(row)
+
+    # Check to makesure that the files are loaded properly
+    count = 0
+    for key, key_val in local_min_structure.items():
+           count += len(key_val['origin_files'])
+    if count != len(data_points):
+        print('WARNING: THE NUMBER OF FILES CURRENTLY BEING STUDIED HAS AN ISSUE.')
+
+    lm_lm_dict = {}
+
+    for group_key, group_info in local_min_structure.items():
+        ts_phi_vals= []
+        ts_theta_vals = []
+        lm_phi_vals = []
+        lm_theta_vals = []
+        xyz_data = []
+        energies = []
+        for row in group_info['origin_files']:
+            ts_phi_vals.append(float(row['phi']))
+            ts_theta_vals.append(float(row['theta']))
+
+            lm_phi_vals.append(np.array([float(row['phi_lm1']), float(row['phi_lm2'])]))
+            lm_theta_vals.append(np.array([float(row['theta_lm1']), float(row['theta_lm2'])]))
+            energies.append(float(row['G298 (Hartrees)']))
+
+            ts_phi = float(row['phi'])
+            ts_theta = float(row['theta'])
+
+            x = np.sin(np.deg2rad(ts_theta)) * np.cos(np.deg2rad(ts_phi))
+            y = np.sin(np.deg2rad(ts_theta)) * np.sin(np.deg2rad(ts_phi))
+            z = np.cos(np.deg2rad(ts_theta))
+
+            xyz_data.append(np.array([x, y, z]))
+
+        # Determining the correct number of k-meand centers using RMSD tolerance criteria
+        for number_clusters in range(1, len(xyz_data)+1):
+            skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
+            skm.fit(xyz_data)
+            phi_centers = []
+            theta_centers = []
+            for center_coord in skm.cluster_centers_:
+                r = np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2 + center_coord[2] ** 2)
+                theta_new = np.rad2deg(np.arctan2(np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2), center_coord[2]))
+                phi_new = np.rad2deg(np.arctan2(center_coord[1], center_coord[0]))
+                if phi_new < 0:
+                    phi_new += 360
+                phi_centers.append(round(phi_new, 1))
+                theta_centers.append(round(theta_new, 1))
+
+            arc_length_diff = 0
+            for i in range(0, skm.n_clusters):
+                center_phi = phi_centers[i]
+                center_theta = theta_centers[i]
+                for k in range(0, len(skm.labels_)):
+                    if i == skm.labels_[k]:
+                        arc_length_diff += math.pow(arc_length_calculator(center_phi, center_theta, ts_phi_vals[k], ts_theta_vals[k]),2)
+            rmsd = math.sqrt(arc_length_diff/len(skm.labels_))
+            if rmsd < 0.1:
+                if show_status is True:
+                    matplotlib_printing_localmin_transition(lm1_phi_vals, lm1_theta_vals, ts_phi_vals, ts_theta_vals, phi_centers, theta_centers, group_key)
+                break
+
+        inner_dict = {}
+        inner_dict['center_phi'] = phi_centers
+        inner_dict['center_theta'] = theta_centers
+        inner_dict['lm_vals_phi'] = lm_phi_vals
+        inner_dict['lm_vals_theta'] = lm_theta_vals
+        inner_dict['ts_vals_phi'] = ts_phi_vals
+        inner_dict['ts_vals_theta'] = ts_theta_vals
+        inner_dict['skm_labels'] = skm.labels_
+        inner_dict['num_clusters'] = skm.n_clusters
+        inner_dict['gibbs_energy'] = energies
+
+        lm_lm_dict[group_key] = inner_dict
+
+    num_ts = checking_accurate_sorting(lm_lm_dict)
+    if num_ts != len(data_points):
+        print('ERROR: THERE IS A TS MISSING FORM THE LM_LM_DICT')
+
+    return lm_lm_dict
+
+
+def checking_accurate_sorting(lm_lm_dict):
+
+    count = 0
+    for key_path, val_path in lm_lm_dict.items():
+        count += len(val_path['ts_vals_phi'])
+
+    return count
+
+
 def return_lowest_value(value1, value2):
 
     if float(value1) < float(value2):
@@ -1098,79 +1271,6 @@ def return_lowest_value(value1, value2):
 
     return lowest_val, highest_val
 
-
-def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_raw):
-
-    data_dict_ts = spherical_kmeans_voronoi(number_cluster, data_points, phi_raw, theta_raw)
-
-    for i in range(len(data_dict_ts['labels_skm_centers'])):
-        dict_ts[i]['assign_ts_origin'] = str('group_'+ str(data_dict_ts['labels_skm_centers'][i]).rjust(2, '0'))
-
-    organized_dict = []
-    massive_dict = {}
-
-    for k in range(0, data_dict_ts['number_clusters']):
-        temp_list_match = []
-        group_id = 'group_'+ str(k).rjust(2, '0')
-        for row in dict_ts:
-            if row['assign_ts_origin'] == group_id:
-                temp_list_match.append(row)
-
-        if len(temp_list_match) is 1:
-            origin_list = []
-            low, high = return_lowest_value(temp_list_match[0]['assign_lm1'].split("_")[1], temp_list_match[0]['assign_lm2'].split("_")[1])
-            origin_list.append(temp_list_match[0])
-            inner_dict['origin_groups'] = origin_list
-            massive_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
-        else:
-            pathway_align_dict = {}
-            for s in range(0, len(temp_list_match)):
-                if s is 0:
-                    origin_list = []
-                    inner_dict = {}
-                    low, high = return_lowest_value(temp_list_match[s]['assign_lm1'].split("_")[1], temp_list_match[s]['assign_lm2'].split("_")[1])
-                    origin_list.append(temp_list_match[s])
-                    inner_dict['origin_groups'] = origin_list
-                    pathway_align_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
-                else:
-                    lm1_assign = temp_list_match[s]['assign_lm1'].split('_')[1]
-                    lm2_assign = temp_list_match[s]['assign_lm2'].split('_')[1]
-                    assign_status = False
-                    for key, key_val in pathway_align_dict.items():
-                        pathway_lm1 = key.split('-')[1].split('_')[0]
-                        pathway_lm2 = key.split('-')[1].split('_')[1]
-                        if pathway_lm1 == lm1_assign and pathway_lm2 == lm2_assign:
-                            assign_status = True
-                            break
-                        elif pathway_lm1 == lm2_assign and pathway_lm2 == lm1_assign:
-                            assign_status = True
-                            break
-                        else:
-                            assign_status = False
-
-                    if assign_status is False:
-                        origin_list = []
-                        inner_dict = {}
-                        low, high = return_lowest_value(temp_list_match[s]['assign_lm1'].split("_")[1], temp_list_match[s]['assign_lm2'].split("_")[1])
-                        origin_list.append(temp_list_match[s])
-                        inner_dict['origin_groups'] = origin_list
-                        pathway_align_dict[str(group_id + '-' + low + '_' + high)] = inner_dict
-                    elif assign_status is True:
-                        pathway_align_dict[key]['origin_groups'].append(temp_list_match[s])
-
-            for key_, key_val_ in pathway_align_dict.items():
-                massive_dict[key_] = key_val_
-
-    count = 0
-
-    for hi, himom in massive_dict.items():
-        count += len(himom['origin_groups'])
-
-        print(len(himom['origin_groups']), himom['origin_groups'])
-
-    print(count)
-
-    return data_dict_ts
 
 ########################################################################################################################
 
@@ -1516,4 +1616,125 @@ def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, vorono
     return
 
 
+def multiple_plots(data):
+
+
+    fig = plt.figure(facecolor='white', dpi=100)
+
+    gs = gridspec.GridSpec(2, 2)
+    ax1 = plt.subplot(gs[0, 0], projection='polar')
+    ax2 = plt.subplot(gs[0, 1], projection='polar')
+    ax3 = plt.subplot(gs[1, :])
+
+    r = np.arange(0, 1, 0.01)
+    theta = 2 * np.pi * r
+    ax1.plot(theta, r)
+    # set the locations and labels of the radial gridlines and labels
+
+
+    ax1.set_rmax(1.05)
+    ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
+    ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+    ax1.set_title("Northern Hemisphere", va='bottom')
+
+
+    ax2.set_title("Southern Hemisphere", va='bottom')
+
+
+    # Setup for the bottom plot
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax3.set_xticks(major_ticksx)
+    ax3.set_xticks(minor_ticksx, minor=True)
+    major_ticksy = np.arange(60, 125, 30)
+    minor_ticksy = np.arange(60, 125, 10)
+    ax3.set_yticks(major_ticksy)
+    ax3.set_yticks(minor_ticksy, minor=True)
+    ax3.set_xlim([-10, 370])
+    ax3.set_ylim([125, 55])
+    ax3.set_xlabel('Phi (degrees)')
+    ax3.set_ylabel('Theta (degrees)')
+
+
+    plt.show()
+
+
+def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, phi_new, theta_new, group_key):
+
+
+    fig, ax = plt.subplots(facecolor='white')
+
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax.set_xticks(major_ticksx)
+    ax.set_xticks(minor_ticksx, minor=True)
+
+    major_ticksy = np.arange(0, 182, 30)
+    minor_ticksy = np.arange(0, 182, 10)
+    ax.set_yticks(major_ticksy)
+    ax.set_yticks(minor_ticksy, minor=True)
+
+    ax.set_xlim([-10, 370])
+    ax.set_ylim([185, -5])
+    ax.set_xlabel('Phi (degrees)')
+    ax.set_ylabel('Theta (degrees)')
+
+    lm_raw = ax.scatter(lm_phi, lm_theta, s=60, c='green', marker='o', edgecolor='face')
+    ts_raw = ax.scatter(ts_phi, ts_theta, s=60, c='blue', marker='s', edgecolor='face')
+    kmeans = ax.scatter(phi_new, theta_new, s=60, c='red', marker='h', edgecolor='face')
+
+    leg = ax.legend((lm_raw, ts_raw, kmeans),
+                    ('local minima', 'transitions state', 'k-means centers (k = ' + str (len(theta_new)) + ')'),
+                    scatterpoints=1, fontsize=12, frameon='false')
+
+
+    leg.get_frame().set_linewidth(0.0)
+
+
+    plt.show()
+
+    return
+
+
+def matplotlib_printing_lm_keys(lm_lm_dict, group_key):
+
+    pass
+    #
+    # if group_key not in lm_lm_dict.keys():
+    #     print('your key is missing!')
+    # else:
+    #     data = lm_lm_dict[group_key]
+    #
+    # fig, ax = plt.subplots(facecolor='white')
+    #
+    # major_ticksx = np.arange(0, 372, 60)
+    # minor_ticksx = np.arange(0, 372, 12)
+    # ax.set_xticks(major_ticksx)
+    # ax.set_xticks(minor_ticksx, minor=True)
+    #
+    # major_ticksy = np.arange(0, 182, 30)
+    # minor_ticksy = np.arange(0, 182, 10)
+    # ax.set_yticks(major_ticksy)
+    # ax.set_yticks(minor_ticksy, minor=True)
+    #
+    # ax.set_xlim([-10, 370])
+    # ax.set_ylim([185, -5])
+    # ax.set_xlabel('Phi (degrees)')
+    # ax.set_ylabel('Theta (degrees)')
+    #
+    # lm_raw = ax.scatter(data[], data[], s=60, c='green', marker='o', edgecolor='face')
+    #
+    # # lm_raw = ax.scatter(lm_phi, lm_theta, s=60, c='green', marker='o', edgecolor='face')
+    # # ts_raw = ax.scatter(ts_phi, ts_theta, s=60, c='blue', marker='s', edgecolor='face')
+    # # kmeans = ax.scatter(phi_new, theta_new, s=60, c='red', marker='h', edgecolor='face')
+    # #
+    # # leg = ax.legend((lm_raw, ts_raw, kmeans),
+    # #                 ('local minima', 'transitions state', 'k-means centers (k = ' + str (len(theta_new)) + ')'),
+    # #                 scatterpoints=1, fontsize=12, frameon='false')
+    # #
+    # #
+    # # leg.get_frame().set_linewidth(0.0)
+    #
+    #
+    # plt.show()
 
