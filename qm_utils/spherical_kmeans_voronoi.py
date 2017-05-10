@@ -869,6 +869,108 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
     return assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm
 
 
+def sorting_TS_into_groups_2(data_points, show_status=True):
+
+
+    local_min_structure = {}
+
+    for row in data_points:
+        first, second = return_lowest_value(row['assign_lm1'].split('_')[1], row['assign_lm2'].split('_')[1])
+
+        if str(first) + '_' + str(second) not in local_min_structure.keys():
+            inner_dict = {}
+            inner_dict['origin_files'] = [row]
+            local_min_structure[str(first) + '_' + str(second)] = inner_dict
+        else:
+            local_min_structure[str(first) + '_' + str(second)]['origin_files'].append(row)
+
+    # Check to makesure that the files are loaded properly
+    count = 0
+    for key, key_val in local_min_structure.items():
+           count += len(key_val['origin_files'])
+    if count != len(data_points):
+        print('WARNING: THE NUMBER OF FILES CURRENTLY BEING STUDIED HAS AN ISSUE.')
+
+    lm_lm_dict = {}
+
+    for group_key, group_info in local_min_structure.items():
+        ts_phi_vals= []
+        ts_theta_vals = []
+        lm_phi_vals = []
+        lm_theta_vals = []
+        xyz_data = []
+        for row in group_info['origin_files']:
+            ts_phi_vals.append(float(row['phi']))
+            ts_theta_vals.append(float(row['theta']))
+            lm_phi_vals.append(float(row['phi_lm1']))
+            lm_phi_vals.append(float(row['phi_lm2']))
+            lm_theta_vals.append(float(row['theta_lm1']))
+            lm_theta_vals.append(float(row['theta_lm2']))
+
+            ts_phi = float(row['phi'])
+            ts_theta = float(row['theta'])
+
+            x = np.sin(np.deg2rad(ts_theta)) * np.cos(np.deg2rad(ts_phi))
+            y = np.sin(np.deg2rad(ts_theta)) * np.sin(np.deg2rad(ts_phi))
+            z = np.cos(np.deg2rad(ts_theta))
+
+            xyz_data.append(np.array([x, y, z]))
+
+        # Determining the correct number of k-meand centers using RMSD tolerance criteria
+        for number_clusters in range(1, len(xyz_data)+1):
+            skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
+            skm.fit(xyz_data)
+            phi_centers = []
+            theta_centers = []
+            for center_coord in skm.cluster_centers_:
+                r = np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2 + center_coord[2] ** 2)
+                theta_new = np.rad2deg(np.arctan2(np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2), center_coord[2]))
+                phi_new = np.rad2deg(np.arctan2(center_coord[1], center_coord[0]))
+                if phi_new < 0:
+                    phi_new += 360
+                phi_centers.append(round(phi_new, 1))
+                theta_centers.append(round(theta_new, 1))
+
+            arc_length_diff = 0
+            for i in range(0, skm.n_clusters):
+                center_phi = phi_centers[i]
+                center_theta = theta_centers[i]
+                for k in range(0, len(skm.labels_)):
+                    if i == skm.labels_[k]:
+                        arc_length_diff += math.pow(arc_length_calculator(center_phi, center_theta, ts_phi_vals[k], ts_theta_vals[k]),2)
+            rmsd = math.sqrt(arc_length_diff/len(skm.labels_))
+            if rmsd < 0.1:
+                if show_status is True:
+                    matplotlib_printing_localmin_transition(lm_phi_vals, lm_theta_vals, ts_phi_vals, ts_theta_vals, phi_centers, theta_centers, group_key)
+                break
+
+        inner_dict = {}
+        inner_dict['center_phi'] = phi_centers
+        inner_dict['center_theta'] = theta_centers
+        inner_dict['lm_vals_phi'] = lm_phi_vals
+        inner_dict['lm_vals_theta'] = lm_theta_vals
+        inner_dict['ts_vals_phi'] = ts_phi_vals
+        inner_dict['ts_vals_theta'] = ts_theta_vals
+        inner_dict['skm_labels'] = skm.labels_
+        inner_dict['num_clusters'] = skm.n_clusters
+
+        lm_lm_dict[group_key] = inner_dict
+
+    num_ts = checking_accurate_sorting(lm_lm_dict)
+    if num_ts != len(data_points):
+        print('ERROR: THERE IS A TS MISSING FORM THE LM_LM_DICT')
+
+    return lm_lm_dict
+
+
+def checking_accurate_sorting(lm_lm_dict):
+
+    count = 0
+    for key_path, val_path in lm_lm_dict.items():
+        count += len(val_path['ts_vals_phi'])
+
+    return count
+
 def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_raw):
 
     data_dict_ts = spherical_kmeans_voronoi(number_cluster, data_points, phi_raw, theta_raw)
@@ -1335,7 +1437,6 @@ def multiple_plots(data):
     # set the locations and labels of the radial gridlines and labels
 
 
-
     ax1.set_rmax(1.05)
     ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
     ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
@@ -1343,8 +1444,6 @@ def multiple_plots(data):
 
 
     ax2.set_title("Southern Hemisphere", va='bottom')
-
-
 
 
     # Setup for the bottom plot
@@ -1365,4 +1464,82 @@ def multiple_plots(data):
     plt.show()
 
 
+def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, phi_new, theta_new, group_key):
+
+
+    fig, ax = plt.subplots(facecolor='white')
+
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax.set_xticks(major_ticksx)
+    ax.set_xticks(minor_ticksx, minor=True)
+
+    major_ticksy = np.arange(0, 182, 30)
+    minor_ticksy = np.arange(0, 182, 10)
+    ax.set_yticks(major_ticksy)
+    ax.set_yticks(minor_ticksy, minor=True)
+
+    ax.set_xlim([-10, 370])
+    ax.set_ylim([185, -5])
+    ax.set_xlabel('Phi (degrees)')
+    ax.set_ylabel('Theta (degrees)')
+
+    lm_raw = ax.scatter(lm_phi, lm_theta, s=60, c='green', marker='o', edgecolor='face')
+    ts_raw = ax.scatter(ts_phi, ts_theta, s=60, c='blue', marker='s', edgecolor='face')
+    kmeans = ax.scatter(phi_new, theta_new, s=60, c='red', marker='h', edgecolor='face')
+
+    leg = ax.legend((lm_raw, ts_raw, kmeans),
+                    ('local minima', 'transitions state', 'k-means centers (k = ' + str (len(theta_new)) + ')'),
+                    scatterpoints=1, fontsize=12, frameon='false')
+
+
+    leg.get_frame().set_linewidth(0.0)
+
+
+    plt.show()
+
+    return
+
+
+def matplotlib_printing_lm_keys(lm_lm_dict, group_key):
+
+    pass
+    #
+    # if group_key not in lm_lm_dict.keys():
+    #     print('your key is missing!')
+    # else:
+    #     data = lm_lm_dict[group_key]
+    #
+    # fig, ax = plt.subplots(facecolor='white')
+    #
+    # major_ticksx = np.arange(0, 372, 60)
+    # minor_ticksx = np.arange(0, 372, 12)
+    # ax.set_xticks(major_ticksx)
+    # ax.set_xticks(minor_ticksx, minor=True)
+    #
+    # major_ticksy = np.arange(0, 182, 30)
+    # minor_ticksy = np.arange(0, 182, 10)
+    # ax.set_yticks(major_ticksy)
+    # ax.set_yticks(minor_ticksy, minor=True)
+    #
+    # ax.set_xlim([-10, 370])
+    # ax.set_ylim([185, -5])
+    # ax.set_xlabel('Phi (degrees)')
+    # ax.set_ylabel('Theta (degrees)')
+    #
+    # lm_raw = ax.scatter(data[], data[], s=60, c='green', marker='o', edgecolor='face')
+    #
+    # # lm_raw = ax.scatter(lm_phi, lm_theta, s=60, c='green', marker='o', edgecolor='face')
+    # # ts_raw = ax.scatter(ts_phi, ts_theta, s=60, c='blue', marker='s', edgecolor='face')
+    # # kmeans = ax.scatter(phi_new, theta_new, s=60, c='red', marker='h', edgecolor='face')
+    # #
+    # # leg = ax.legend((lm_raw, ts_raw, kmeans),
+    # #                 ('local minima', 'transitions state', 'k-means centers (k = ' + str (len(theta_new)) + ')'),
+    # #                 scatterpoints=1, fontsize=12, frameon='false')
+    # #
+    # #
+    # # leg.get_frame().set_linewidth(0.0)
+    #
+    #
+    # plt.show()
 

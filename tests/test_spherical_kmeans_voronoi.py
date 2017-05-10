@@ -21,7 +21,8 @@ from qm_utils.spherical_kmeans_voronoi import read_csv_data, spherical_kmeans_vo
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, arc_coords, \
-    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots
+    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots, sorting_TS_into_groups_2, \
+    matplotlib_printing_lm_keys
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -266,11 +267,15 @@ class MainRun(unittest.TestCase):
             # matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
 
             # Grouping the TS #
-            sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
+            # sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
+            lm_lm_dict = sorting_TS_into_groups_2(data_dict_ts)
             # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
+            group_key = '00_01'
 
-            multiple_plots(sorted_data_dict_ts)
+            matplotlib_printing_lm_keys(lm_lm_dict, group_key)
+
+            # multiple_plots(sorted_data_dict_ts)
 
             pass
 
