@@ -271,11 +271,8 @@ class MainRun(unittest.TestCase):
             lm_lm_dict = sorting_TS_into_groups_2(data_dict_ts)
             # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
-            group_key = '00_01'
 
-            matplotlib_printing_lm_keys(lm_lm_dict, group_key)
-
-            # multiple_plots(sorted_data_dict_ts)
+            multiple_plots(lm_lm_dict)
 
             pass
 
