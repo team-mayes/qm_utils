@@ -27,6 +27,8 @@ from matplotlib import colors
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.lines as mlines
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 
 
 try:
@@ -877,6 +879,7 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
     organized_dict = []
     massive_dict = {}
 
+
     for k in range(0, data_dict_ts['number_clusters']):
         temp_list_match = []
         group_id = 'group_'+ str(k).rjust(2, '0')
@@ -884,6 +887,7 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
             if row['assign_ts_origin'] == group_id:
                 temp_list_match.append(row)
 
+        inner_dict = {}
         if len(temp_list_match) is 1:
             origin_list = []
             low, high = return_lowest_value(temp_list_match[0]['assign_lm1'].split("_")[1], temp_list_match[0]['assign_lm2'].split("_")[1])
@@ -931,26 +935,29 @@ def sorting_TS_into_groups(number_cluster, data_points, dict_ts, phi_raw, theta_
 
 
 
+    # Checking to make sure that all of the groups are positioned properly.
     count = 0
-
     list_puckers = []
-
     for hi, himom in massive_dict.items():
         for row in himom['origin_groups']:
             list_puckers.append(row['File Name'])
-
 
     for row_check in dict_ts:
         status_found = False
         for file in list_puckers:
             if file == row_check['File Name']:
                 status_found = True
+                count += 1
                 break
 
         if status_found is False:
             print('Missing: {}'.format(row_check['File Name']))
 
-    return data_dict_ts
+    if count != len(dict_ts):
+        print('ERROR MESSAGE: THE NUMBER OF GROUPS ISN\'T CORRECT')
+
+
+    return massive_dict
 
 
 def return_lowest_value(value1, value2):
@@ -1310,6 +1317,52 @@ def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, vorono
         plt.show()
 
     return
+
+
+def multiple_plots(data):
+
+
+    fig = plt.figure(facecolor='white', dpi=100)
+
+    gs = gridspec.GridSpec(2, 2)
+    ax1 = plt.subplot(gs[0, 0], projection='polar')
+    ax2 = plt.subplot(gs[0, 1], projection='polar')
+    ax3 = plt.subplot(gs[1, :])
+
+    r = np.arange(0, 1, 0.01)
+    theta = 2 * np.pi * r
+    ax1.plot(theta, r)
+    # set the locations and labels of the radial gridlines and labels
+
+
+
+    ax1.set_rmax(1.05)
+    ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
+    ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+    ax1.set_title("Northern Hemisphere", va='bottom')
+
+
+    ax2.set_title("Southern Hemisphere", va='bottom')
+
+
+
+
+    # Setup for the bottom plot
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax3.set_xticks(major_ticksx)
+    ax3.set_xticks(minor_ticksx, minor=True)
+    major_ticksy = np.arange(60, 125, 30)
+    minor_ticksy = np.arange(60, 125, 10)
+    ax3.set_yticks(major_ticksy)
+    ax3.set_yticks(minor_ticksy, minor=True)
+    ax3.set_xlim([-10, 370])
+    ax3.set_ylim([125, 55])
+    ax3.set_xlabel('Phi (degrees)')
+    ax3.set_ylabel('Theta (degrees)')
+
+
+    plt.show()
 
 
 

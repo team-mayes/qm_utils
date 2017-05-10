@@ -21,7 +21,7 @@ from qm_utils.spherical_kmeans_voronoi import read_csv_data, spherical_kmeans_vo
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, arc_coords, \
-    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions
+    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -268,6 +268,9 @@ class MainRun(unittest.TestCase):
             # Grouping the TS #
             sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
             # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
+
+
+            multiple_plots(sorted_data_dict_ts)
 
             pass
 
