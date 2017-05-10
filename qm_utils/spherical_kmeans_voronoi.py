@@ -204,18 +204,16 @@ class Local_Minima():
         return
 
 class Transition_States():
-    def __init__(self, uniq_ts_paths_in):
+    def __init__(self, ts_groups_in):
         # groups by the unique transition state paths
-        self.uniq_ts_paths = uniq_ts_paths_in
+        self.ts_groups = ts_groups_in
 
         # makes average path for each unique transition state pathway
-        for ts_group in (self.uniq_ts_paths).values():
-            self.make_avg_path(ts_group)
+        for ts_group in (self.ts_groups).values():
+            self.kmeans_on_ts_group(ts_group)
 
     # makes average path for given unique transition state pathway (described by ts_group)
-    def make_avg_path(self, ts_group):
-        wt_phi = 0
-        wt_theta = 0
+    def set_weighted_gibbs(self, ts_group):
         # weighted Gibb's free energy
         wt_gibbs = 0
 
@@ -223,79 +221,50 @@ class Transition_States():
         total_boltz = 0
 
         # finding Boltzmann weight
-        for i in range(len(ts_group['origin_groups'])):
-            e_val = ts_group['origin_groups'][i]['energy (A.U.)']
+        for key in self.ts_groups['ts_group']:
+            e_val = self.ts_groups['ts_group'][key]['energy (A.U.)']
             component = math.exp(-float(e_val) / (K_B * DEFAULT_TEMPERATURE))
             ind_boltz.append(component)
             total_boltz += component
 
-        for i in range(len(ts_group['origin_groups'])):
-            wt_gibbs += (ind_boltz[i] / total_boltz) * ts_group['origin_groups'][i]['energy (A.U.)']
-            wt_phi += (ind_boltz[i] / total_boltz) * ts_group['raw_phi'][i]
-            wt_theta += (ind_boltz[i] / total_boltz) * ts_group['raw_theta'][i]
+        for i in range(len(self.ts_groups['ts_group'])):
+            wt_gibbs += (ind_boltz[i] / total_boltz) * self.ts_groups['ts_group'][i]['energy (A.U.)']
 
-        self.uniq_ts_paths['weighted_gibbs'] = round(wt_gibbs, 3)
-        self.uniq_ts_paths['phi'] = round(wt_phi, 3)
-        self.uniq_ts_paths['theta'] = round(wt_theta, 3)
-
-        return
-
-    # plots desired transition state pathways
-    def plot_ts_group(self, ts_group, ax):
-        """
-        
-        :param ts_group: transition state group name
-        :param ax: plot being added to
-        :return: 
-        """
-
-        for key in self.uniq_ts_paths:
-            if self.uniq_ts_paths[key]['ts_group'] == ts_group:
-                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm1_vert'])
-                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm2_vert'])
+        self.ts_groups['weighted_gibbs'] = round(wt_gibbs, 3)
 
         return
 
     # plots desired local minimum group pathways
-    def plot_loc_min_group(self, ax, lm1, lm2):
+    def plot_loc_min_group(self, ax, lm_key_in):
         """
         
         :param ax: plot being added to
-        :param lm1: vertex of a local min
-        :param lm2: vertex of the other local min
+        :param lm_key_in: local min group key
         :return: 
         """
-        for key in self.uniq_ts_paths:
-            # if the key contains the local min group, plot it
-            if (self.uniq_ts_paths[key]['lm1'] == lm1 and self.uniq_ts_paths[key]['lm2'] == lm2)\
-                or (self.uniq_ts_paths[key]['lm1'] == lm2 and self.uniq_ts_paths[key]['lm2'] == lm1):
+        for lm_key in self.ts_groups:
+            # if the key is the local min group, plot it
+            if (lm_key == lm_key_in):
+                for ts_group_key in self.ts_groups[lm_key]:
+                    curr_ts_group = self.ts_groups[lm_key][ts_group_key]
 
-                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm1_vert'])
-                plot_line(ax, self.uniq_ts_paths[key]['vert'], self.uniq_ts_paths[key]['lm2_vert'])
+                    plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm1_vert'])
+                    plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm2_vert'])
 
         return
 
-    # plots desired unqie transition state pathway
-    def plot_uniq_ts_path(self, ax, uniq_ts_path):
-        """
-        
-        :param ax: plot being added to
-        :param uniq_ts_path: name of uniq_ts_path
-        :return: 
-        """
-        # particular unique transition state pathway
-        path = self.uniq_ts_paths[uniq_ts_path]
-
-        for i in range(len(path['origin_groups'])):
-            plot_line(ax, path['raw_ts_verts'][i], path['lm1_vert'])
-            plot_line(ax, path['raw_ts_verts'][i], path['lm2_vert'])
-
+    # plots desired unique transition state pathway
+    def plot_uniq_ts_path(self, ax, lm_key_in, ts_key_in):
         return
 
     # plots all pathways
     def plot_all(self, ax):
-        for key in self.uniq_ts_paths:
-            self.plot_uniq_ts_path(ax, key)
+        for lm_key in self.ts_groups:
+            for ts_group_key in self.ts_groups[lm_key]:
+                curr_ts_group = self.ts_groups[lm_key][ts_group_key]
+
+                plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm1_vert'])
+                plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm2_vert'])
 
         return
 
