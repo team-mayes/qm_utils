@@ -1436,7 +1436,7 @@ def multiple_plots(data):
     thetaticks = np.arange(0,360,30)
 
     # Setup for the Northern Plot
-    ax1.set_rmax(1.05)
+    ax1g.set_rmax(1.05)
     ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
     ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
     ax1.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
