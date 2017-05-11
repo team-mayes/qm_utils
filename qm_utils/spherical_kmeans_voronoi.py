@@ -155,14 +155,55 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
     vec_y.append(y_f)
     vec_z.append(z_f)
 
-    # plots line
-    # ax_3d.plot([x_0, x_f], [y_0, y_f], [z_0, z_f], label='parametric line', color='green')
     # plots arclength
     ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in)
 
+# converts the list of theta's into a list of r's
+def get_r(theta_vals):
+    r = []
+    r_max = 0
+
+    for i in range(len(theta_vals)):
+        if math.sin(theta_vals[i]) == 0:
+            r.append(0)
+        else:
+            r.append(abs(math.sin(theta_vals[i])))
+            if r[i] > r_max:
+                r_max = r[i]
+
+    for i in range(len(theta_vals)):
+        r[i]  = r[i] / r_max
+
+    return r
+
 # plots a line on a circular plot (2D)
-def plot_on_circle(ax_circle, vert_1, vert_2, color_in):
-    pass
+# verts are in polar [phi, theta]
+def plot_on_circle(ax_circ, vert_1, vert_2, color_in='black'):
+    """
+    
+    :param ax_circle: plot being added to
+    :param vert_1: 
+    :param vert_2: 
+    :param color_in: 
+    :return: 
+    """
+
+    pol_coords = get_pol_coords(vert_1, vert_2)
+
+    # theta
+    r = get_r(pol_coords[1])
+    # phi
+    theta = pol_coords[0]
+
+    for i in range(len(theta)):
+        theta[i] = np.rad2deg(theta[i])
+
+    for i in range(len(r)):
+        print(theta[i], r[i])
+
+    ax_circ.plot(theta, r, color=color_in)
+
+    return
 
 # creates a file for given plot & figure
 def make_file_from_plot(filename, plt, fig, dir_):
@@ -621,19 +662,21 @@ class Transition_States():
         return data
 
 # plots modify anything?
-class Plotting():
+class Plots():
     def __init__(self):
         # creating rectangular plot
-        self.fig_rect, self.ax_rect = plt.subplots(facecolor='white')
+        self.rect_plot_init()
 
         # creating spherical plot
-        self.fig_spher = plt.figure()
-        self.ax_spher = self.fig_spher.gca(projection='3d')
+        self.spher_plot_init()
 
-
+        # creating circular plot
+        self.circ_plot_init()
 
     # initializes a rectangular plot
     def rect_plot_init(self):
+        self.fig_rect, self.ax_rect = plt.subplots(facecolor='white')
+
         major_ticksx = np.arange(0, 372, 60)
         minor_ticksx = np.arange(0, 372, 12)
         self.ax_rect.set_xticks(major_ticksx)
@@ -652,7 +695,10 @@ class Plotting():
         return
 
     # intializes a circular plot
-    def circ_plot_init(self):
+    def spher_plot_init(self):
+        self.fig_spher = plt.figure()
+        self.ax_spher = self.fig_spher.gca(projection='3d')
+
         # plots wireframe sphere
         theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
         THETA, PHI = np.meshgrid(theta, phi)
@@ -671,9 +717,28 @@ class Plotting():
         return
 
     # initializes a spherical plot
-    def spher_plot_init(self):
-        pass
+    def circ_plot_init(self):
+        self.fig_circ = plt.figure(facecolor='white', dpi=100)
+        self.ax_circ = plt.subplot(projection='polar')
 
+        thetaticks = np.arange(0, 360, 30)
+
+        self.ax_circ.set_rmax(1.05)
+        self.ax_circ.set_rticks([0, 0.5, 1.05])  # less radial ticks
+        self.ax_circ.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+        self.ax_circ.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
+        self.ax_circ.set_theta_zero_location("N")
+        self.ax_circ.set_yticklabels([])
+        self.ax_circ.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
+        self.ax_circ.set_theta_direction(-1)
+
+        return
+
+    # shows all plots
+    def show(self):
+        plt.show()
+
+        return
 #endregion
 
 # # # Local Minima Functions # # #
