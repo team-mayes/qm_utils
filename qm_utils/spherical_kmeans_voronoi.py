@@ -87,19 +87,77 @@ def cart2pol(vert):
     return get_pol_coord(vert[0], vert[1], vert[2])
 
 
-# plots a line between two points given in polar coordinates
-def plot_line(ax, vert_1, vert_2):
+# plots a line between two points given in cartesian coordinates
+def plot_line(ax, vert_1, vert_2, color_in):
     line = get_pol_coords(vert_1, vert_2)
 
     if (is_end(line)):
         two_edges = split_in_two(line)
 
-        ax.plot(two_edges[0][0], two_edges[0][1])
-        ax.plot(two_edges[1][0], two_edges[1][1])
+        ax.plot(two_edges[0][0], two_edges[0][1], color=color_in)
+        ax.plot(two_edges[1][0], two_edges[1][1], color=color_in)
     else:
-        ax.plot(line[0], line[1])
+        ax.plot(line[0], line[1], color=color_in)
 
     return
+
+def plot_arc(ax_3d, vert_1, vert_2, color_in):
+    """
+    plots lines individually on a sphere
+    :param ax_3d:
+    :param vert_1:
+    :param vert_2:
+    :return:
+    """
+    mpl.rcParams['legend.fontsize'] = 10
+
+    # endpts of the line
+    x_0 = vert_1[0]
+    y_0 = vert_1[1]
+    z_0 = vert_1[2]
+    x_f = vert_2[0]
+    y_f = vert_2[1]
+    z_f = vert_2[2]
+
+    # polar coords to be changed to cartesian
+    raw_coords = get_pol_coords(vert_1, vert_2)
+
+    # converts the polar coords to cartesian with r = 1
+    def get_arc_coord(phi, theta):
+        phi = np.deg2rad(phi)
+        theta = np.deg2rad(theta)
+
+        x = np.sin(theta) * np.cos(phi)
+        y = np.sin(theta) * np.sin(phi)
+        z = np.cos(theta)
+
+        return (x, y, z)
+
+    # initializes the cartesian coordinates for the arclength
+    vec_x = [x_0]
+    vec_y = [y_0]
+    vec_z = [z_0]
+
+    # increments over the raw coords to get cartesian coords
+    for i in range(len(raw_coords[0])):
+        arc_coord = get_arc_coord(raw_coords[0][i], raw_coords[1][i])
+
+        # pushes coords into the arclength
+        vec_x.append(arc_coord[0])
+        vec_y.append(arc_coord[1])
+        vec_z.append(arc_coord[2])
+
+        i += 1
+
+    # pushes final coord into the arclength
+    vec_x.append(x_f)
+    vec_y.append(y_f)
+    vec_z.append(z_f)
+
+    # plots line
+    # ax_3d.plot([x_0, x_f], [y_0, y_f], [z_0, z_f], label='parametric line', color='green')
+    # plots arclength
+    ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in)
 
 
 # # # Helper Functions # # #
@@ -338,33 +396,92 @@ class Transition_States():
         return temp_ts_groups
 
     # plots desired local minimum group pathways for all uniq ts pts
-    def plot_loc_min_group_with_uniq_ts(self, ax, lm_key_in):
+    def plot_loc_min_group_with_uniq_ts_2d(self, ax, lm_key_in):
         """
 
         :param ax: plot being added to
         :param lm_key_in: lm group key
         :return:
         """
+
+        for ts_group_key in self.ts_groups[lm_key_in]:
+            print('ts_group_key: ', ts_group_key)
+            for ts_key in self.ts_groups[lm_key_in][ts_group_key]['ts_group']:
+                if(ts_key != 'weighted_gibbs'):
+                    self.plot_uniq_ts_path(ax, lm_key_in, ts_group_key, ts_key)
+
+        return
+
+    # plots desired local minimum group pathways for all uniq ts pts
+    def plot_loc_min_group_with_uniq_ts_3d(self, ax_3d, lm_key_in):
+        """
+
+        :param ax: plot being added to
+        :param lm_key_in: lm group key
+        :return: 
+        """
+
+        for ts_group_key in self.ts_groups[lm_key_in]:
+            print('ts_group_key: ', ts_group_key)
+            for ts_key in self.ts_groups[lm_key_in][ts_group_key]['ts_group']:
+                if (ts_key != 'weighted_gibbs'):
+                    self.plot_uniq_ts_path_3d(ax_3d, lm_key_in, ts_group_key, ts_key)
+
+        return
+
+    # plots desired local minimum group pathways for all uniq ts pts
+    def plot_loc_min_group_2d(self, ax, lm_key_in):
+        """
+
+        :param ax: plot being added to
+        :param lm_key_in: lm group key
+        :return: 
+        """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
             if (lm_key == lm_key_in):
                 for ts_group_key in self.ts_groups[lm_key]:
-                    for ts_key in self.ts_groups[lm_key][ts_group_key]['ts_group']:
-                        path = self.ts_groups[lm_key][ts_group_key]['ts_group'][ts_key]
+                    path = self.ts_groups[lm_key][ts_group_key]
 
-                        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm1_vert_cart'])
-                        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
+                    plot_line(ax, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                    plot_line(ax, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
 
-                        print(path['uniq_ts_vert_cart'])
+        return
+
+    # plots desired local minimum group pathways for all uniq ts pts
+    def plot_loc_min_group_3d(self, ax_3d, lm_key_in):
+        """
+
+        :param ax: plot being added to
+        :param lm_key_in: lm group key
+        :return: 
+        """
+        for lm_key in self.ts_groups:
+            # if the key is the local min group, plot it
+            if (lm_key == lm_key_in):
+                for ts_group_key in self.ts_groups[lm_key]:
+                    path = self.ts_groups[lm_key][ts_group_key]
+
+                    plot_arc(ax_3d, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                    plot_arc(ax_3d, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
 
         return
 
     # plots desired unique transition state pathway
-    def plot_uniq_ts_path(self, ax, lm_key_in, ts_group_key_in, ts_key_in):
+    def plot_uniq_ts_path_2d(self, ax, lm_key_in, ts_group_key_in, ts_key_in):
         path = self.ts_groups[lm_key_in][ts_group_key_in]['ts_group'][ts_key_in]
 
         plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm1_vert_cart'])
         plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
+
+        return
+
+    # plots desired unique transition state pathway
+    def plot_uniq_ts_path_3d(self, ax_3d, lm_key_in, ts_group_key_in, ts_key_in):
+        path = self.ts_groups[lm_key_in][ts_group_key_in]['ts_group'][ts_key_in]
+
+        plot_arc(ax_3d, path['uniq_ts_vert_cart'], path['uniq_lm1_vert_cart'])
+        plot_arc(ax_3d, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
 
         return
 
@@ -1029,7 +1146,7 @@ def plot_vor_sec(ax_3d, ax, verts):
         # vector of phi & theta vectors
         edge = get_pol_coords(pairs[i][0], pairs[i][1])
 
-        plot_3d(ax_3d, pairs[i][0], pairs[i][1])
+        plot_arc(ax_3d, pairs[i][0], pairs[i][1])
 
         if (is_end(edge)):
             two_edges = split_in_two(edge)
@@ -1059,66 +1176,6 @@ def plot_regions(ax_3d, ax, data_dict):
         plot_vor_sec(ax_3d, ax, verts)
 
     return
-
-
-def plot_3d(ax_3d, vert_1, vert_2):
-    """
-    plots lines individually on a sphere
-    :param ax_3d:
-    :param vert_1:
-    :param vert_2:
-    :return:
-    """
-    mpl.rcParams['legend.fontsize'] = 10
-
-    # endpts of the line
-    x_0 = vert_1[0]
-    y_0 = vert_1[1]
-    z_0 = vert_1[2]
-    x_f = vert_2[0]
-    y_f = vert_2[1]
-    z_f = vert_2[2]
-
-    # polar coords to be changed to cartesian
-    raw_coords = get_pol_coords(vert_1, vert_2)
-
-    # converts the polar coords to cartesian with r = 1
-    def get_arc_coord(phi, theta):
-        phi = np.deg2rad(phi)
-        theta = np.deg2rad(theta)
-
-        x = np.sin(theta) * np.cos(phi)
-        y = np.sin(theta) * np.sin(phi)
-        z = np.cos(theta)
-
-        return (x, y, z)
-
-    # initializes the cartesian coordinates for the arclength
-    vec_x = [x_0]
-    vec_y = [y_0]
-    vec_z = [z_0]
-
-    # increments over the raw coords to get cartesian coords
-    for i in range(len(raw_coords[0])):
-        arc_coord = get_arc_coord(raw_coords[0][i], raw_coords[1][i])
-
-        # pushes coords into the arclength
-        vec_x.append(arc_coord[0])
-        vec_y.append(arc_coord[1])
-        vec_z.append(arc_coord[2])
-
-        i += 1
-
-    # pushes final coord into the arclength
-    vec_x.append(x_f)
-    vec_y.append(y_f)
-    vec_z.append(z_f)
-
-    # plots line
-    # ax_3d.plot([x_0, x_f], [y_0, y_f], [z_0, z_f], label='parametric line', color='green')
-    # plots arclength
-    ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color='green')
-
 
 def not_in_pairs(pairs, curr_pair):
     """
