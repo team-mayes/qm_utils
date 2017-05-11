@@ -311,7 +311,7 @@ class MainRun(unittest.TestCase):
         try:
             save_status = True
             storage_spot = LOCAL_MIN_IMAGES
-            number_clusters = 10
+            number_clusters = 9
             data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
             dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
         finally:
@@ -325,9 +325,14 @@ class MainRun(unittest.TestCase):
 
     def TestTransitionState(self):
         try:
-            save_status = True
-            storage_spot = LOCAL_MIN_IMAGES
-            number_clusters = 10
-            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            save_status = False
+            storage_spot = TRANS_STA_IMAGES
+            data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
+
+            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
+
+
             dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
         finally:
+            ts_class = Transition_States(data_dict_ts)
+            print(ts_class)
