@@ -263,16 +263,16 @@ class MainRun(unittest.TestCase):
         finally:
             # Comparing the LM structures #
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
-            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
+            # assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
+            assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
             # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
             # matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
 
             # Grouping the TS #
             # sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
-            lm_lm_dict = sorting_TS_into_groups(data_dict_ts)
+            # lm_lm_dict = sorting_TS_into_groups(data_dict_ts)
             # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
-<<<<<<< HEAD
             ts_class = Transition_States(data_dict_ts)
 
             fig, ax = plt.subplots(facecolor='white')
@@ -295,12 +295,11 @@ class MainRun(unittest.TestCase):
             ts_class.plot_uniq_ts_path(ax, '03_04', 'ts_group_0', 'ts_0')
             plt.show()
 
-
             # multiple_plots(sorted_data_dict_ts)
-=======
 
-            multiple_plots(lm_lm_dict)
->>>>>>> b34899d7aab4da277565ca1cadcb445c9421ad5e
+
+            #multiple_plots(lm_lm_dict)
+
 
             pass
 
