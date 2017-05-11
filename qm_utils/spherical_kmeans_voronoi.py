@@ -228,8 +228,9 @@ class Transition_States():
     def __init__(self, ts_data_in, lm_class_obj):
         # groups by the unique transition state paths
         __unorg_groups = sorting_TS_into_groups(ts_data_in, lm_class_obj)
-
         self.ts_groups = self.reorg_groups(__unorg_groups)
+
+        self.lm_class = lm_class_obj
 
         # # makes average path for each unique transition state pathway
         # for ts_group in self.ts_groups:
@@ -337,12 +338,44 @@ class Transition_States():
 
 
     # plot multiple plots
-<<<<<<< HEAD
-    def plot_southern(self):
-=======
-    def plot_northern_southern(self):
->>>>>>> 99cd8c641e3e00522b01a1d0a606be5406141cd1
-        pass
+    def plot_northern_southern(self, directory=None, save_status=False):
+
+        northern_groups = []
+        southern_groups = []
+        for group_key, group_val in self.lm_class.groups_dict.items():
+            if float(group_val['mean_theta']) < 60:
+                northern_groups.append(group_key.split('_')[1])
+            elif float(group_val['mean_theta']) > 120:
+                southern_groups.append(group_key.split('_')[1])
+
+        northern_connect = []
+        southern_connect = []
+        equatori_connect = []
+        for key, key_val in self.ts_groups.items():
+            if key.split('_')[0] in northern_groups:
+                northern_connect.append(key)
+            elif key.split('_')[1] in southern_groups:
+                southern_connect.append(key)
+            else:
+                equatori_connect.append(key)
+
+
+        for row in northern_connect:
+            print(row)
+            for key, key_val in self.ts_groups[row].items():
+                print(key)
+                print(key_val['ts_vert'])
+
+
+
+        # plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, sv_skm_dict, directory=None, save_status=False)
+
+
+
+
+        return
+
+
 
 
 class Voronoi_plotting(Local_Minima):
@@ -1465,9 +1498,7 @@ def plotting_local_minima_size(data_dict, sv_skm_dict, cano_point, directory=Non
     return
 
 
-def plotting_northern_southern_equatorial(data_dict, directory=None, save_status=False):
-
-
+def plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, sv_skm_dict, directory=None, save_status=False):
 
     # Generating the information for the plots
     fig = plt.figure(facecolor='white', dpi=100)
@@ -1487,6 +1518,10 @@ def plotting_northern_southern_equatorial(data_dict, directory=None, save_status
     ax1.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
     ax1.set_theta_direction(-1)
 
+
+
+
+
     # Setup for the Southern Plot
     ax2.set_rmax(1.05)
     ax2.set_rticks([0, 0.5, 1.05])  # less radial ticks
@@ -1496,6 +1531,10 @@ def plotting_northern_southern_equatorial(data_dict, directory=None, save_status
     ax2.set_yticklabels([])
     ax2.set_thetagrids(thetaticks, frac=1.15)
     ax2.set_theta_direction(-1)
+
+
+
+
 
     # Setup for the Equatorial Plot
     major_ticksx = np.arange(0, 372, 60)
@@ -1512,10 +1551,16 @@ def plotting_northern_southern_equatorial(data_dict, directory=None, save_status
     ax3.set_ylabel('Theta (degrees)')
     ax3.set_title("Equatorial", ha='center', va='bottom', loc='left', fontsize=12)
 
-    # Plotting the information
 
-    plt.show()
 
+    if save_status is True and directory is not None:
+        filename = create_out_fname('bxyl-k' + str(sv_skm_dict['number_clusters']) + '-overall.png', base_dir=directory)
+        plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
+    else:
+        plt.show()
+
+
+    return
 
 
 
