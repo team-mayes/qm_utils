@@ -20,7 +20,7 @@ from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, captur
 import qm_utils.spherical_kmeans_voronoi
 from qm_utils.spherical_kmeans_voronoi import Transition_States, read_csv_data, spherical_kmeans_voronoi, \
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
-    organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
+    organizing_information_from_spherical_kmeans, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
     matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots, sorting_TS_into_groups, \
     Local_Minima
@@ -39,6 +39,8 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 TEST_DIR     = os.path.dirname(__file__)
 DATA_DIR     = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'spherical_kmeans_voronoi')
+LOCAL_MIN_IMAGES = os.path.join(SUB_DATA_DIR, 'images_local_min')
+TRANS_STA_IMAGES = os.path.join(SUB_DATA_DIR, 'image_transition_state')
 
 # Input files #
 HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
@@ -306,12 +308,26 @@ class MainRun(unittest.TestCase):
         #     pass
 
     def TestLocMin(self):
-        data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+        try:
+            save_status = True
+            storage_spot = LOCAL_MIN_IMAGES
+            number_clusters = 10
+            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
+        finally:
+            data = Local_Minima(number_clusters, data_points, dict_cano ,phi_raw, theta_raw, energy)
+            data.cano_points
+            data.plot_local_min(directory=storage_spot, save_status=save_status)
+            data.plot_group_labels(directory=storage_spot, save_status=save_status)
+            data.plot_local_min_sizes(directory=storage_spot, save_status=save_status)
+            pass
 
-        data = Local_Minima(9, data_points, phi_raw, theta_raw, energy)
 
-        himom = data.groups_dict
-
-        data.plot_local_min()
-
-        pass
+    def TestTransitionState(self):
+        try:
+            save_status = True
+            storage_spot = LOCAL_MIN_IMAGES
+            number_clusters = 10
+            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
+        finally:
