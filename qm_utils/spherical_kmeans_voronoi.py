@@ -418,7 +418,7 @@ class Transition_States():
 
         :param ax: plot being added to
         :param lm_key_in: lm group key
-        :return: 
+        :return:
         """
 
         for ts_group_key in self.ts_groups[lm_key_in]:
@@ -435,7 +435,7 @@ class Transition_States():
 
         :param ax: plot being added to
         :param lm_key_in: lm group key
-        :return: 
+        :return:
         """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
@@ -454,7 +454,7 @@ class Transition_States():
 
         :param ax: plot being added to
         :param lm_key_in: lm group key
-        :return: 
+        :return:
         """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it

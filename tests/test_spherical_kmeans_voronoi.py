@@ -356,6 +356,7 @@ class MainRun(unittest.TestCase):
         finally:
             ts_class = Transition_States(data_dict_ts, data)
             ts_class.plot_northern_southern(directory=storage_spot, save_status=save_status)
+            ts_class.plot_all()
 
 
 
