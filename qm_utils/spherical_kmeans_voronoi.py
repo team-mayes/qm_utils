@@ -337,7 +337,11 @@ class Transition_States():
 
 
     # plot multiple plots
+<<<<<<< HEAD
     def plot_southern(self):
+=======
+    def plot_northern_southern(self):
+>>>>>>> 99cd8c641e3e00522b01a1d0a606be5406141cd1
         pass
 
 
@@ -1459,6 +1463,60 @@ def plotting_local_minima_size(data_dict, sv_skm_dict, cano_point, directory=Non
     return
 
     return
+
+
+def plotting_northern_southern_equatorial(data_dict, directory=None, save_status=False):
+
+
+
+    # Generating the information for the plots
+    fig = plt.figure(facecolor='white', dpi=100)
+    gs = gridspec.GridSpec(2, 2)
+    ax1 = plt.subplot(gs[0, 0], projection='polar')
+    ax2 = plt.subplot(gs[0, 1], projection='polar')
+    ax3 = plt.subplot(gs[1, :])
+    thetaticks = np.arange(0, 360, 30)
+
+    # Setup for the Northern Plot
+    ax1.set_rmax(1.05)
+    ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
+    ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+    ax1.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
+    ax1.set_theta_zero_location("N")
+    ax1.set_yticklabels([])
+    ax1.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
+    ax1.set_theta_direction(-1)
+
+    # Setup for the Southern Plot
+    ax2.set_rmax(1.05)
+    ax2.set_rticks([0, 0.5, 1.05])  # less radial ticks
+    ax2.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+    ax2.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
+    ax2.set_theta_zero_location("N")
+    ax2.set_yticklabels([])
+    ax2.set_thetagrids(thetaticks, frac=1.15)
+    ax2.set_theta_direction(-1)
+
+    # Setup for the Equatorial Plot
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax3.set_xticks(major_ticksx)
+    ax3.set_xticks(minor_ticksx, minor=True)
+    major_ticksy = np.arange(60, 125, 30)
+    minor_ticksy = np.arange(60, 125, 10)
+    ax3.set_yticks(major_ticksy)
+    ax3.set_yticks(minor_ticksy, minor=True)
+    ax3.set_xlim([-10, 370])
+    ax3.set_ylim([125, 55])
+    ax3.set_xlabel('Phi (degrees)')
+    ax3.set_ylabel('Theta (degrees)')
+    ax3.set_title("Equatorial", ha='center', va='bottom', loc='left', fontsize=12)
+
+    # Plotting the information
+
+    plt.show()
+
+
 
 
 
