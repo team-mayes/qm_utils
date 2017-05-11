@@ -328,7 +328,7 @@ class MainRun(unittest.TestCase):
         dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
         data = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
         try:
-            save_status = False
+            save_status = True
             storage_spot = TRANS_STA_IMAGES
             # loading in the local minima information
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)

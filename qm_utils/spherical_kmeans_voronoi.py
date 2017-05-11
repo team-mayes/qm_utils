@@ -402,35 +402,56 @@ class Transition_States():
             else:
                 equatori_connect.append(key)
 
-        phi_lm_val = []
-        pro_lm_val = []
-        phi_ts_val = []
-        pro_ts_val = []
 
-        for row in northern_connect:
-            for key, key_val in self.ts_groups[row].items():
-                phi_lm_val.append(key_val['lm1_vert_pol'][0])
-                pro_lm_val.append(np.sin(math.radians(key_val['lm1_vert_pol'][1])))
-                phi_ts_val.append(key_val['ts_vert_pol'][0])
-                pro_ts_val.append(np.sin(math.radians(key_val['ts_vert_pol'][1])))
-                phi_lm_val.append(key_val['lm2_vert_pol'][0])
-                pro_lm_val.append(np.sin(math.radians(key_val['lm2_vert_pol'][1])))
+        northern_data = self.polar_info_collecting(northern_connect, type='hemi')
+        southern_data = self.polar_info_collecting(southern_connect, type='hemi')
+        equatorial_data = self.polar_info_collecting(equatori_connect, type='eq')
 
-        northern_data = {}
-        northern_data['pro_lm_val'] = pro_lm_val
-        northern_data['phi_lm_val'] = phi_lm_val
-        northern_data['pro_ts_val'] = pro_ts_val
-        northern_data['phi_ts_val'] = phi_ts_val
-
-
-        southern_data = {}
-        equatorial_data = {}
-
-
-        plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, self.lm_class.groups_dict, directory=None, save_status=False)
+        plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, self.lm_class.groups_dict, directory, save_status)
 
 
         return
+
+    def polar_info_collecting(self, connect, type):
+
+        if type == 'hemi':
+            phi_lm_val = []
+            pro_lm_val = []
+            phi_ts_val = []
+            pro_ts_val = []
+            for row in connect:
+                for key, key_val in self.ts_groups[row].items():
+                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
+                    pro_lm_val.append(np.sin(math.radians(key_val['lm1_vert_pol'][1])))
+                    phi_ts_val.append(key_val['ts_vert_pol'][0])
+                    pro_ts_val.append(np.sin(math.radians(key_val['ts_vert_pol'][1])))
+                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
+                    pro_lm_val.append(np.sin(math.radians(key_val['lm2_vert_pol'][1])))
+            data = {}
+            data['pro_lm_val'] = pro_lm_val
+            data['phi_lm_val'] = phi_lm_val
+            data['pro_ts_val'] = pro_ts_val
+            data['phi_ts_val'] = phi_ts_val
+        elif type == 'eq':
+            phi_lm_val = []
+            theta_lm_val = []
+            phi_ts_val = []
+            theta_ts_val = []
+            for row in connect:
+                for key, key_val in self.ts_groups[row].items():
+                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
+                    theta_lm_val.append(key_val['lm1_vert_pol'][1])
+                    phi_ts_val.append(key_val['ts_vert_pol'][0])
+                    theta_ts_val.append(key_val['ts_vert_pol'][1])
+                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
+                    theta_lm_val.append(key_val['lm2_vert_pol'][1])
+            data = {}
+            data['phi_lm_val'] = phi_lm_val
+            data['theta_lm_val'] = theta_lm_val
+            data['phi_ts_val'] = phi_ts_val
+            data['theta_ts_val'] = theta_ts_val
+
+        return data
 
 
 
@@ -1555,7 +1576,36 @@ def plotting_local_minima_size(data_dict, sv_skm_dict, cano_point, directory=Non
     return
 
 
-def plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, sv_skm_dict, directory=None, save_status=False):
+def polar_organizer(data, type='hemi'):
+
+    if type == 'hemi':
+        for key, key_val in data.items():
+            type = key.split('_')
+            if type[1] == 'ts' and type[0] == 'phi':
+                ts_phi = key_val
+            elif type[1] == 'ts' and type[0] == 'pro':
+                ts_pro = key_val
+            elif type[1] == 'lm' and type[0] == 'phi':
+                lm_phi = key_val
+            elif type[1] == 'lm' and type[0] == 'pro':
+                lm_pro = key_val
+    elif type == 'eq':
+        for key, key_val in data.items():
+            type = key.split('_')
+            if type[1] == 'ts' and type[0] == 'phi':
+                ts_phi = key_val
+            elif type[1] == 'ts' and type[0] == 'theta':
+                ts_pro = key_val
+            elif type[1] == 'lm' and type[0] == 'phi':
+                lm_phi = key_val
+            elif type[1] == 'lm' and type[0] == 'theta':
+                lm_pro = key_val
+
+
+    return ts_phi, ts_pro, lm_phi, lm_pro
+
+
+def plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, kmeans, directory=None, save_status=False):
 
     # Generating the information for the plots
     fig = plt.figure(facecolor='white', dpi=100)
@@ -1565,22 +1615,12 @@ def plotting_northern_southern_equatorial(northern_data, southern_data, equatori
     ax3 = plt.subplot(gs[1, :])
     thetaticks = np.arange(0, 360, 30)
 
-    for key, key_val in northern_data.items():
-        type = key.split('_')
-        if type[1] == 'ts' and type[0] == 'phi':
-            ax1_ts_phi = key_val
-        elif type[1] == 'ts' and type[0] == 'pro':
-            ax1_ts_pro = key_val
-        elif type[1] == 'lm' and type[0] == 'phi':
-            ax1_lm_phi = key_val
-        elif type[1] == 'lm' and type[0] == 'pro':
-            ax1_lm_pro = key_val
 
+    # Setup for the Northern Plot
+    ax1_ts_phi, ax1_ts_pro, ax1_lm_phi, ax1_lm_pro = polar_organizer(northern_data, type='hemi')
     ax1_ts_data = ax1.scatter(ax1_ts_phi, ax1_ts_pro, s = 30, c='blue', marker='s', edgecolor='face')
     ax1_lm_data = ax1.scatter(ax1_lm_phi, ax1_lm_pro, s = 30, c='green', marker='o', edgecolor='face')
 
-
-    # Setup for the Northern Plot
     ax1.set_rmax(1.05)
     ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
     ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
@@ -1590,7 +1630,12 @@ def plotting_northern_southern_equatorial(northern_data, southern_data, equatori
     ax1.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
     ax1.set_theta_direction(-1)
 
+
     # Setup for the Southern Plot
+    ax2_ts_phi, ax2_ts_pro, ax2_lm_phi, ax2_lm_pro = polar_organizer(southern_data, type='hemi')
+    ax2_ts_data = ax2.scatter(ax2_ts_phi, ax2_ts_pro, s = 30, c='blue', marker='s', edgecolor='face')
+    ax2_lm_data = ax2.scatter(ax2_lm_phi, ax2_lm_pro, s = 30, c='green', marker='o', edgecolor='face')
+
     ax2.set_rmax(1.05)
     ax2.set_rticks([0, 0.5, 1.05])  # less radial ticks
     ax2.set_rlabel_position(-22.5)  # get radial labels away from plotted line
@@ -1601,32 +1646,37 @@ def plotting_northern_southern_equatorial(northern_data, southern_data, equatori
     ax2.set_theta_direction(-1)
 
 
-
-
-
     # Setup for the Equatorial Plot
+    ax3_ts_phi, ax3_ts_pro, ax3_lm_phi, ax3_lm_pro = polar_organizer(equatorial_data, type='eq')
+    ax3_ts_data = ax3.scatter(ax3_ts_phi, ax3_ts_pro, s = 30, c='blue', marker='s', edgecolor='face')
+    ax3_lm_data = ax3.scatter(ax3_lm_phi, ax3_lm_pro, s = 30, c='green', marker='o', edgecolor='face')
+
     major_ticksx = np.arange(0, 372, 60)
     minor_ticksx = np.arange(0, 372, 12)
     ax3.set_xticks(major_ticksx)
     ax3.set_xticks(minor_ticksx, minor=True)
-    major_ticksy = np.arange(60, 125, 30)
-    minor_ticksy = np.arange(60, 125, 10)
+    major_ticksy = np.arange(75, 110, 10)
+    minor_ticksy = np.arange(75, 110, 5)
     ax3.set_yticks(major_ticksy)
     ax3.set_yticks(minor_ticksy, minor=True)
     ax3.set_xlim([-10, 370])
-    ax3.set_ylim([125, 55])
+    ax3.set_ylim([107, 73])
     ax3.set_xlabel('Phi (degrees)')
     ax3.set_ylabel('Theta (degrees)')
     ax3.set_title("Equatorial", ha='center', va='bottom', loc='left', fontsize=12)
 
+    leg = ax3.legend((ax3_lm_data, ax3_ts_data),
+                    ('local minima', 'transition states'),
+                    scatterpoints=1, fontsize=12, frameon='false')
 
+    leg.get_frame().set_linewidth(0.0)
+    leg.get_frame().set_alpha(0.75)
 
     if save_status is True and directory is not None:
-        filename = create_out_fname('bxyl-k' + str(sv_skm_dict['number_clusters']) + '-overall.png', base_dir=directory)
+        filename = create_out_fname('bxyl-k' + str(len(kmeans.keys())) + '-overall.png', base_dir=directory)
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
         plt.show()
-
 
     return
 
