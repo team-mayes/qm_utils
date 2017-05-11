@@ -18,7 +18,7 @@ from scipy.spatial import SphericalVoronoi
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 import qm_utils.spherical_kmeans_voronoi
-from qm_utils.spherical_kmeans_voronoi import Transition_States, Local_Minima, read_csv_data, spherical_kmeans_voronoi, \
+from qm_utils.spherical_kmeans_voronoi import pol2cart, plot_on_circle, Plots, make_file_from_plot, Transition_States, Local_Minima, read_csv_data, spherical_kmeans_voronoi, \
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
@@ -40,6 +40,7 @@ DATA_DIR     = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'spherical_kmeans_voronoi')
 LOCAL_MIN_IMAGES = os.path.join(SUB_DATA_DIR, 'images_local_min')
 TRANS_STA_IMAGES = os.path.join(SUB_DATA_DIR, 'image_transition_state')
+TS_PATHWAYS = os.path.join(TRANS_STA_IMAGES, 'pathways')
 
 # Input files #
 HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
@@ -277,46 +278,15 @@ class MainRun(unittest.TestCase):
             lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
             ts_class = Transition_States(data_dict_ts, lm_class)
 
-            fig, ax = plt.subplots(facecolor='white')
+            plot_test = Plots()
+            ax_rect = plot_test.ax_rect
+            ax_spher = plot_test.ax_spher
 
-            major_ticksx = np.arange(0, 372, 60)
-            minor_ticksx = np.arange(0, 372, 12)
-            ax.set_xticks(major_ticksx)
-            ax.set_xticks(minor_ticksx, minor=True)
+            ts_class.plot_loc_min_group_2d(ax_rect, '00_04')
+            ts_class.plot_loc_min_group_3d(ax_spher, '00_04')
+            plot_test.show()
 
-            major_ticksy = np.arange(0, 182, 30)
-            minor_ticksy = np.arange(0, 182, 10)
-            ax.set_yticks(major_ticksy)
-            ax.set_yticks(minor_ticksy, minor=True)
-
-            ax.set_xlim([-5, 365])
-            ax.set_ylim([185, -5])
-            ax.set_xlabel('Phi (degrees)')
-            ax.set_ylabel('Theta (degrees)')
-
-            fig_3d = plt.figure()
-            ax_3d = fig_3d.gca(projection='3d')
-
-            # plots wireframe sphere
-            theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
-            THETA, PHI = np.meshgrid(theta, phi)
-            R = 1.0
-            X = R * np.sin(PHI) * np.cos(THETA)
-            Y = R * np.sin(PHI) * np.sin(THETA)
-            Z = R * np.cos(PHI)
-            ax_3d.plot_wireframe(X, Y, Z, color="lightblue")
-
-            # settings for 3d graph
-            ax_3d.legend()
-            ax_3d.set_xlim([-1, 1])
-            ax_3d.set_ylim([-1, 1])
-            ax_3d.set_zlim([-1, 1])
-
-            #ts_class.plot_uniq_ts_path(ax, '00_07', 'ts_group_0', 'ts_0')
-            ts_class.plot_loc_min_group_2d(ax, '00_04')
-            ts_class.plot_loc_min_group_3d(ax_3d, '00_04')
-            #ts_class.plot_loc_min_group_with_uniq_ts(ax, '00_04')
-            plt.show()
+            #make_file_from_plot('plot_00_04', ax, fig, TS_PATHWAYS)
 
             pass
 
@@ -357,6 +327,23 @@ class MainRun(unittest.TestCase):
             ts_class = Transition_States(data_dict_ts, data)
             ts_class.plot_northern_southern(directory=storage_spot, save_status=save_status)
             ts_class.plot_all()
+
+    def TestPlotting(self):
+        plot_test = Plots()
+        graph = plot_test.ax_circ
+        graph.plot([100, 200, 300], [100, 50, 150])
+
+        vert1 = [np.deg2rad(1), np.deg2rad(30)]
+        vert1_cart = pol2cart(vert1)
+
+        vert2 = [np.deg2rad(40), np.deg2rad(30)]
+        vert2_cart = pol2cart(vert2)
+
+        plot_on_circle(graph, vert1_cart, vert2_cart)
+
+        plot_test.show()
+
+
 
 
 
