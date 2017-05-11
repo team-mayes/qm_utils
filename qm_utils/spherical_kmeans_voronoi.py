@@ -225,9 +225,9 @@ class Local_Minima():
 
 
 class Transition_States():
-    def __init__(self, ts_data_in):
+    def __init__(self, ts_data_in, lm_class_obj):
         # groups by the unique transition state paths
-        __unorg_groups = sorting_TS_into_groups(ts_data_in)
+        __unorg_groups = sorting_TS_into_groups(ts_data_in, lm_class_obj)
 
         self.ts_groups = self.reorg_groups(__unorg_groups)
 
@@ -337,7 +337,8 @@ class Transition_States():
 
 
     # plot multiple plots
-    def plot_southern
+    def plot_southern(self):
+        pass
 
 
 class Voronoi_plotting(Local_Minima):
@@ -1112,38 +1113,6 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
     :return: TS with the local min assignments (list of dicts) and a workable dict of dict for lm groups
     """
 
-    # Recreating the local minima dict for further processing
-    raw_hsp_lm_dict = hsp_lm_groups.to_dict(orient='dict')
-    number_dict = raw_hsp_lm_dict['Unnamed: 0']
-    hsp_lm_dict = {}
-
-    for group, group_dict in raw_hsp_lm_dict.items():
-        ind_dict = {}
-        if group != 'Unnamed: 0':
-            for num_key, value in group_dict.items():
-                correct_key = number_dict[num_key]
-                ind_dict[correct_key] = value
-            hsp_lm_dict[group] = ind_dict
-
-    for key, key_val in hsp_lm_dict.items():
-
-        phi_values = []
-        theta_values = []
-        energy_values = []
-
-        phi_redo = key_val['phi'].split(',')
-        theta_redo = key_val['theta'].split(',')
-        enery_redo = key_val['energies'].split(',')
-
-        for i in range(0, len(phi_redo)):
-            phi_values.append(str(phi_redo[i].replace("[", "").replace("]", "")))
-            theta_values.append(str(theta_redo[i].replace("[", "").replace("]", "")))
-            energy_values.append(str(enery_redo[i].replace("[", "").replace("]", "")))
-
-        key_val['phi'] = phi_values
-        key_val['theta'] = theta_values
-        key_val['energies'] = energy_values
-
     # Assigning each local minima to a lm group
     assigned_lm = []
     phi_ts_lm = []
@@ -1161,7 +1130,7 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
 
         lm1_arc_dict = {}
         lm2_arc_dict = {}
-        for lm_key, lm_val in hsp_lm_dict.items():
+        for lm_key, lm_val in hsp_lm_groups.items():
             group_phi = float(lm_val['mean_phi'])
             group_theta = float(lm_val['mean_theta'])
             lm1_arc_dict[lm_key] = arc_length_calculator(p1, t1, group_phi, group_theta, radius=1)
@@ -1174,11 +1143,13 @@ def assign_groups_to_TS_LM(data_dict_ts, hsp_lm_groups):
         structure['arc_lm2'] = str(round(lm2_arc_dict[lm2_assignment[0]], 3))
         assigned_lm.append(structure)
 
-    return assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm
+    return
 
 
-def sorting_TS_into_groups(data_points, show_status=False):
+def sorting_TS_into_groups(data_points, lm_class_obj, show_status=False):
     local_min_structure = {}
+
+    assign_groups_to_TS_LM(data_points, lm_class_obj.groups_dict)
 
     for row in data_points:
         first, second = return_lowest_value(row['assign_lm1'].split('_')[1], row['assign_lm2'].split('_')[1])
@@ -1250,7 +1221,7 @@ def sorting_TS_into_groups(data_points, show_status=False):
             rmsd = math.sqrt(arc_length_diff / len(skm.labels_))
             if rmsd < 0.1:
                 if show_status is True:
-                    matplotlib_printing_localmin_transition(lm1_phi_vals, lm1_theta_vals, ts_phi_vals, ts_theta_vals,
+                    matplotlib_printing_localmin_transition(lm_phi_vals, lm_theta_vals, ts_phi_vals, ts_theta_vals,
                                                             phi_centers, theta_centers, group_key)
                 break
 
@@ -1301,6 +1272,7 @@ def return_lowest_value(value1, value2):
 # # # New plotting Functions # # #
 
 def plotting_local_minima(data_dict, sv_skm_dict, cano_point, directory=None, save_status=False, voronoi_status=True):
+    global leg
     phi_vals = []
     theta_vals = []
     phi_centers = []

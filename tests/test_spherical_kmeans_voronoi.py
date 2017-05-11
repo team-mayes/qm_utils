@@ -18,12 +18,11 @@ from scipy.spatial import SphericalVoronoi
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 import qm_utils.spherical_kmeans_voronoi
-from qm_utils.spherical_kmeans_voronoi import Transition_States, read_csv_data, spherical_kmeans_voronoi, \
+from qm_utils.spherical_kmeans_voronoi import Transition_States, Local_Minima, read_csv_data, spherical_kmeans_voronoi, \
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
-    organizing_information_from_spherical_kmeans, matplotlib_printing_group_labels, read_csv_data_TS, \
+    organizing_information_from_spherical_kmeans, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
-    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots, sorting_TS_into_groups, \
-    matplotlib_printing_lm_keys
+    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots, sorting_TS_into_groups
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -39,6 +38,8 @@ DISABLE_REMOVE = logger.isEnabledFor(logging.DEBUG)
 TEST_DIR     = os.path.dirname(__file__)
 DATA_DIR     = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'spherical_kmeans_voronoi')
+LOCAL_MIN_IMAGES = os.path.join(SUB_DATA_DIR, 'images_local_min')
+TRANS_STA_IMAGES = os.path.join(SUB_DATA_DIR, 'image_transition_state')
 
 # Input files #
 HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
@@ -86,7 +87,6 @@ class TestSphereicalKmeansVoronoi(unittest.TestCase):
         data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
         data_dict = spherical_kmeans_voronoi(9, data_points, phi_raw, theta_raw, energy)
         final_groups = organizing_information_from_spherical_kmeans(data_dict)
-        matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status='off')
 
     def testArcCoords(self):
         def plot(vert_1, vert_2):
@@ -263,17 +263,19 @@ class MainRun(unittest.TestCase):
         finally:
             # Comparing the LM structures #
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
-            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
+            #assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
             # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
             # matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
 
             # Grouping the TS #
             # sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
-            lm_lm_dict = sorting_TS_into_groups(data_dict_ts)
-            # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
-<<<<<<< HEAD
-            ts_class = Transition_States(data_dict_ts)
+            # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
+            number_clusters = 9
+            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
+            lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
+            ts_class = Transition_States(data_dict_ts, lm_class)
 
             fig, ax = plt.subplots(facecolor='white')
 
@@ -292,14 +294,8 @@ class MainRun(unittest.TestCase):
             ax.set_xlabel('Phi (degrees)')
             ax.set_ylabel('Theta (degrees)')
 
-            ts_class.plot_uniq_ts_path(ax, '03_04', 'ts_group_0', 'ts_0')
+            ts_class.plot_uniq_ts_path(ax, '00_07', 'ts_group_0', 'ts_0')
             plt.show()
-
-
-            # multiple_plots(sorted_data_dict_ts)
-
-            multiple_plots(lm_lm_dict)
-
 
             pass
 
@@ -327,15 +323,13 @@ class MainRun(unittest.TestCase):
 
 
     def TestTransitionState(self):
+        number_clusters = 9
+        data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+        dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
+        data = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
         try:
             save_status = False
             storage_spot = TRANS_STA_IMAGES
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
-
-            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
-
-
-            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
         finally:
-            ts_class = Transition_States(data_dict_ts)
-            print(ts_class)
+            ts_class = Transition_States(data_dict_ts,data)
