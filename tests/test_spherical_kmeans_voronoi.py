@@ -18,7 +18,7 @@ from scipy.spatial import SphericalVoronoi
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 import qm_utils.spherical_kmeans_voronoi
-from qm_utils.spherical_kmeans_voronoi import Transition_States, Local_Minima, read_csv_data, spherical_kmeans_voronoi, \
+from qm_utils.spherical_kmeans_voronoi import make_file_from_plot, Transition_States, Local_Minima, read_csv_data, spherical_kmeans_voronoi, \
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
@@ -40,6 +40,7 @@ DATA_DIR     = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'spherical_kmeans_voronoi')
 LOCAL_MIN_IMAGES = os.path.join(SUB_DATA_DIR, 'images_local_min')
 TRANS_STA_IMAGES = os.path.join(SUB_DATA_DIR, 'image_transition_state')
+TS_PATHWAYS = os.path.join(TRANS_STA_IMAGES, 'pathways')
 
 # Input files #
 HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
@@ -312,11 +313,11 @@ class MainRun(unittest.TestCase):
             ax_3d.set_ylim([-1, 1])
             ax_3d.set_zlim([-1, 1])
 
-            #ts_class.plot_uniq_ts_path(ax, '00_07', 'ts_group_0', 'ts_0')
             ts_class.plot_loc_min_group_2d(ax, '00_04')
             ts_class.plot_loc_min_group_3d(ax_3d, '00_04')
-            #ts_class.plot_loc_min_group_with_uniq_ts(ax, '00_04')
-            plt.show()
+            #plt.show()
+
+            make_file_from_plot('plot_00_04', ax, fig, TS_PATHWAYS)
 
             pass
 

@@ -29,7 +29,8 @@ import matplotlib as mpl
 import matplotlib.lines as mlines
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
-
+# # # Header Stuff # # #
+#region
 try:
     # noinspection PyCompatibility
     from ConfigParser import ConfigParser
@@ -50,9 +51,10 @@ PLM1 = 'phi_lm1'
 TLM1 = 'theta_lm1'
 PLM2 = 'phi_lm2'
 TLM2 = 'theta_lm2'
-
+#endregion
 
 # # # Helper Functions # # #
+#region
 # converts a vertex from polar to cartesian
 def pol2cart(vert):
     """
@@ -70,7 +72,6 @@ def pol2cart(vert):
 
     return [x, y, z]
 
-
 # converts a vertex from cartesian to polar
 def cart2pol(vert):
     def get_pol_coord(x, y, z):
@@ -86,8 +87,7 @@ def cart2pol(vert):
 
     return get_pol_coord(vert[0], vert[1], vert[2])
 
-
-# plots a line between two points given in cartesian coordinates
+# plots a line on a rectangular plot (2D)
 def plot_line(ax, vert_1, vert_2, color_in):
     line = get_pol_coords(vert_1, vert_2)
 
@@ -101,6 +101,7 @@ def plot_line(ax, vert_1, vert_2, color_in):
 
     return
 
+# plots a line on a spherical plot (3D)
 def plot_arc(ax_3d, vert_1, vert_2, color_in):
     """
     plots lines individually on a sphere
@@ -159,14 +160,19 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
     # plots arclength
     ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in)
 
-def make_file_from_plot(filename, plt, fig, dir_):
-    filename = create_out_fname(filename, base_dir=dir_)
-    plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
+# plots a line on a circular plot (2D)
+def plot_on_circle(ax_circle, vert_1, vert_2, color_in):
+    pass
 
-# # # Helper Functions # # #
+# creates a file for given plot & figure
+def make_file_from_plot(filename, plt, fig, dir_):
+    filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
+    plt.figure.savefig(filename1, facecolor=fig.get_facecolor(), transparent=True)
+#endregion
 
 # # # Classes # # #
-
+#region
+# class for spherical voronoi on local minima
 class Local_Minima():
     def __init__(self, number_clusters_in, data_points_in, cano_points_in, phi_raw_in, theta_raw_in, energy):
         self.sv_kmeans_dict = {}
@@ -295,7 +301,7 @@ class Local_Minima():
         plotting_local_minima_size(self.groups_dict, self.sv_kmeans_dict, self.cano_points, directory=directory, save_status=save_status)
     #TODO: add voronoi edges to the above plot.
 
-
+# class for transition states and their pathways
 class Transition_States():
     def __init__(self, ts_data_in, lm_class_obj):
         # groups by the unique transition state paths
@@ -308,6 +314,7 @@ class Transition_States():
         # for ts_group in self.ts_groups:
         #     self.set_weighted_gibbs(ts_group)
 
+    # reorganizes the data structure
     def reorg_groups(self, unorg_groups, lm_class_obj):
         temp_ts_groups = {}
 
@@ -499,7 +506,6 @@ class Transition_States():
 
         return
 
-
     # plot multiple plots
     def plot_northern_southern(self, directory=None, save_status=False):
 
@@ -573,23 +579,105 @@ class Transition_States():
 
         return data
 
+    def polar_info_collecting(self, connect, type):
 
+        if type == 'hemi':
+            phi_lm_val = []
+            pro_lm_val = []
+            phi_ts_val = []
+            pro_ts_val = []
+            for row in connect:
+                for key, key_val in self.ts_groups[row].items():
+                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
+                    pro_lm_val.append(np.sin(math.radians(key_val['lm1_vert_pol'][1])))
+                    phi_ts_val.append(key_val['ts_vert_pol'][0])
+                    pro_ts_val.append(np.sin(math.radians(key_val['ts_vert_pol'][1])))
+                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
+                    pro_lm_val.append(np.sin(math.radians(key_val['lm2_vert_pol'][1])))
+            data = {}
+            data['pro_lm_val'] = pro_lm_val
+            data['phi_lm_val'] = phi_lm_val
+            data['pro_ts_val'] = pro_ts_val
+            data['phi_ts_val'] = phi_ts_val
+        elif type == 'eq':
+            phi_lm_val = []
+            theta_lm_val = []
+            phi_ts_val = []
+            theta_ts_val = []
+            for row in connect:
+                for key, key_val in self.ts_groups[row].items():
+                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
+                    theta_lm_val.append(key_val['lm1_vert_pol'][1])
+                    phi_ts_val.append(key_val['ts_vert_pol'][0])
+                    theta_ts_val.append(key_val['ts_vert_pol'][1])
+                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
+                    theta_lm_val.append(key_val['lm2_vert_pol'][1])
+            data = {}
+            data['phi_lm_val'] = phi_lm_val
+            data['theta_lm_val'] = theta_lm_val
+            data['phi_ts_val'] = phi_ts_val
+            data['theta_ts_val'] = theta_ts_val
 
+        return data
 
 # plots modify anything?
 class Plotting():
-    def __init__(self, groups_in):
-        # list of groups
-        self.groups = groups_in
+    def __init__(self):
+        # creating rectangular plot
+        self.fig_rect, self.ax_rect = plt.subplots(facecolor='white')
+
+        # creating spherical plot
+        self.fig_spher = plt.figure()
+        self.ax_spher = self.fig_spher.gca(projection='3d')
 
 
-# # # Class # # #
 
+    # initializes a rectangular plot
+    def rect_plot_init(self):
+        major_ticksx = np.arange(0, 372, 60)
+        minor_ticksx = np.arange(0, 372, 12)
+        self.ax_rect.set_xticks(major_ticksx)
+        self.ax_rect.set_xticks(minor_ticksx, minor=True)
 
-########################################################################################################################
+        major_ticksy = np.arange(0, 182, 30)
+        minor_ticksy = np.arange(0, 182, 10)
+        self.ax_rect.set_yticks(major_ticksy)
+        self.ax_rect.set_yticks(minor_ticksy, minor=True)
+
+        self.ax_rect.set_xlim([-5, 365])
+        self.ax_rect.set_ylim([185, -5])
+        self.ax_rect.set_xlabel('Phi (degrees)')
+        self.ax_rect.set_ylabel('Theta (degrees)')
+
+        return
+
+    # intializes a circular plot
+    def circ_plot_init(self):
+        # plots wireframe sphere
+        theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
+        THETA, PHI = np.meshgrid(theta, phi)
+        R = 1.0
+        X = R * np.sin(PHI) * np.cos(THETA)
+        Y = R * np.sin(PHI) * np.sin(THETA)
+        Z = R * np.cos(PHI)
+        self.ax_spher.plot_wireframe(X, Y, Z, color="lightblue")
+
+        # settings for 3d graph
+        self.ax_spher.legend()
+        self.ax_spher.set_xlim([-1, 1])
+        self.ax_spher.set_ylim([-1, 1])
+        self.ax_spher.set_zlim([-1, 1])
+
+        return
+
+    # initializes a spherical plot
+    def spher_plot_init(self):
+        pass
+
+#endregion
 
 # # # Local Minima Functions # # #
-
+#region
 def read_csv_data(filename, dir_):
     """
     Reads the CSV file with the information
@@ -861,11 +949,10 @@ def boltzmann_weighting_mini(energies):
         weighted_gibbs_free_energy += (ind_boltz[i] / total_botlz) * energies[i]
 
     return round(weighted_gibbs_free_energy, 3)
-
-
-########################################################################################################################
+#endregion
 
 # # # Justin's Functions # # #
+#region
 
 def get_pol_coords(vert_1, vert_2):
     """
@@ -967,7 +1054,6 @@ def pol2cart(vert):
 def vor_edges(data_dict):
     return get_regions(data_dict)
 
-
 # gets lines of particular region
 def get_vor_sec(verts):
     pairs = []
@@ -996,7 +1082,6 @@ def get_vor_sec(verts):
 
     return lines
 
-
 # gets lines of all regions
 def get_regions(data_dict):
     lines = []
@@ -1010,7 +1095,6 @@ def get_regions(data_dict):
         lines.extend(get_vor_sec(verts))
 
     return lines
-
 
 # plots 2D and 3D voronoi edges
 def matplotlib_edge_printing(data_dict, dir_, save_status='no'):
@@ -1117,7 +1201,6 @@ def matplotlib_edge_printing(data_dict, dir_, save_status='no'):
 
     return
 
-
 def plot_vor_sec(ax_3d, ax, verts):
     """
     helper function for plotting a single voronoi section (input is the vertices of the section)
@@ -1153,7 +1236,6 @@ def plot_vor_sec(ax_3d, ax, verts):
 
     return
 
-
 def plot_regions(ax_3d, ax, data_dict):
     """
     plots all voronoi sections
@@ -1188,7 +1270,6 @@ def not_in_pairs(pairs, curr_pair):
 
     return True
 
-
 def is_end(edge):
     """
     helper function to determine if an edge goes across the end
@@ -1206,7 +1287,6 @@ def is_end(edge):
             has_360 = True
 
     return has_0 and has_360
-
 
 def split_in_two(edge):
     """
@@ -1233,12 +1313,10 @@ def split_in_two(edge):
     two_edges = [edge_one, edge_two]
 
     return two_edges
-
-
-########################################################################################################################
+#endregion
 
 # # # Transition State Functions # # #
-
+#region
 def read_csv_data_TS(filename, dir_):
     """
     Reads the CSV file with the information for the TS structures
@@ -1432,12 +1510,10 @@ def return_lowest_value(value1, value2):
         highest_val = value2
 
     return lowest_val, highest_val
-
-
-########################################################################################################################
+#endregion
 
 # # # New plotting Functions # # #
-
+#region
 def plotting_local_minima(data_dict, sv_skm_dict, cano_point, directory=None, save_status=False, voronoi_status=True):
     global leg
     phi_vals = []
@@ -1653,7 +1729,6 @@ def polar_organizer(data, type='hemi'):
             elif type[1] == 'lm' and type[0] == 'theta':
                 lm_pro = key_val
 
-
     return ts_phi, ts_pro, lm_phi, lm_pro
 
 
@@ -1733,9 +1808,6 @@ def plotting_northern_southern_equatorial(northern_data, southern_data, equatori
     return
 
 
-
-
-
 def matplotlib_printing_normal(data_dict, dir_=None, save_status=False, voronoi_status=True, ts_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
@@ -1801,7 +1873,6 @@ def matplotlib_printing_normal(data_dict, dir_=None, save_status=False, voronoi_
         plt.show()
 
     return
-
 
 
 def matplotlib_printing_size_bxyl_lm(data_dict, dir_, save_status=False):
@@ -1879,7 +1950,6 @@ def matplotlib_printing_size_bxyl_lm(data_dict, dir_, save_status=False):
         plt.show()
 
     return
-
 
 
 def matplotlib_printing_ts_local_min(groups, phi_ts_lm, theta_ts_lm, voronoi_info, dir_, save_status=False):
@@ -2019,9 +2089,6 @@ def matplotlib_printing_ts_raw_local_mini(groups, phi_ts_lm, theta_ts_lm, vorono
     return
 
 
-
-
-
 def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, phi_new, theta_new, group_key):
     fig, ax = plt.subplots(facecolor='white')
 
@@ -2053,3 +2120,4 @@ def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, 
     plt.show()
 
     return
+#endregion
