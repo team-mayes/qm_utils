@@ -295,6 +295,7 @@ class MainRun(unittest.TestCase):
             ax.set_ylabel('Theta (degrees)')
 
             ts_class.plot_uniq_ts_path(ax, '00_07', 'ts_group_0', 'ts_0')
+            ts_class.plot_loc_min_group_with_uniq_ts(ax, '00_07')
             plt.show()
 
             pass
@@ -339,14 +340,12 @@ class MainRun(unittest.TestCase):
 
 
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
-<<<<<<< HEAD
-=======
+
 
 
             assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
 
 
             dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
->>>>>>> 99cd8c641e3e00522b01a1d0a606be5406141cd1
         finally:
             ts_class = Transition_States(data_dict_ts,data)

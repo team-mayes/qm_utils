@@ -73,7 +73,18 @@ def pol2cart(vert):
 
 # converts a vertex from cartesian to polar
 def cart2pol(vert):
-    return
+    def get_pol_coord(x, y, z):
+        theta = np.rad2deg(np.arctan2(np.sqrt(x ** 2 + y ** 2), z))
+        phi = np.rad2deg(np.arctan2(y, x))
+
+        while theta < 0:
+            theta += 360
+        while phi < 0:
+            phi += 360
+
+        return [phi, theta]
+
+    return get_pol_coord(vert[0], vert[1], vert[2])
 
 
 # plots a line between two points given in polar coordinates
@@ -229,13 +240,13 @@ class Transition_States():
         # groups by the unique transition state paths
         __unorg_groups = sorting_TS_into_groups(ts_data_in, lm_class_obj)
 
-        self.ts_groups = self.reorg_groups(__unorg_groups)
+        self.ts_groups = self.reorg_groups(__unorg_groups, lm_class_obj)
 
         # # makes average path for each unique transition state pathway
         # for ts_group in self.ts_groups:
         #     self.set_weighted_gibbs(ts_group)
 
-    def reorg_groups(self, unorg_groups):
+    def reorg_groups(self, unorg_groups, lm_class_obj):
         temp_ts_groups = {}
 
         # creating new dict of lm_groups
@@ -251,6 +262,28 @@ class Transition_States():
                 temp_ts_group['ts_group_' + str(i)] = {}
                 temp_ts_group['ts_group_' + str(i)]['ts_vert'] = np.asarray(pol2cart(ts_vert))
 
+                lm_keys = lm_key.split("_")
+                lm1_key = 'group_' + lm_keys[0]
+                lm2_key = 'group_' + lm_keys[1]
+
+                lm1_phi = lm_class_obj.groups_dict[lm1_key]['mean_phi']
+                lm1_theta = lm_class_obj.groups_dict[lm1_key]['mean_theta']
+
+                lm1_vert = [float(lm1_phi), float(lm1_theta)]
+
+                lm2_phi = lm_class_obj.groups_dict[lm2_key]['mean_phi']
+                lm2_theta = lm_class_obj.groups_dict[lm2_key]['mean_theta']
+
+                lm2_vert = [float(lm2_phi), float(lm2_theta)]
+
+                temp_ts_group['ts_group_' + str(i)]['lm1_vert_cart'] = np.asarray(pol2cart(lm1_vert))
+                temp_ts_group['ts_group_' + str(i)]['lm2_vert_cart'] = np.asarray(pol2cart(lm2_vert))
+                temp_ts_group['ts_group_' + str(i)]['ts_vert_cart'] = np.asarray(pol2cart(ts_vert))
+
+                temp_ts_group['ts_group_' + str(i)]['lm1_vert_pol'] = np.asarray(lm1_vert)
+                temp_ts_group['ts_group_' + str(i)]['lm2_vert_pol'] = np.asarray(lm2_vert)
+                temp_ts_group['ts_group_' + str(i)]['ts_vert_pol'] = np.asarray(ts_vert)
+
                 # creating a dict of uniq ts's
                 temp_ts_group['ts_group_' + str(i)]['ts_group'] = {}
 
@@ -260,14 +293,21 @@ class Transition_States():
                         uniq_ts = {}
 
                         uniq_ts['energy (A.U.)'] = curr_lm_group['gibbs_energy'][j]
-                        uniq_ts['uniq_ts_vert'] = np.asarray(pol2cart([curr_lm_group['ts_vals_phi'][j],
+                        uniq_ts['uniq_ts_vert_cart'] = np.asarray(pol2cart([curr_lm_group['ts_vals_phi'][j],
                                                                        curr_lm_group['ts_vals_theta'][j]]))
-
                         # storing the lm verts for specific ts
-                        uniq_ts['lm1_vert'] = np.asarray(pol2cart([curr_lm_group['lm_vals_phi'][j][0],
+                        uniq_ts['uniq_lm1_vert_cart'] = np.asarray(pol2cart([curr_lm_group['lm_vals_phi'][j][0],
                                                                    curr_lm_group['lm_vals_theta'][j][0]]))
-                        uniq_ts['lm2_vert'] = np.asarray(pol2cart([curr_lm_group['lm_vals_phi'][j][1],
+                        uniq_ts['uniq_lm2_vert_cart'] = np.asarray(pol2cart([curr_lm_group['lm_vals_phi'][j][1],
                                                                    curr_lm_group['lm_vals_theta'][j][1]]))
+
+                        uniq_ts['uniq_ts_vert_pol'] = np.asarray([curr_lm_group['ts_vals_phi'][j],
+                                                                            curr_lm_group['ts_vals_theta'][j]])
+                        # storing the lm verts for specific ts
+                        uniq_ts['uniq_lm1_vert_pol'] = np.asarray([curr_lm_group['lm_vals_phi'][j][0],
+                                                                        curr_lm_group['lm_vals_theta'][j][0]])
+                        uniq_ts['uniq_lm2_vert_pol'] = np.asarray([curr_lm_group['lm_vals_phi'][j][1],
+                                                                        curr_lm_group['lm_vals_theta'][j][1]])
 
                     temp_ts_group['ts_group_' + str(i)]['ts_group']['ts_' + str(j)] = uniq_ts
 
@@ -296,22 +336,25 @@ class Transition_States():
 
         return temp_ts_groups
 
-    # plots desired local minimum group pathways
-    def plot_loc_min_group(self, ax, lm_key_in):
+    # plots desired local minimum group pathways for all uniq ts pts
+    def plot_loc_min_group_with_uniq_ts(self, ax, lm_key_in):
         """
-
+        
         :param ax: plot being added to
-        :param lm_key_in: local min group key
-        :return:
+        :param lm_key_in: lm group key
+        :return: 
         """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
             if (lm_key == lm_key_in):
                 for ts_group_key in self.ts_groups[lm_key]:
-                    curr_ts_group = self.ts_groups[lm_key][ts_group_key]
+                    for ts_key in self.ts_groups[lm_key][ts_group_key]['ts_group']:
+                        path = self.ts_groups[lm_key][ts_group_key]['ts_group'][ts_key]
 
-                    plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm1_vert'])
-                    plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm2_vert'])
+                        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm1_vert_cart'])
+                        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
+
+                        print(path['uniq_ts_vert_cart'])
 
         return
 
@@ -319,8 +362,8 @@ class Transition_States():
     def plot_uniq_ts_path(self, ax, lm_key_in, ts_group_key_in, ts_key_in):
         path = self.ts_groups[lm_key_in][ts_group_key_in]['ts_group'][ts_key_in]
 
-        plot_line(ax, path['uniq_ts_vert'], path['lm1_vert'])
-        plot_line(ax, path['uniq_ts_vert'], path['lm2_vert'])
+        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm1_vert_cart'])
+        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
 
         return
 
@@ -337,11 +380,10 @@ class Transition_States():
 
 
     # plot multiple plots
-<<<<<<< HEAD
+
     def plot_southern(self):
-=======
+        pass
     def plot_northern_southern(self):
->>>>>>> 99cd8c641e3e00522b01a1d0a606be5406141cd1
         pass
 
 
