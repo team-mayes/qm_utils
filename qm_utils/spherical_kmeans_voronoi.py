@@ -159,6 +159,9 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
     # plots arclength
     ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in)
 
+def make_file_from_plot(filename, plt, fig, dir_):
+    filename = create_out_fname(filename, base_dir=dir_)
+    plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
 
 # # # Helper Functions # # #
 
@@ -502,14 +505,6 @@ class Transition_States():
         pass
     def plot_northern_southern(self):
         pass
-
-
-class Voronoi_plotting(Local_Minima):
-    def __init__(self):
-        # list of vertices for region
-        self.sv_region_indices = []
-        # list of sv_region_indices
-        self.sv_regions = []
 
 
 # plots modify anything?
