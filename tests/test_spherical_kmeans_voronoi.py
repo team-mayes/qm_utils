@@ -294,8 +294,28 @@ class MainRun(unittest.TestCase):
             ax.set_xlabel('Phi (degrees)')
             ax.set_ylabel('Theta (degrees)')
 
-            ts_class.plot_uniq_ts_path(ax, '00_07', 'ts_group_0', 'ts_0')
-            ts_class.plot_loc_min_group_with_uniq_ts(ax, '00_07')
+            fig_3d = plt.figure()
+            ax_3d = fig_3d.gca(projection='3d')
+
+            # plots wireframe sphere
+            theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
+            THETA, PHI = np.meshgrid(theta, phi)
+            R = 1.0
+            X = R * np.sin(PHI) * np.cos(THETA)
+            Y = R * np.sin(PHI) * np.sin(THETA)
+            Z = R * np.cos(PHI)
+            ax_3d.plot_wireframe(X, Y, Z, color="lightblue")
+
+            # settings for 3d graph
+            ax_3d.legend()
+            ax_3d.set_xlim([-1, 1])
+            ax_3d.set_ylim([-1, 1])
+            ax_3d.set_zlim([-1, 1])
+
+            #ts_class.plot_uniq_ts_path(ax, '00_07', 'ts_group_0', 'ts_0')
+            ts_class.plot_loc_min_group_2d(ax, '00_04')
+            ts_class.plot_loc_min_group_3d(ax_3d, '00_04')
+            #ts_class.plot_loc_min_group_with_uniq_ts(ax, '00_04')
             plt.show()
 
             pass
