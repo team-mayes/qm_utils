@@ -22,7 +22,7 @@ from qm_utils.spherical_kmeans_voronoi import Transition_States, Local_Minima, r
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
-    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, multiple_plots, sorting_TS_into_groups
+    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, sorting_TS_into_groups
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -348,24 +348,20 @@ class MainRun(unittest.TestCase):
         dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
         data = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
         try:
-            save_status = False
+            save_status = True
             storage_spot = TRANS_STA_IMAGES
             # loading in the local minima information
-            number_clusters = 9
-            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
-            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
-            data = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
-
-            data.groups_dict
-
-
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
 
-
-
-            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
-
-
-            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
         finally:
-            ts_class = Transition_States(data_dict_ts,data)
+            ts_class = Transition_States(data_dict_ts, data)
+            ts_class.plot_northern_southern(directory=storage_spot, save_status=save_status)
+
+
+
+
+
+
+
+
+
