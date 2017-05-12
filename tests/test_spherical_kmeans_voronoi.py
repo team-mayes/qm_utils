@@ -18,7 +18,7 @@ from scipy.spatial import SphericalVoronoi
 from qm_utils.qm_common import silent_remove, diff_lines, capture_stderr, capture_stdout, create_out_fname, \
     write_csv, list_to_dict, read_csv_to_dict
 import qm_utils.spherical_kmeans_voronoi
-from qm_utils.spherical_kmeans_voronoi import pol2cart, plot_on_circle, Plots, make_file_from_plot, Transition_States, Local_Minima, read_csv_data, spherical_kmeans_voronoi, \
+from qm_utils.spherical_kmeans_voronoi import plot_arc, pol2cart, plot_on_circle, Plots, make_file_from_plot, Transition_States, Local_Minima, read_csv_data, spherical_kmeans_voronoi, \
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
@@ -330,25 +330,18 @@ class MainRun(unittest.TestCase):
     def TestPlotting(self):
         plot_test = Plots()
         graph = plot_test.ax_circ
-        graph.plot([100, 200, 300], [100, 50, 150])
 
-        vert1 = [np.deg2rad(1), np.deg2rad(30)]
+        vert1 = [0, 0]
         vert1_cart = pol2cart(vert1)
 
-        vert2 = [np.deg2rad(40), np.deg2rad(30)]
+        vert2 = [45, 45]
         vert2_cart = pol2cart(vert2)
 
         plot_on_circle(graph, vert1_cart, vert2_cart)
 
+        vert3 = [90, 90]
+        vert3_cart = pol2cart(vert3)
+
+        plot_on_circle(graph, vert3_cart, vert2_cart)
+
         plot_test.show()
-
-
-
-
-
-
-
-
-
-
-

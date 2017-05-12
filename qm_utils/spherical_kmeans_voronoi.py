@@ -158,23 +158,7 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
     # plots arclength
     ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in)
 
-# converts the list of theta's into a list of r's
-def get_r(theta_vals):
-    r = []
-    r_max = 0
-
-    for i in range(len(theta_vals)):
-        if math.sin(theta_vals[i]) == 0:
-            r.append(0)
-        else:
-            r.append(abs(math.sin(theta_vals[i])))
-            if r[i] > r_max:
-                r_max = r[i]
-
-    for i in range(len(theta_vals)):
-        r[i]  = r[i] / r_max
-
-    return r
+    return raw_coords
 
 # plots a line on a circular plot (2D)
 # verts are in polar [phi, theta]
@@ -191,15 +175,17 @@ def plot_on_circle(ax_circ, vert_1, vert_2, color_in='black'):
     pol_coords = get_pol_coords(vert_1, vert_2)
 
     # theta
-    r = get_r(pol_coords[1])
+    r = []
+
     # phi
     theta = pol_coords[0]
 
-    for i in range(len(theta)):
-        theta[i] = np.rad2deg(theta[i])
-
-    for i in range(len(r)):
+    for i in range(len(pol_coords[1])):
+        r.append(abs(math.sin(np.radians(pol_coords[1][i]))))
+        theta[i] = np.radians(pol_coords[0][i])
         print(theta[i], r[i])
+
+    theta[0] = theta[1]
 
     ax_circ.plot(theta, r, color=color_in)
 
@@ -723,8 +709,8 @@ class Plots():
 
         thetaticks = np.arange(0, 360, 30)
 
-        self.ax_circ.set_rmax(1.05)
-        self.ax_circ.set_rticks([0, 0.5, 1.05])  # less radial ticks
+        self.ax_circ.set_rlim([0, 1])
+        self.ax_circ.set_rticks([0.5, 1.0])  # less radial ticks
         self.ax_circ.set_rlabel_position(-22.5)  # get radial labels away from plotted line
         self.ax_circ.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ.set_theta_zero_location("N")
