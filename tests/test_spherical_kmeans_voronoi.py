@@ -181,45 +181,6 @@ class TestSphereicalKmeansVoronoi(unittest.TestCase):
         plt.show()
 
 
-    # def testCanonicalDesignationCenters(self):
-    #
-    #     # Canonical Designations
-    #     pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir_)
-    #
-    #     #### TEST PURPOSES ####
-    #     cano_centers = []
-    #
-    #     # converts strings to ints
-    #     for i in range(len(phi_cano)):
-    #         phi_cano[i] = float(phi_cano[i])
-    #         theta_cano[i] = float(theta_cano[i])
-    #
-    #     # creating cartesian cano_centers
-    #     for i in range(len(phi_cano)):
-    #         vert_test = pol2cart([phi_cano[i], theta_cano[i], 1])
-    #         vert_test = np.asarray(vert_test)
-    #
-    #         cano_centers.append(vert_test)
-    #
-    #     # Default parameters for spherical voronoi
-    #     radius = 1
-    #     center = np.array([0, 0, 0])
-    #
-    #     cano_centers = np.asarray(cano_centers)
-    #
-    #     # Spherical Voronoi for the centers
-    #
-    #     sv_test = SphericalVoronoi(cano_centers, radius, center)
-    #     sv_test.sort_vertices_of_regions()
-    #     test_dict = {}
-    #
-    #     test_dict['number_clusters'] = len(phi_cano)
-    #     test_dict['vertices_sv_xyz'] = sv_test.vertices
-    #     test_dict['regions_sv_labels'] = sv_test.regions
-    #
-    #     plot_regions(ax_3d, ax, test_dict)
-    #
-    #     #### TEST PURPOSES ####
 
 
 class MainRun(unittest.TestCase):
@@ -264,27 +225,30 @@ class MainRun(unittest.TestCase):
         finally:
             # Comparing the LM structures #
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
-            #assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
-            # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
-            # matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
+            matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+            matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
 
             # Grouping the TS #
-            # sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
+            sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
 
-            # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
-            number_clusters = 9
-            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
-            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
-            lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
-            ts_class = Transition_States(data_dict_ts, lm_class)
+            matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
-            plot_test = Plots()
-            ax_rect = plot_test.ax_rect
-            ax_spher = plot_test.ax_spher
 
-            ts_class.plot_loc_min_group_2d(ax_rect, '00_04')
-            ts_class.plot_loc_min_group_3d(ax_spher, '00_04')
-            plot_test.show()
+
+            # number_clusters = 9
+            # data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            # dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
+            # lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
+            # ts_class = Transition_States(data_dict_ts, lm_class)
+            #
+            # plot_test = Plots()
+            # ax_rect = plot_test.ax_rect
+            # ax_spher = plot_test.ax_spher
+            #
+            # ts_class.plot_loc_min_group_2d(ax_rect, '00_04')
+            # ts_class.plot_loc_min_group_3d(ax_spher, '00_04')
+            # plot_test.show()
 
             #make_file_from_plot('plot_00_04', ax, fig, TS_PATHWAYS)
 
@@ -328,6 +292,7 @@ class MainRun(unittest.TestCase):
             ts_class.plot_northern_southern(directory=storage_spot, save_status=save_status)
             ts_class.plot_all()
 
+
     def TestPlotting(self):
         plot_test = Plots()
         graph = plot_test.ax_circ
@@ -342,6 +307,8 @@ class MainRun(unittest.TestCase):
         plot_on_circle(graph, vert1_cart, vert2_cart)
 
         plot_test.show()
+
+
 
 
 

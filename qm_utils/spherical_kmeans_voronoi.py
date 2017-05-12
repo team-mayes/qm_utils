@@ -180,12 +180,12 @@ def get_r(theta_vals):
 # verts are in polar [phi, theta]
 def plot_on_circle(ax_circ, vert_1, vert_2, color_in='black'):
     """
-    
+
     :param ax_circle: plot being added to
-    :param vert_1: 
-    :param vert_2: 
-    :param color_in: 
-    :return: 
+    :param vert_1:
+    :param vert_2:
+    :param color_in:
+    :return:
     """
 
     pol_coords = get_pol_coords(vert_1, vert_2)
@@ -212,6 +212,7 @@ def make_file_from_plot(filename, plt, fig, dir_):
 #endregion
 
 # # # Classes # # #
+
 #region
 # class for spherical voronoi on local minima
 class Local_Minima():
@@ -547,7 +548,51 @@ class Transition_States():
 
         return
 
-    # plot multiple plots
+
+    def plot_mercator(self, ax, directory=None, save_status=False):
+
+        for lm_key, lm_val in self.ts_groups.items():
+            print('\n{}'.format(lm_key))
+            for ts_key, ts_group_val in lm_val.items():
+                print(ts_key)
+
+
+
+            # for ts_key, ts_group in lm_key.items():
+            #
+            #     print(ts_key)
+            #     print(ts_group)
+            #     print('\n')
+
+
+
+        return
+
+
+
+    def plot_multiple(self, ax1, ax2, ax3, directory=None, save_status=False):
+
+    #
+    #     pro = []
+    #     phi = []
+    #
+    #     for key, key_val in self.ts_groups.items():
+    #         if key == '00_01':
+    #             for ts_group_key, ts_group_info in key_val.items():
+    #                 phi.append(ts_group_info['ts_vert_pol'][0])
+    #                 pro.append(np.sin(np.deg2rad(ts_group_info['ts_vert_pol'][1])))
+    #
+    #
+    #         ax1.scatter(phi, pro, s=60, c='blue')
+    #
+    #
+    #
+    #
+    #
+    #
+        return
+
+
     def plot_northern_southern(self, directory=None, save_status=False):
 
         northern_groups = []
@@ -578,6 +623,7 @@ class Transition_States():
 
 
         return
+
 
     def polar_info_collecting(self, connect, type):
 
@@ -619,6 +665,7 @@ class Transition_States():
             data['theta_ts_val'] = theta_ts_val
 
         return data
+
 
     def polar_info_collecting(self, connect, type):
 
@@ -725,7 +772,6 @@ class Plots():
 
         self.ax_circ.set_rmax(1.05)
         self.ax_circ.set_rticks([0, 0.5, 1.05])  # less radial ticks
-        self.ax_circ.set_rlabel_position(-22.5)  # get radial labels away from plotted line
         self.ax_circ.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ.set_theta_zero_location("N")
         self.ax_circ.set_yticklabels([])
@@ -1632,10 +1678,6 @@ def plotting_local_minima(data_dict, sv_skm_dict, cano_point, directory=None, sa
     return
 
 
-
-    # # # Plotting Functions # # #
-
-
 def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=False):
     phi_values = []
     theta_values = []
@@ -1871,8 +1913,9 @@ def plotting_northern_southern_equatorial(northern_data, southern_data, equatori
         plt.show()
 
     return
+#endregion
 
-
+#
 def matplotlib_printing_normal(data_dict, dir_=None, save_status=False, voronoi_status=True, ts_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
@@ -2185,4 +2228,3 @@ def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, 
     plt.show()
 
     return
-#endregion
