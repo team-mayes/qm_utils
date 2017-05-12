@@ -280,10 +280,15 @@ class MainRun(unittest.TestCase):
 
             plot_test = Plots()
             ax_rect = plot_test.ax_rect
+            ax_circ = plot_test.ax_circ
             ax_spher = plot_test.ax_spher
 
-            ts_class.plot_loc_min_group_2d(ax_rect, '00_04')
+            #ts_class.plot_all_2d(ax_rect, ax_circ)
+            #ts_class.plot_all_3d(ax_spher)
+
+            ts_class.plot_loc_min_group_2d(ax_rect, ax_circ, '00_04')
             ts_class.plot_loc_min_group_3d(ax_spher, '00_04')
+
             plot_test.show()
 
             #make_file_from_plot('plot_00_04', ax, fig, TS_PATHWAYS)
@@ -343,5 +348,6 @@ class MainRun(unittest.TestCase):
         vert3_cart = pol2cart(vert3)
 
         plot_on_circle(graph, vert3_cart, vert2_cart)
+        plot_on_circle(graph, vert1_cart, vert3_cart)
 
         plot_test.show()
