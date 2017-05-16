@@ -88,16 +88,19 @@ def cart2pol(vert):
     return get_pol_coord(vert[0], vert[1], vert[2])
 
 # plots a line on a rectangular plot (2D)
-def plot_line(ax, vert_1, vert_2, color_in):
+def plot_line(ax, vert_1, vert_2, line_color):
     line = get_pol_coords(vert_1, vert_2)
 
     if (is_end(line)):
         two_edges = split_in_two(line)
 
-        ax.plot(two_edges[0][0], two_edges[0][1], color=color_in)
-        ax.plot(two_edges[1][0], two_edges[1][1], color=color_in)
+        ax.plot(two_edges[0][0], two_edges[0][1], color=line_color)
+        ax.plot(two_edges[1][0], two_edges[1][1], color=line_color)
     else:
-        ax.plot(line[0], line[1], color=color_in)
+        ax.plot(line[0], line[1], color=line_color)
+
+    ax.scatter(line[0][0], line[1][0], s=60, c='blue', marker='s', edgecolor='face')
+    ax.scatter(line[0][-1], line[1][-1], s=60, c='green', marker='o', edgecolor='face')
 
     return
 
@@ -158,11 +161,15 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
     # plots arclength
     ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in)
 
+    # plots verts
+    ax_3d.scatter(vert_1[0], vert_1[1], vert_1[2], s=60, c='blue', marker='s', edgecolor='face')
+    ax_3d.scatter(vert_2[0], vert_2[1], vert_2[2], s=60, c='green', marker='o', edgecolor='face')
+
     return raw_coords
 
 # plots a line on a circular plot (2D)
-# verts are in polar [phi, theta]
-def plot_on_circle(ax_circ, vert_1, vert_2, color_in='black'):
+# verts are in polar
+def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', vert_color='black'):
     """
 
     :param ax_circle: plot being added to
@@ -187,7 +194,10 @@ def plot_on_circle(ax_circ, vert_1, vert_2, color_in='black'):
 
     theta[0] = theta[1]
 
-    ax_circ.plot(theta, r, color=color_in)
+    ax_circ.plot(theta, r, color=line_color)
+
+    ax_circ.scatter(theta[0], r[0], s=60, c='blue', marker='s', edgecolor='face')
+    ax_circ.scatter(theta[-1], r[-1], s=60, c='green', marker='o', edgecolor='face')
 
     return
 
@@ -338,9 +348,7 @@ class Transition_States():
         self.ts_groups = self.reorg_groups(__unorg_groups, lm_class_obj)
         self.lm_class = lm_class_obj
 
-        # # makes average path for each unique transition state pathway
-        # for ts_group in self.ts_groups:
-        #     self.set_weighted_gibbs(ts_group)
+        self.circ_groups_init()
 
     # reorganizes the data structure
     def reorg_groups(self, unorg_groups, lm_class_obj):
@@ -468,12 +476,13 @@ class Transition_States():
         return
 
     # plots desired local minimum group pathways for all uniq ts pts
-    def plot_loc_min_group_2d(self, ax, lm_key_in):
+    def plot_loc_min_group_2d(self, ax_rect, ax_circ, lm_key_in):
         """
-
-        :param ax: plot being added to
-        :param lm_key_in: lm group key
+        :param ax_rect:
+        :param ax_circ:
+        :param lm_key_in:
         :return:
+
         """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
@@ -481,8 +490,11 @@ class Transition_States():
                 for ts_group_key in self.ts_groups[lm_key]:
                     path = self.ts_groups[lm_key][ts_group_key]
 
-                    plot_line(ax, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                    plot_line(ax, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+                    plot_line(ax_rect, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                    plot_line(ax_rect, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+
+                    plot_on_circle(ax_circ, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                    plot_on_circle(ax_circ, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
 
         return
 
@@ -524,175 +536,40 @@ class Transition_States():
         return
 
     # plots all pathways
-    def plot_all(self, ax):
+    def plot_all_2d(self, ax_rect, ax_circ):
         for lm_key in self.ts_groups:
-            for ts_group_key in self.ts_groups[lm_key]:
-                curr_ts_group = self.ts_groups[lm_key][ts_group_key]
-
-                plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm1_vert'])
-                plot_line(ax, curr_ts_group['ts_vert'], curr_ts_group['lm2_vert'])
+            self.plot_loc_min_group_2d(ax_rect, ax_circ, lm_key)
 
         return
 
-
-    def plot_mercator(self, ax, directory=None, save_status=False):
-
-        for lm_key, lm_val in self.ts_groups.items():
-            print('\n{}'.format(lm_key))
-            for ts_key, ts_group_val in lm_val.items():
-                print(ts_key)
-
-
-
-            # for ts_key, ts_group in lm_key.items():
-            #
-            #     print(ts_key)
-            #     print(ts_group)
-            #     print('\n')
-
-
+    # plots all pathways
+    def plot_all_3d(self, ax_spher):
+        for lm_key in self.ts_groups:
+            self.plot_loc_min_group_3d(ax_spher, lm_key)
 
         return
 
+    # get group keys associated with north, south, and equatorial
+    def circ_groups_init(self):
+        self.north_groups = []
+        self.south_groups = []
+        self.equat_groups = []
 
+        lm_key_list = list(self.lm_class.groups_dict.keys())
 
-    def plot_multiple(self, ax1, ax2, ax3, directory=None, save_status=False):
+        lm_key_list.sort()
 
-    #
-    #     pro = []
-    #     phi = []
-    #
-    #     for key, key_val in self.ts_groups.items():
-    #         if key == '00_01':
-    #             for ts_group_key, ts_group_info in key_val.items():
-    #                 phi.append(ts_group_info['ts_vert_pol'][0])
-    #                 pro.append(np.sin(np.deg2rad(ts_group_info['ts_vert_pol'][1])))
-    #
-    #
-    #         ax1.scatter(phi, pro, s=60, c='blue')
-    #
-    #
-    #
-    #
-    #
-    #
-        return
-
-
-    def plot_northern_southern(self, directory=None, save_status=False):
-
-        northern_groups = []
-        southern_groups = []
-        for group_key, group_val in self.lm_class.groups_dict.items():
-            if float(group_val['mean_theta']) < 60:
-                northern_groups.append(group_key.split('_')[1])
-            elif float(group_val['mean_theta']) > 120:
-                southern_groups.append(group_key.split('_')[1])
-
-        northern_connect = []
-        southern_connect = []
-        equatori_connect = []
-        for key, key_val in self.ts_groups.items():
-            if key.split('_')[0] in northern_groups:
-                northern_connect.append(key)
-            elif key.split('_')[1] in southern_groups:
-                southern_connect.append(key)
+        for lm_key in self.ts_groups:
+            if lm_key.split("_")[0] == lm_key_list[0].split("_")[1]:
+                self.north_groups.append(lm_key)
+            elif lm_key.split("_")[1] == lm_key_list[-1].split("_")[1]:
+                self.south_groups.append(lm_key)
             else:
-                equatori_connect.append(key)
-
-
-        northern_data = self.polar_info_collecting(northern_connect, type='hemi')
-        southern_data = self.polar_info_collecting(southern_connect, type='hemi')
-        equatorial_data = self.polar_info_collecting(equatori_connect, type='eq')
-
-        plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, self.lm_class.groups_dict, directory, save_status)
-
+                self.equat_groups.append(lm_key)
 
         return
 
 
-    def polar_info_collecting(self, connect, type):
-
-        if type == 'hemi':
-            phi_lm_val = []
-            pro_lm_val = []
-            phi_ts_val = []
-            pro_ts_val = []
-            for row in connect:
-                for key, key_val in self.ts_groups[row].items():
-                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
-                    pro_lm_val.append(np.sin(math.radians(key_val['lm1_vert_pol'][1])))
-                    phi_ts_val.append(key_val['ts_vert_pol'][0])
-                    pro_ts_val.append(np.sin(math.radians(key_val['ts_vert_pol'][1])))
-                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
-                    pro_lm_val.append(np.sin(math.radians(key_val['lm2_vert_pol'][1])))
-            data = {}
-            data['pro_lm_val'] = pro_lm_val
-            data['phi_lm_val'] = phi_lm_val
-            data['pro_ts_val'] = pro_ts_val
-            data['phi_ts_val'] = phi_ts_val
-        elif type == 'eq':
-            phi_lm_val = []
-            theta_lm_val = []
-            phi_ts_val = []
-            theta_ts_val = []
-            for row in connect:
-                for key, key_val in self.ts_groups[row].items():
-                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
-                    theta_lm_val.append(key_val['lm1_vert_pol'][1])
-                    phi_ts_val.append(key_val['ts_vert_pol'][0])
-                    theta_ts_val.append(key_val['ts_vert_pol'][1])
-                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
-                    theta_lm_val.append(key_val['lm2_vert_pol'][1])
-            data = {}
-            data['phi_lm_val'] = phi_lm_val
-            data['theta_lm_val'] = theta_lm_val
-            data['phi_ts_val'] = phi_ts_val
-            data['theta_ts_val'] = theta_ts_val
-
-        return data
-
-
-    def polar_info_collecting(self, connect, type):
-
-        if type == 'hemi':
-            phi_lm_val = []
-            pro_lm_val = []
-            phi_ts_val = []
-            pro_ts_val = []
-            for row in connect:
-                for key, key_val in self.ts_groups[row].items():
-                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
-                    pro_lm_val.append(np.sin(math.radians(key_val['lm1_vert_pol'][1])))
-                    phi_ts_val.append(key_val['ts_vert_pol'][0])
-                    pro_ts_val.append(np.sin(math.radians(key_val['ts_vert_pol'][1])))
-                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
-                    pro_lm_val.append(np.sin(math.radians(key_val['lm2_vert_pol'][1])))
-            data = {}
-            data['pro_lm_val'] = pro_lm_val
-            data['phi_lm_val'] = phi_lm_val
-            data['pro_ts_val'] = pro_ts_val
-            data['phi_ts_val'] = phi_ts_val
-        elif type == 'eq':
-            phi_lm_val = []
-            theta_lm_val = []
-            phi_ts_val = []
-            theta_ts_val = []
-            for row in connect:
-                for key, key_val in self.ts_groups[row].items():
-                    phi_lm_val.append(key_val['lm1_vert_pol'][0])
-                    theta_lm_val.append(key_val['lm1_vert_pol'][1])
-                    phi_ts_val.append(key_val['ts_vert_pol'][0])
-                    theta_ts_val.append(key_val['ts_vert_pol'][1])
-                    phi_lm_val.append(key_val['lm2_vert_pol'][0])
-                    theta_lm_val.append(key_val['lm2_vert_pol'][1])
-            data = {}
-            data['phi_lm_val'] = phi_lm_val
-            data['theta_lm_val'] = theta_lm_val
-            data['phi_ts_val'] = phi_ts_val
-            data['theta_ts_val'] = theta_ts_val
-
-        return data
 
 # plots modify anything?
 class Plots():
@@ -1712,8 +1589,6 @@ def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=Fa
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
         plt.show()
-    return
-
     return
 
 

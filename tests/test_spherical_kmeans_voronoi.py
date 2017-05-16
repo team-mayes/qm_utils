@@ -225,30 +225,35 @@ class MainRun(unittest.TestCase):
         finally:
             # Comparing the LM structures #
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
-            assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
-            matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
-            matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+            # assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
+            # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+            # matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
 
             # Grouping the TS #
-            sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
-
-            matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
-
-
-
-            # number_clusters = 9
-            # data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
-            # dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
-            # lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
-            # ts_class = Transition_States(data_dict_ts, lm_class)
+            # sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
             #
-            # plot_test = Plots()
-            # ax_rect = plot_test.ax_rect
-            # ax_spher = plot_test.ax_spher
-            #
-            # ts_class.plot_loc_min_group_2d(ax_rect, '00_04')
-            # ts_class.plot_loc_min_group_3d(ax_spher, '00_04')
-            # plot_test.show()
+            # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
+
+
+
+            number_clusters = 9
+            data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
+            dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
+            lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
+            ts_class = Transition_States(data_dict_ts, lm_class)
+
+            plot_test = Plots()
+            ax_rect = plot_test.ax_rect
+            ax_circ = plot_test.ax_circ
+            ax_spher = plot_test.ax_spher
+
+            #ts_class.plot_all_2d(ax_rect, ax_circ)
+            #ts_class.plot_all_3d(ax_spher)
+
+            ts_class.plot_loc_min_group_2d(ax_rect, ax_circ, '00_04')
+            ts_class.plot_loc_min_group_3d(ax_spher, '00_04')
+
+            plot_test.show()
 
             #make_file_from_plot('plot_00_04', ax, fig, TS_PATHWAYS)
 
@@ -309,5 +314,6 @@ class MainRun(unittest.TestCase):
         vert3_cart = pol2cart(vert3)
 
         plot_on_circle(graph, vert3_cart, vert2_cart)
+        plot_on_circle(graph, vert1_cart, vert3_cart)
 
         plot_test.show()

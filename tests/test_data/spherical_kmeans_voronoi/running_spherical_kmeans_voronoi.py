@@ -62,37 +62,18 @@ try:
 finally:
     ts_class = Transition_States(data_dict_ts, data)
 
-    figure = Plots()
+    plot_test = Plots()
+    ax_rect = plot_test.ax_rect
+    ax_circ = plot_test.ax_circ
+    ax_spher = plot_test.ax_spher
 
-    ax_rec = figure.ax_rect
+    ts_class.plot_all_2d(ax_rect, ax_circ)
+    ts_class.plot_all_3d(ax_spher)
 
-    ts_class.plot_mercator(ax_rec, directory=storage_spot, save_status=save_status)
+    # ts_class.plot_loc_min_group_2d(ax_rect, ax_circ, '00_02')
+    # ts_class.plot_loc_min_group_3d(ax_spher, '00_02')
 
-
-
-
-    # ts_class.plot_northern_southern(directory=storage_spot, save_status=save_status)
-    #
-    # figure = Plots()
-    # ax_rect = figure.ax_rect
-    #
-    # ts_class.plot_loc_min_group_2d(ax_rect, '00_04')
-
-
-
-    #
-    # figure2 = Plots()
-    #
-    #
-    # ax1 = figure2.ax_circ
-    # ax2 = figure2.ax_circ
-    # ax3 = figure2.ax_rect
-    #
-    # ts_class.plot_multiple(ax1, ax2, ax3)
-    #
-    #
-    #
-    # # figure2.show()
+    plot_test.show()
 
 
 
