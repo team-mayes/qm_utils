@@ -1362,12 +1362,6 @@ def main(argv=None):
         writer_rmsd_information(rmsd_overall_dict, args.dir_hartree)
 
 
-
-
-
-
-
-
     except IOError as e:
         warning(e)
         return IO_ERROR
