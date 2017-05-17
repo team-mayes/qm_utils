@@ -171,12 +171,12 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
 # verts are in polar
 def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', vert_color='black'):
     """
-    
+
     :param ax_circle: plot being added to
-    :param vert_1: 
-    :param vert_2: 
-    :param color_in: 
-    :return: 
+    :param vert_1:
+    :param vert_2:
+    :param color_in:
+    :return:
     """
 
     pol_coords = get_pol_coords(vert_1, vert_2)
@@ -208,6 +208,7 @@ def make_file_from_plot(filename, plt, fig, dir_):
 #endregion
 
 # # # Classes # # #
+
 #region
 # class for spherical voronoi on local minima
 class Local_Minima():
@@ -463,7 +464,7 @@ class Transition_States():
 
         :param ax: plot being added to
         :param lm_key_in: lm group key
-        :return: 
+        :return:
         """
 
         for ts_group_key in self.ts_groups[lm_key_in]:
@@ -477,11 +478,11 @@ class Transition_States():
     # plots desired local minimum group pathways for all uniq ts pts
     def plot_loc_min_group_2d(self, ax_rect, ax_circ, lm_key_in):
         """
-        
-        :param ax_rect: 
-        :param ax_circ: 
-        :param lm_key_in: 
-        :return: 
+        :param ax_rect:
+        :param ax_circ:
+        :param lm_key_in:
+        :return:
+
         """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
@@ -503,7 +504,7 @@ class Transition_States():
 
         :param ax: plot being added to
         :param lm_key_in: lm group key
-        :return: 
+        :return:
         """
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
@@ -567,6 +568,8 @@ class Transition_States():
                 self.equat_groups.append(lm_key)
 
         return
+
+
 
 # plots modify anything?
 class Plots():
@@ -1539,10 +1542,6 @@ def plotting_local_minima(data_dict, sv_skm_dict, cano_point, directory=None, sa
     return
 
 
-
-    # # # Plotting Functions # # #
-
-
 def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=False):
     phi_values = []
     theta_values = []
@@ -1590,8 +1589,6 @@ def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=Fa
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
         plt.show()
-    return
-
     return
 
 
@@ -1778,8 +1775,9 @@ def plotting_northern_southern_equatorial(northern_data, southern_data, equatori
         plt.show()
 
     return
+#endregion
 
-
+#
 def matplotlib_printing_normal(data_dict, dir_=None, save_status=False, voronoi_status=True, ts_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
@@ -2092,4 +2090,3 @@ def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, 
     plt.show()
 
     return
-#endregion
