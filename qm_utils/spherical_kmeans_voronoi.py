@@ -595,7 +595,7 @@ class Plots():
         self.ax_rect.set_yticks(minor_ticksy, minor=True)
 
         self.ax_rect.set_xlim([-5, 365])
-        self.ax_rect.set_ylim([185, -5])
+        self.ax_rect.set_ylim([155, 25])
         self.ax_rect.set_xlabel('Phi (degrees)')
         self.ax_rect.set_ylabel('Theta (degrees)')
 
@@ -630,8 +630,8 @@ class Plots():
 
         thetaticks = np.arange(0, 360, 30)
 
-        self.ax_circ.set_rlim([0, 1])
-        self.ax_circ.set_rticks([0.5, 1.0])  # less radial ticks
+        self.ax_circ.set_rlim([0, 0.5])
+        self.ax_circ.set_rticks([0.5])  # less radial ticks
         self.ax_circ.set_rlabel_position(-22.5)  # get radial labels away from plotted line
         self.ax_circ.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ.set_theta_zero_location("N")
