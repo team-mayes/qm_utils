@@ -858,6 +858,7 @@ class Transition_States():
 
         return
 
+
     def plot_vor_sec(self, ax, verts):
         """
         helper function for plotting a single voronoi section (input is the vertices of the section)
@@ -1430,6 +1431,7 @@ def sorting_TS_into_groups(data_points, lm_class_obj, show_status=False):
             rmsd = math.sqrt(arc_length_diff / len(skm.labels_))
             if rmsd < 0.1:
                 if show_status is True:
+                    #TODO: plot each of the TS group assignments to visualize
                     matplotlib_printing_localmin_transition(lm_phi_vals, lm_theta_vals, ts_phi_vals, ts_theta_vals,
                                                             phi_centers, theta_centers, group_key)
                 break
@@ -1575,6 +1577,84 @@ def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=Fa
     if save_status is True and directory is not None:
         filename = create_out_fname('bxyl-k' + str(sv_skm_dict['number_clusters']) + '-groups.png',
                                     base_dir=directory)
+        plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
+    else:
+        plt.show()
+    return
+
+def plotting_local_minima_size(data_dict, sv_skm_dict, cano_point, directory=None, save_status=False, voronoi_status=True):
+    phi_vals = []
+    theta_vals = []
+    phi_centers = []
+    theta_centers = []
+    energy = []
+    for key, key_val in data_dict.items():
+        phi_vals.extend(key_val['phi'])
+        theta_vals.extend(key_val['theta'])
+        phi_centers.append(key_val['mean_phi'])
+        theta_centers.append(key_val['mean_theta'])
+        energy.extend(key_val['energies'])
+    phi_vertices = sv_skm_dict['phi_sv_vertices']
+    theta_vertices = sv_skm_dict['theta_sv_vertices']
+
+    # Generating the marker size based on energy
+    max_energy = float(max(energy))
+    size = []
+
+    for row in energy:
+        size.append(80 * (1 - (float(row) / max_energy)))
+
+    # Organizing the figure plot
+    fig, ax = plt.subplots(facecolor='white')
+    major_ticksx = np.arange(0, 372, 60)
+    minor_ticksx = np.arange(0, 372, 12)
+    ax.set_xticks(major_ticksx)
+    ax.set_xticks(minor_ticksx, minor=True)
+    major_ticksy = np.arange(0, 182, 30)
+    minor_ticksy = np.arange(0, 182, 10)
+    ax.set_yticks(major_ticksy)
+    ax.set_yticks(minor_ticksy, minor=True)
+    ax.set_xlim([-10, 370])
+    ax.set_ylim([185, -5])
+    ax.set_xlabel('Phi (degrees)')
+    ax.set_ylabel('Theta (degrees)')
+
+    cano = ax.scatter(cano_point['phi_cano'], cano_point['theta_cano'], s=60, c='black', marker='+', edgecolor='face')
+    for i, txt in enumerate(cano_point['pucker']):
+        if float(cano_point['theta_cano'][i]) < 120 and float(cano_point['theta_cano'][i]) > 60 and float(cano_point['phi_cano'][i]) < 355:
+            ax.annotate(txt, xy=(cano_point['phi_cano'][i], cano_point['theta_cano'][i]),
+                        xytext=(float(cano_point['phi_cano'][i]) - 7, float(cano_point['theta_cano'][i]) + 12))
+
+    kmeans = ax.scatter(phi_centers, theta_centers, s=80, c='red', marker='h', edgecolor='face')
+    hsp = ax.scatter(phi_vals, theta_vals, s=size, c='blue', marker='o', edgecolor='face')
+
+    # ax.annotate(str(energy[5]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[5], theta_raw[5]),
+    #             xytext=(float(phi_vals[5]) + 18, float(theta_raw[5]) - 15), arrowprops=dict(arrowstyle="->",
+    #                                                                                        connectionstyle="arc3"), )
+
+    # ax.annotate(str(energy[5]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[5], theta_raw[5]),
+    #             xytext=(float(phi_vals[5]) + 18, float(theta_raw[5]) - 15), arrowprops=dict(arrowstyle="->",
+    #                                                                                        connectionstyle="arc3"), )
+    # ax.annotate(str(energy[20]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[20], theta_raw[20]),
+    #         xytext=(float(phi_raw[20]) - 20, float(theta_raw[20]) - 15), arrowprops=dict(arrowstyle="->",
+    #                                                                                      connectionstyle="arc3"), )
+    # ax.annotate(str(energy[11]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[11], theta_raw[11]),
+    #         xytext=(float(phi_raw[11]) - 20, float(theta_raw[11]) - 15), arrowprops=dict(arrowstyle="->",
+    #                                                                                      connectionstyle="arc3"), )
+    # ax.annotate(str(energy[24]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[24], theta_raw[24]),
+    #         xytext=(float(phi_raw[24]) - 20, float(theta_raw[24]) - 15), arrowprops=dict(arrowstyle="->",
+    #                                                                                      connectionstyle="arc3"), )
+
+    leg = ax.legend((hsp, kmeans),
+                    ('HSP local minima', 'k-means center (k = ' + str(sv_skm_dict['number_clusters']) + ')',
+                     'voronoi vertice', 'canonical designation'),
+                    scatterpoints=1, fontsize=12, frameon='false')
+
+    leg.get_frame().set_linewidth(0.0)
+    leg.get_frame().set_alpha(0.75)
+
+    if save_status is True and directory is not None:
+        filename = create_out_fname('bxyl-k' + str(sv_skm_dict['number_clusters']) + '-size.png', base_dir=directory)
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
         plt.show()
