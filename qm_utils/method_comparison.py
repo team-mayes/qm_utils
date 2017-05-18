@@ -65,10 +65,60 @@ WEIGHT_ENTH = 'Boltz Weight Enth'
 FREQ = 'Freq 1'
 
 
+# # # Classes # # #
+class Local_Minima_Compare():
+    """
+    class for organizing the local minima information
+    """
+    def __init__(self, list_of_dicts, method, hsp_lm_groups):
+        print(method)
+
+        # Perform the following operations on the local min data set:
+        # (1) assign each of the unique local min to a particular HSP reference group
+        #       (be sure to store the arc_length value to the closest local min AND the group ID)
+        # (2) within each group, perform RMSD calculations on arc_length? and gibbs free energies
+        # (3) plot HSP reference groups and the data points associated with each (save all files into a specific folder)
+        #       a) overall plot
+        #       b) folder for each HSP reference group (with each method's results located in folder)
 
 
 
+class Transition_State_Compare():
+    """
+    class for organizing the transition state information
+    """
+    def  __init__(self, list_of_dicts, method, hsp_ts_groups):
+        print(method)
+        self.ts_list_of_dicts = []
+        self.irc_list_of_dicts = []
 
+        self.separate_TS_files(list_of_dicts)
+
+    def separate_TS_files(self, list_of_dicts):
+        """
+        separates out the TS files for further processing
+        :param list_of_dicts:
+        :return:
+        """
+        for row in list_of_dicts:
+            if float(row[FREQ]) < 0:
+                self.ts_list_of_dicts.append(row)
+            elif float(row[FREQ]) > 0:
+                self.irc_list_of_dicts.append(row)
+
+        if len(self.irc_list_of_dicts) / 2 != len(self.ts_list_of_dicts):
+            print('\nThere are {} TS files and {} IRC files...THERE IS A PROBLEM.\n'.
+                  format(len(self.ts_list_of_dicts),len(self.irc_list_of_dicts)))
+
+        return
+
+
+        # Perform the following operations on the transition state data set:
+        # (1) isolate the TS and IRC files by 'Freq 1' values and naming convention (also link files together) -- DONE.
+        # (2) assign each of the transition states to a particular HSP reference group
+        #       (assigning pathway will need to be on both the transition state AND the local minima connecting them)
+        # (3) within each of the assign group, perform RMSD calculations on the arc length and gibbs free energies
+        # (4) develop a similar plotting strategy (more thought needed)
 
 
 # # # Command Line Parse # # #
@@ -144,11 +194,14 @@ def main(argv=None):
 
         # Need to come up with a simple way to local in the necessary HSP reference information based on args.molecule (database? HSP reference files?)
 
+        hsp_lm_groups = 1
+        hsp_ts_groups = 1
+
         with open(args.sum_file) as f:
             for csv_file_read_newline in f:
                 csv_file_read = csv_file_read_newline.strip("\n")
                 method_list_dicts = read_csv_to_dict(os.path.join(args.dir_hartree, csv_file_read), mode='r')
-                qm_method = csv_file_read.split('-')[3]
+                qm_method = csv_file_read.split('-')[3].split('.')[0]
 
                 if csv_file_read.split('-')[1] != args.molecule:
                     print('\nERROR: THE MOLECULE TYPE DOES NOT MATCH UP.\n')
@@ -156,24 +209,19 @@ def main(argv=None):
 
                 if csv_file_read.split('-')[2] == 'LM':
                     print(csv_file_read)
+
+                    data_lm = Local_Minima_Compare(method_list_dicts, qm_method, hsp_lm_groups)
+
                     #TODO: run a local min class on this data set...
 
-                    # Perform the following operations on the local min data set:
-                    # (1) assign each of the unique local min to a particular HSP reference group
-                    #       (be sure to store the arc_length value to the closest local min AND the group ID)
-                    # (2) within each group, perform RMSD calculations on arc_length? and gibbs free energies
-                    # (3) plot HSP reference groups and the data points associated with each (save all files into a specific folder)
 
                 elif csv_file_read.split('-')[2] == 'TS':
                     print(csv_file_read)
                     #TODO: run a transition state class on this data set...
 
-                    # Perform the following operations on the transition state data set:
-                    # (1) isolate the TS and IRC files by 'Freq 1' values and naming convention (also link files together)
-                    # (2) assign each of the transition states to a particular HSP reference group
-                    #       (assigning pathway will need to be on both the transition state AND the local minima connecting them)
-                    # (3) within each of the assign group, perform RMSD calculations on the arc length and gibbs free energies
-                    # (4) develop a similar plotting strategy (more thought needed)
+                    data_ts = Transition_State_Compare(method_list_dicts, qm_method, hsp_ts_groups)
+
+
 
                 else:
                     print('WARNING: NOT SURE WHAT TYPE OF JOB THIS IS')

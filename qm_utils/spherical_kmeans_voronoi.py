@@ -569,8 +569,6 @@ class Transition_States():
 
         return
 
-
-
 # plots modify anything?
 class Plots():
     def __init__(self):
@@ -1441,6 +1439,7 @@ def sorting_TS_into_groups(data_points, lm_class_obj, show_status=False):
             rmsd = math.sqrt(arc_length_diff / len(skm.labels_))
             if rmsd < 0.1:
                 if show_status is True:
+                    #TODO: plot each of the TS group assignments to visualize
                     matplotlib_printing_localmin_transition(lm_phi_vals, lm_theta_vals, ts_phi_vals, ts_theta_vals,
                                                             phi_centers, theta_centers, group_key)
                 break
@@ -1668,8 +1667,6 @@ def plotting_local_minima_size(data_dict, sv_skm_dict, cano_point, directory=Non
         plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
     else:
         plt.show()
-    return
-
     return
 
 
