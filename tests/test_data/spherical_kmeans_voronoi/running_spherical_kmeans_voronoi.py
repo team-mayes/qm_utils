@@ -64,7 +64,7 @@ finally:
 
     plot_test = Plots()
     ax_rect = plot_test.ax_rect
-    ax_circ = plot_test.ax_circ
+    ax_circ = plot_test.ax_circ_north
     ax_spher = plot_test.ax_spher
 
     ts_class.plot_all_2d(ax_rect, ax_circ)

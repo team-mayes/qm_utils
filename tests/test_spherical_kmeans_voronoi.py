@@ -22,7 +22,7 @@ from qm_utils.spherical_kmeans_voronoi import plot_arc, pol2cart, plot_on_circle
     matplotlib_printing_size_bxyl_lm, matplotlib_printing_normal, read_csv_canonical_designations, \
     organizing_information_from_spherical_kmeans, read_csv_data_TS, \
     assign_groups_to_TS_LM, matplotlib_printing_ts_local_min, matplotlib_printing_ts_raw_local_mini, get_pol_coords, \
-    matplotlib_edge_printing, sorting_TS_into_groups, plot_regions, sorting_TS_into_groups
+    sorting_TS_into_groups, sorting_TS_into_groups
 from qm_utils.xyz_cluster import main, hartree_sum_pucker_cluster, compare_rmsd_xyz, test_clusters, \
     check_ring_ordering, read_ring_atom_ids, check_before_after_sorting
 
@@ -198,12 +198,6 @@ class MainRun(unittest.TestCase):
             out_file_name = create_out_fname('a_HSP_lm_reference_groups', base_dir=SUB_DATA_DIR, ext='.csv')
             df.to_csv(out_file_name)
 
-            # Plotting Commands #
-            # matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status)
-            # matplotlib_printing_size_bxyl_lm(data_dict, SUB_DATA_DIR, save_status=save_status)
-            # matplotlib_printing_group_labels(final_groups, dir_=SUB_DATA_DIR, save_status=save_status)
-            matplotlib_edge_printing(data_dict, SUB_DATA_DIR, save_status='no')
-
             # Testing #
             if number_clusters == 9:
                 self.assertFalse(diff_lines(out_file_name, HSP_LM_DF_GOOD))
@@ -240,20 +234,19 @@ class MainRun(unittest.TestCase):
             data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
             dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
             lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
-            ts_class = Transition_States(data_dict_ts, lm_class)
+            ts_class = Transition_States(data_dict_ts, lm_class, TS_PATHWAYS)
 
-            plot_test = Plots()
-            ax_rect = plot_test.ax_rect
-            ax_circ = plot_test.ax_circ
-            ax_spher = plot_test.ax_spher
+            #lm_class.plot_local_min()
+            #lm_class.plot_group_labels()
+            lm_class.plot_cano_vor()
+            lm_class.plot_local_min_sizes()
+            lm_class.plot_vor_sec('04')
+            lm_class.show()
 
-            #ts_class.plot_all_2d(ax_rect, ax_circ)
-            #ts_class.plot_all_3d(ax_spher)
-
-            ts_class.plot_loc_min_group_2d(ax_rect, ax_circ, '00_04')
-            ts_class.plot_loc_min_group_3d(ax_spher, '00_04')
-
-            plot_test.show()
+            ts_class.plot_loc_min_group_2d('00_04')
+            ts_class.plot_loc_min_group_2d('05_08')
+            #ts_class.plot_loc_min_group_3d('00_04')
+            #ts_class.plot_loc_min_group_3d('05_08')
 
             #make_file_from_plot('plot_00_04', ax, fig, TS_PATHWAYS)
 
@@ -300,7 +293,7 @@ class MainRun(unittest.TestCase):
 
     def TestPlotting(self):
         plot_test = Plots()
-        graph = plot_test.ax_circ
+        graph = plot_test.ax_circ_north
 
         vert1 = [0, 0]
         vert1_cart = pol2cart(vert1)

@@ -87,6 +87,83 @@ def cart2pol(vert):
 
     return get_pol_coord(vert[0], vert[1], vert[2])
 
+# gets the phi and theta values between two vertices
+def get_pol_coords(vert_1, vert_2):
+    """
+    REQUIRES: arclength < PI*radius
+    MODIFIES: nothing
+    EFFECTS: returns a vector of phi & theta values for the voronoi edges
+    :param vert_1: one vertex of an edge
+    :param vert_2: other vertex of an edge
+    :return: returns a vector of phi & theta values for the voronoi edges
+    """
+
+    # desired number of pts in arclength & line
+    NUM_PTS = 100
+
+    # endpts of the line
+    x_0 = vert_1[0]
+    y_0 = vert_1[1]
+    z_0 = vert_1[2]
+    x_f = vert_2[0]
+    y_f = vert_2[1]
+    z_f = vert_2[2]
+
+    # eqn for parametric eqns of x, y, & z respectively
+    a = x_f - x_0
+    b = y_f - y_0
+    c = z_f - z_0
+
+    # incrementing variable for parametric equations
+    # normalized to allow for input to be number of desired pts
+    # if clause to prevent division by zero
+    if (a != 0):
+        t_0 = abs(((x_f - x_0) / a) / NUM_PTS)
+    elif (b != 0):
+        t_0 = abs(((y_f - y_0) / b) / NUM_PTS)
+    else:
+        t_0 = abs(((z_f - z_0) / c) / NUM_PTS)
+
+    t = t_0
+    t_f = t_0 * NUM_PTS
+
+    # converts the cartesian coords to polar
+    def get_arc_coord(x, y, z):
+        theta = np.rad2deg(np.arctan2(np.sqrt(x ** 2 + y ** 2), z))
+        phi = np.rad2deg(np.arctan2(y, x))
+
+        while theta < 0:
+            theta += 360
+        while phi < 0:
+            phi += 360
+
+        return (phi, theta)
+
+    # initialize the theta and phi vectors
+    coords = get_arc_coord(x_0, y_0, z_0)
+    arc_coords = [[coords[0]], [coords[1]]]
+
+    # increments over t to give desired number of pts
+    while (t < t_f):
+        # parametric eqns
+        x = x_0 + t * a
+        y = y_0 + t * b
+        z = z_0 + t * c
+
+        # pushes polar coords into the arclength
+        coords = get_arc_coord(x, y, z)
+        arc_coords[0].append(coords[0])
+        arc_coords[1].append(coords[1])
+
+        t += t_0
+
+    # pushes final coords into the arclength
+    coords = get_arc_coord(x_f, y_f, z_f)
+    arc_coords[0].append(coords[0])
+    arc_coords[1].append(coords[1])
+
+    return arc_coords
+
 # plots a line on a rectangular plot (2D)
 def plot_line(ax, vert_1, vert_2, line_color):
     line = get_pol_coords(vert_1, vert_2)
@@ -94,13 +171,30 @@ def plot_line(ax, vert_1, vert_2, line_color):
     if (is_end(line)):
         two_edges = split_in_two(line)
 
-        ax.plot(two_edges[0][0], two_edges[0][1], color=line_color)
-        ax.plot(two_edges[1][0], two_edges[1][1], color=line_color)
+        ax.plot(two_edges[0][0], two_edges[0][1], color=line_color, zorder = 1)
+        ax.plot(two_edges[1][0], two_edges[1][1], color=line_color, zorder = 1)
     else:
         ax.plot(line[0], line[1], color=line_color)
 
-    ax.scatter(line[0][0], line[1][0], s=60, c='blue', marker='s', edgecolor='face')
-    ax.scatter(line[0][-1], line[1][-1], s=60, c='green', marker='o', edgecolor='face')
+    ax.scatter(line[0][0], line[1][0], s=60, c='blue', marker='s', edgecolor='face', zorder = 10, label="Transition State")
+    ax.scatter(line[0][-1], line[1][-1], s=60, c='green', marker='o', edgecolor='face', zorder = 10, label="Local Minimum")
+
+
+    return
+
+# plots a line on a rectangular plot (2D)
+def plot_vor_line(ax, vert_1, vert_2, line_color):
+    line = get_pol_coords(vert_1, vert_2)
+
+    if (is_end(line)):
+        two_edges = split_in_two(line)
+
+        ax.plot(two_edges[0][0], two_edges[0][1], color=line_color, zorder = 1)
+        ax.plot(two_edges[1][0], two_edges[1][1], color=line_color, zorder = 1)
+    else:
+        ax.plot(line[0], line[1], color=line_color)
+
+    ax.scatter([line[0][0], line[0][-1]], [line[1][0], line[1][-1]], s=60, c='green', marker='s', edgecolor='face', zorder = 10)
 
     return
 
@@ -159,17 +253,17 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
     vec_z.append(z_f)
 
     # plots arclength
-    ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in)
+    ax_3d.plot(vec_x, vec_y, vec_z, label='arclength', color=color_in, zorder = 1)
 
     # plots verts
-    ax_3d.scatter(vert_1[0], vert_1[1], vert_1[2], s=60, c='blue', marker='s', edgecolor='face')
-    ax_3d.scatter(vert_2[0], vert_2[1], vert_2[2], s=60, c='green', marker='o', edgecolor='face')
+    ax_3d.scatter(vert_1[0], vert_1[1], vert_1[2], s=60, c='blue', marker='s', edgecolor='face', zorder = 10)
+    ax_3d.scatter(vert_2[0], vert_2[1], vert_2[2], s=60, c='green', marker='o', edgecolor='face', zorder = 1)
 
     return raw_coords
 
 # plots a line on a circular plot (2D)
 # verts are in polar
-def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', vert_color='black'):
+def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black'):
     """
 
     :param ax_circle: plot being added to
@@ -190,35 +284,81 @@ def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', vert_color='blac
     for i in range(len(pol_coords[1])):
         r.append(abs(math.sin(np.radians(pol_coords[1][i]))))
         theta[i] = np.radians(pol_coords[0][i])
-        print(theta[i], r[i])
 
     theta[0] = theta[1]
 
-    ax_circ.plot(theta, r, color=line_color)
+    ax_circ.plot(theta, r, color=line_color, zorder = 1)
 
-    ax_circ.scatter(theta[0], r[0], s=60, c='blue', marker='s', edgecolor='face')
-    ax_circ.scatter(theta[-1], r[-1], s=60, c='green', marker='o', edgecolor='face')
+    ax_circ.scatter(theta[0], r[0], s=60, c='blue', marker='s', edgecolor='face', zorder = 10)
+    ax_circ.scatter(theta[-1], r[-1], s=60, c='green', marker='o', edgecolor='face', zorder = 10)
 
     return
 
 # creates a file for given plot & figure
-def make_file_from_plot(filename, plt, fig, dir_):
+def make_file_from_plot(filename, fig, dir_):
     filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
-    plt.figure.savefig(filename1, facecolor=fig.get_facecolor(), transparent=True)
+    fig.savefig(filename1, facecolor=fig.get_facecolor(), transparent=True)
+
+# checks if the edge crosses from 0 to 360
+def is_end(edge):
+    """
+    helper function to determine if an edge goes across the end
+    (i.e - crosses from 0 to 360)
+    :param edge:
+    :return:
+    """
+    has_0 = False
+    has_360 = False
+
+    for i in range(len(edge[0])):
+        if edge[0][i] < 5:
+            has_0 = True
+        if edge[0][i] > 355:
+            has_360 = True
+
+    return has_0 and has_360
+
+# splits an edge that crosses from 0 to 360 in half
+def split_in_two(edge):
+    """
+    helper function to split an edge into two based on the 0 / 360 degree split
+    :param edge: [[phi], [theta]]
+    :return: two edges
+    """
+    edge_one_phi = []
+    edge_one_theta = []
+    edge_two_phi = []
+    edge_two_theta = []
+
+    for i in range(len(edge[0])):
+        if edge[0][i] < 180:
+            edge_one_phi.append(edge[0][i])
+            edge_one_theta.append(edge[1][i])
+        elif edge[0][i] >= 180:
+            edge_two_phi.append(edge[0][i])
+            edge_two_theta.append(edge[1][i])
+
+    edge_one = [edge_one_phi, edge_one_theta]
+    edge_two = [edge_two_phi, edge_two_theta]
+
+    two_edges = [edge_one, edge_two]
+
+    return two_edges
 #endregion
 
 # # # Classes # # #
-
 #region
-# class for spherical voronoi on local minima
+# class for local minima
 class Local_Minima():
     def __init__(self, number_clusters_in, data_points_in, cano_points_in, phi_raw_in, theta_raw_in, energy):
         self.sv_kmeans_dict = {}
         self.groups_dict = {}
         self.cano_points = cano_points_in
+        self.plot = Plots(False, False, True)
 
         self.populate_sv_kmeans_dict(number_clusters_in, data_points_in, phi_raw_in, theta_raw_in, energy)
         self.populate_groups_dict()
+        self.organize_regions()
 
     def populate_sv_kmeans_dict(self, number_clusters, data_points, phi_raw, theta_raw, energy):
         # Generating the important lists
@@ -286,7 +426,6 @@ class Local_Minima():
 
         return
 
-
     def populate_groups_dict(self):
         temp_groups = {}
         groups = {}
@@ -328,7 +467,6 @@ class Local_Minima():
 
         return
 
-
     def plot_local_min(self, directory=None, save_status=False):
         plotting_local_minima(self.groups_dict, self.sv_kmeans_dict, self.cano_points, directory=directory, save_status=save_status)
 
@@ -336,12 +474,146 @@ class Local_Minima():
         plotting_group_labels(self.groups_dict, self.sv_kmeans_dict, directory=directory, save_status=save_status)
 
     def plot_local_min_sizes(self, directory=None, save_status=False):
-        plotting_local_minima_size(self.groups_dict, self.sv_kmeans_dict, self.cano_points, directory=directory, save_status=save_status)
-    #TODO: add voronoi edges to the above plot.
+        # Generating the marker size based on energy
+        max_energy = float(max(self.sv_kmeans_dict['energy']))
+        size = []
+
+        for row in self.sv_kmeans_dict['energy']:
+            size.append(80 * (1 - (float(row) / max_energy)))
+
+        self.plot.ax_rect.scatter(self.cano_points['phi_cano'], self.cano_points['theta_cano'], s=60, c='black', marker='+',
+                          edgecolor='face')
+        for i, txt in enumerate(self.cano_points['pucker']):
+            if float(self.cano_points['theta_cano'][i]) < 120 and float(self.cano_points['theta_cano'][i]) > 60 and float(
+                self.cano_points['phi_cano'][i]) < 355:
+                self.plot.ax_rect.annotate(txt, xy=(self.cano_points['phi_cano'][i], self.cano_points['theta_cano'][i]),
+                            xytext=(float(self.cano_points['phi_cano'][i]) - 7, float(self.cano_points['theta_cano'][i]) + 12))
+
+        for key in self.groups_dict:
+            self.plot.ax_rect.scatter(self.groups_dict[key]['mean_phi'], self.groups_dict[key]['mean_theta'], s=80, c='red', marker='h', edgecolor='face')
+            self.plot.ax_rect.scatter(self.groups_dict[key]['phi'], self.groups_dict[key]['theta'], s=size, c='blue', marker='o', edgecolor='face')
+
+    def show(self):
+        self.plot.show()
+
+    def plot_cano_vor(self):
+        cano_plot = Plots(False, False, True)
+
+        cano_centers = []
+
+        # converts strings to ints
+        for i in range(len(self.cano_points['phi_cano'])):
+            self.cano_points['phi_cano'][i] = float(self.cano_points['phi_cano'][i])
+            self.cano_points['theta_cano'][i] = float(self.cano_points['theta_cano'][i])
+
+        # creating cartesian cano_centers
+        for i in range(len(self.cano_points['phi_cano'])):
+            cano_vert = pol2cart([self.cano_points['phi_cano'][i], self.cano_points['theta_cano'][i], 1])
+            cano_vert = np.asarray(cano_vert)
+
+            cano_centers.append(cano_vert)
+
+        # Default parameters for spherical voronoi
+        radius = 1
+        center = np.array([0, 0, 0])
+
+        cano_centers = np.asarray(cano_centers)
+
+        # Spherical Voronoi for the centers
+
+        sv_cano = SphericalVoronoi(cano_centers, radius, center)
+        sv_cano.sort_vertices_of_regions()
+        cano_dict = {}
+
+        cano_dict['number_clusters'] = len(self.cano_points['phi_cano'])
+        cano_dict['vertices_sv_xyz'] = sv_cano.vertices
+        cano_dict['regions_sv_labels'] = sv_cano.regions
+
+        for k in range(len(cano_dict['regions_sv_labels'])):
+            verts = []
+
+            for j in range(len(cano_dict['regions_sv_labels'][k])):
+                verts.append(cano_dict['vertices_sv_xyz'][cano_dict['regions_sv_labels'][k][j]])
+
+            pairs = []
+
+            for i in range(len(verts)):
+                # first vertex gets paired to last vertex
+                if i == len(verts) - 1:
+                    curr_pair = [verts[i], verts[0]]
+                else:
+                    curr_pair = [verts[i], verts[i + 1]]
+
+                pairs.append(curr_pair)
+
+            for i in range(len(pairs)):
+                # plot_arc(ax_3d, pairs[i][0], pairs[i][1])
+
+                plot_vor_line(cano_plot.ax_rect, pairs[i][0], pairs[i][1], 'green')
+
+        cano_plot.ax_rect.scatter(self.cano_points['phi_cano'], self.cano_points['theta_cano'], s=60, c='black',
+                                  marker='+',
+                                  edgecolor='face')
+
+        cano_plot.show()
+
+        return
+
+    def plot_vor_sec(self, lm_group):
+        """
+        helper function for plotting a single voronoi section (input is the vertices of the section)
+        :param ax: plot being added to
+        :param verts: all vertices of the voronoi section
+        :return: nothing
+        """
+
+        verts = []
+
+        for j in range(len(self.sv_kmeans_dict['regions_sv_labels'][int(lm_group)])):
+            verts.append(self.sv_kmeans_dict['vertices_sv_xyz'][self.sv_kmeans_dict['regions_sv_labels'][int(lm_group)][j]])
+
+        pairs = []
+
+        for i in range(len(verts)):
+            # first vertex gets paired to last vertex
+            if i == len(verts) - 1:
+                curr_pair = [verts[i], verts[0]]
+            else:
+                curr_pair = [verts[i], verts[i + 1]]
+
+            pairs.append(curr_pair)
+
+        for i in range(len(pairs)):
+            #plot_arc(ax_3d, pairs[i][0], pairs[i][1])
+
+            plot_vor_line(self.plot.ax_rect, pairs[i][0], pairs[i][1], 'green')
+
+        return
+
+    def plot_all_vor_sec(self):
+        return
+
+    def organize_regions(self):
+        org_dict = {}
+        org_list = []
+
+        for group_key in self.groups_dict:
+            for i in range(len(self.sv_kmeans_dict['phi_skm_centers'])):
+                if float(self.groups_dict[group_key]['mean_phi']) == float(self.sv_kmeans_dict['phi_skm_centers'][i])\
+                    and float(self.groups_dict[group_key]['mean_theta']) == float(self.sv_kmeans_dict['theta_skm_centers'][i]):
+
+                    org_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['regions_sv_labels'][i]
+
+        for key in org_dict:
+            org_list.append(org_dict[key])
+
+        self.sv_kmeans_dict['regions_sv_labels'] = org_list
+
+        return
 
 # class for transition states and their pathways
 class Transition_States():
-    def __init__(self, ts_data_in, lm_class_obj):
+    def __init__(self, ts_data_in, lm_class_obj, save_dir_in):
         # groups by the unique transition state paths
         __unorg_groups = sorting_TS_into_groups(ts_data_in, lm_class_obj)
 
@@ -349,6 +621,8 @@ class Transition_States():
         self.lm_class = lm_class_obj
 
         self.circ_groups_init()
+
+        self.save_dir = save_dir_in
 
     # reorganizes the data structure
     def reorg_groups(self, unorg_groups, lm_class_obj):
@@ -442,6 +716,63 @@ class Transition_States():
         return temp_ts_groups
 
     # plots desired local minimum group pathways for all uniq ts pts
+    def plot_loc_min_group_2d(self, lm_key_in):
+        """
+        :param ax_rect:
+        :param ax_circ:
+        :param lm_key_in:
+        :return:
+
+        """
+        plot = Plots(True, False, False)
+
+        for lm_key in self.ts_groups:
+            # if the key is the local min group, plot it
+            if (lm_key == lm_key_in):
+                for ts_group_key in self.ts_groups[lm_key]:
+                    path = self.ts_groups[lm_key][ts_group_key]
+
+                    plot_line(plot.ax_rect, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                    plot_line(plot.ax_rect, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+
+                    if self.north_groups.count(lm_key) == 1:
+                        plot_on_circle(plot.ax_circ_north, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                        plot_on_circle(plot.ax_circ_north, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+                    elif self.south_groups.count(lm_key) == 1:
+                        plot_on_circle(plot.ax_circ_south, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                        plot_on_circle(plot.ax_circ_south, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+
+        plot.show()
+
+        make_file_from_plot('test', plot.fig, self.save_dir)
+
+        return
+
+    # plots desired local minimum group pathways for all uniq ts pts
+    def plot_loc_min_group_3d(self, lm_key_in):
+        """
+
+        :param ax: plot being added to
+        :param lm_key_in: lm group key
+        :return:
+        """
+        plot = Plots(False, True)
+
+        for lm_key in self.ts_groups:
+            # if the key is the local min group, plot it
+            if (lm_key == lm_key_in):
+                for ts_group_key in self.ts_groups[lm_key]:
+                    path = self.ts_groups[lm_key][ts_group_key]
+
+                    plot_arc(plot.ax_spher, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                    plot_arc(plot.ax_spher, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+
+        plot.show()
+
+        return
+
+
+    # plots desired local minimum group pathways for all uniq ts pts
     def plot_loc_min_group_with_uniq_ts_2d(self, ax, lm_key_in):
         """
 
@@ -475,48 +806,6 @@ class Transition_States():
 
         return
 
-    # plots desired local minimum group pathways for all uniq ts pts
-    def plot_loc_min_group_2d(self, ax_rect, ax_circ, lm_key_in):
-        """
-        :param ax_rect:
-        :param ax_circ:
-        :param lm_key_in:
-        :return:
-
-        """
-        for lm_key in self.ts_groups:
-            # if the key is the local min group, plot it
-            if (lm_key == lm_key_in):
-                for ts_group_key in self.ts_groups[lm_key]:
-                    path = self.ts_groups[lm_key][ts_group_key]
-
-                    plot_line(ax_rect, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                    plot_line(ax_rect, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
-
-                    plot_on_circle(ax_circ, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                    plot_on_circle(ax_circ, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
-
-        return
-
-    # plots desired local minimum group pathways for all uniq ts pts
-    def plot_loc_min_group_3d(self, ax_3d, lm_key_in):
-        """
-
-        :param ax: plot being added to
-        :param lm_key_in: lm group key
-        :return:
-        """
-        for lm_key in self.ts_groups:
-            # if the key is the local min group, plot it
-            if (lm_key == lm_key_in):
-                for ts_group_key in self.ts_groups[lm_key]:
-                    path = self.ts_groups[lm_key][ts_group_key]
-
-                    plot_arc(ax_3d, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                    plot_arc(ax_3d, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
-
-        return
-
     # plots desired unique transition state pathway
     def plot_uniq_ts_path_2d(self, ax, lm_key_in, ts_group_key_in, ts_key_in):
         path = self.ts_groups[lm_key_in][ts_group_key_in]['ts_group'][ts_key_in]
@@ -535,14 +824,14 @@ class Transition_States():
 
         return
 
-    # plots all pathways
+    # plots all pathways in 2d
     def plot_all_2d(self, ax_rect, ax_circ):
         for lm_key in self.ts_groups:
             self.plot_loc_min_group_2d(ax_rect, ax_circ, lm_key)
 
         return
 
-    # plots all pathways
+    # plots all pathways in 3d
     def plot_all_3d(self, ax_spher):
         for lm_key in self.ts_groups:
             self.plot_loc_min_group_3d(ax_spher, lm_key)
@@ -569,24 +858,90 @@ class Transition_States():
 
         return
 
+    def plot_vor_sec(self, ax, verts):
+        """
+        helper function for plotting a single voronoi section (input is the vertices of the section)
+        :param ax: plot being added to
+        :param verts: all vertices of the voronoi section
+        :return: nothing
+        """
+
+        pairs = []
+
+        for i in range(len(verts)):
+            # first vertex gets paired to last vertex
+            if i == len(verts) - 1:
+                curr_pair = [verts[i], verts[0]]
+            else:
+                curr_pair = [verts[i], verts[i + 1]]
+
+            pairs.append(curr_pair)
+
+        for i in range(len(pairs)):
+            #plot_arc(ax_3d, pairs[i][0], pairs[i][1])
+
+            plot_vor_line(ax, pairs[i][0], pairs[i][1], 'green')
+
+        return
+
+    def plot_regions(self, ax):
+        for i in range(len(self.lm_class.sv_kmeans_dict['regions_sv_labels'])):
+            verts = []
+
+            for j in range(len(self.lm_class.sv_kmeans_dict['regions_sv_labels'][i])):
+                verts.append(self.lm_class.sv_kmeans_dict['vertices_sv_xyz'][self.lm_class.sv_kmeans_dict['regions_sv_labels'][i][j]])
+
+            self.plot_vor_sec(ax, verts)
+
+        return
 
 
-# plots modify anything?
+# class for initializing plots
 class Plots():
-    def __init__(self):
-        # creating rectangular plot
-        self.rect_plot_init()
+    # arguments are bools for creating the 2d and 3d plots
+    def __init__(self, twoD_arg, threeD_arg, merc_arg):
+        if twoD_arg:
+            self.fig = plt.figure()
+            gs = gridspec.GridSpec(2, 2)
+            self.ax_rect = self.fig.add_subplot(gs[1:, :], facecolor='white')
+            self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
+            self.ax_circ_south = self.fig.add_subplot(gs[0, 1], projection='polar')
 
-        # creating spherical plot
-        self.spher_plot_init()
+            # initializing settins for the 2d plot
+            self.twoD_init()
 
-        # creating circular plot
-        self.circ_plot_init()
+            # Create custom artists
+            ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='blue', marker='s', edgecolor='face')
+            lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='green', marker='o', edgecolor='face')
+            path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
 
-    # initializes a rectangular plot
-    def rect_plot_init(self):
-        self.fig_rect, self.ax_rect = plt.subplots(facecolor='white')
+            self.ax_rect.legend([ts_Artist, lm_Artist, path_Artist], ['Transition State', 'Local Minimum', 'Pathway'])
 
+        if threeD_arg:
+            self.fig_spher = plt.figure()
+            self.ax_spher = self.fig_spher.gca(projection='3d')
+
+            # settings for spherical plot
+            self.threeD_init()
+
+        if merc_arg:
+            self.ax_rect = plt.subplot(facecolor='white')
+
+            self.ax_rect_init()
+
+            # Create custom artists
+            ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='blue', marker='s', edgecolor='face')
+            lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='green', marker='o', edgecolor='face')
+            path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+
+            self.ax_rect.legend([ts_Artist, lm_Artist, path_Artist], ['Transition State', 'Local Minimum', 'Pathway'])
+
+    def twoD_init(self):
+        self.ax_rect_init()
+        self.ax_circ_north_init()
+        self.ax_circ_south_init()
+
+    def ax_rect_init(self):
         major_ticksx = np.arange(0, 372, 60)
         minor_ticksx = np.arange(0, 372, 12)
         self.ax_rect.set_xticks(major_ticksx)
@@ -598,17 +953,11 @@ class Plots():
         self.ax_rect.set_yticks(minor_ticksy, minor=True)
 
         self.ax_rect.set_xlim([-5, 365])
-        self.ax_rect.set_ylim([155, 25])
+        self.ax_rect.set_ylim([185, -5])
         self.ax_rect.set_xlabel('Phi (degrees)')
         self.ax_rect.set_ylabel('Theta (degrees)')
 
-        return
-
-    # intializes a circular plot
-    def spher_plot_init(self):
-        self.fig_spher = plt.figure()
-        self.ax_spher = self.fig_spher.gca(projection='3d')
-
+    def threeD_init(self):
         # plots wireframe sphere
         theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
         THETA, PHI = np.meshgrid(theta, phi)
@@ -624,25 +973,29 @@ class Plots():
         self.ax_spher.set_ylim([-1, 1])
         self.ax_spher.set_zlim([-1, 1])
 
-        return
-
-    # initializes a spherical plot
-    def circ_plot_init(self):
-        self.fig_circ = plt.figure(facecolor='white', dpi=100)
-        self.ax_circ = plt.subplot(projection='polar')
-
+    def ax_circ_north_init(self):
         thetaticks = np.arange(0, 360, 30)
 
-        self.ax_circ.set_rlim([0, 0.5])
-        self.ax_circ.set_rticks([0.5])  # less radial ticks
-        self.ax_circ.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-        self.ax_circ.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
-        self.ax_circ.set_theta_zero_location("N")
-        self.ax_circ.set_yticklabels([])
-        self.ax_circ.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
-        self.ax_circ.set_theta_direction(-1)
+        self.ax_circ_north.set_rlim([0, 1])
+        self.ax_circ_north.set_rticks([0.5])  # less radial ticks
+        self.ax_circ_north.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+        self.ax_circ_north.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
+        self.ax_circ_north.set_theta_zero_location("N")
+        self.ax_circ_north.set_yticklabels([])
+        self.ax_circ_north.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
+        self.ax_circ_north.set_theta_direction(-1)
 
-        return
+    def ax_circ_south_init(self):
+        thetaticks = np.arange(0, 360, 30)
+
+        self.ax_circ_south.set_rlim([0, 1])
+        self.ax_circ_south.set_rticks([0.5])  # less radial ticks
+        self.ax_circ_south.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+        self.ax_circ_south.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
+        self.ax_circ_south.set_theta_zero_location("N")
+        self.ax_circ_south.set_yticklabels([])
+        self.ax_circ_south.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
+        self.ax_circ_south.set_theta_direction(-1)
 
     # shows all plots
     def show(self):
@@ -924,370 +1277,6 @@ def boltzmann_weighting_mini(energies):
         weighted_gibbs_free_energy += (ind_boltz[i] / total_botlz) * energies[i]
 
     return round(weighted_gibbs_free_energy, 3)
-#endregion
-
-# # # Justin's Functions # # #
-#region
-
-def get_pol_coords(vert_1, vert_2):
-    """
-    REQUIRES: arclength < PI*radius
-    MODIFIES: nothing
-    EFFECTS: returns a vector of phi & theta values for the voronoi edges
-    :param vert_1: one vertex of an edge
-    :param vert_2: other vertex of an edge
-    :return: returns a vector of phi & theta values for the voronoi edges
-    """
-
-    # desired number of pts in arclength & line
-    NUM_PTS = 100
-
-    # endpts of the line
-    x_0 = vert_1[0]
-    y_0 = vert_1[1]
-    z_0 = vert_1[2]
-    x_f = vert_2[0]
-    y_f = vert_2[1]
-    z_f = vert_2[2]
-
-    # eqn for parametric eqns of x, y, & z respectively
-    a = x_f - x_0
-    b = y_f - y_0
-    c = z_f - z_0
-
-    # incrementing variable for parametric equations
-    # normalized to allow for input to be number of desired pts
-    # if clause to prevent division by zero
-    if (a != 0):
-        t_0 = abs(((x_f - x_0) / a) / NUM_PTS)
-    elif (b != 0):
-        t_0 = abs(((y_f - y_0) / b) / NUM_PTS)
-    else:
-        t_0 = abs(((z_f - z_0) / c) / NUM_PTS)
-
-    t = t_0
-    t_f = t_0 * NUM_PTS
-
-    # converts the cartesian coords to polar
-    def get_arc_coord(x, y, z):
-        theta = np.rad2deg(np.arctan2(np.sqrt(x ** 2 + y ** 2), z))
-        phi = np.rad2deg(np.arctan2(y, x))
-
-        while theta < 0:
-            theta += 360
-        while phi < 0:
-            phi += 360
-
-        return (phi, theta)
-
-    # initialize the theta and phi vectors
-    coords = get_arc_coord(x_0, y_0, z_0)
-    arc_coords = [[coords[0]], [coords[1]]]
-
-    # increments over t to give desired number of pts
-    while (t < t_f):
-        # parametric eqns
-        x = x_0 + t * a
-        y = y_0 + t * b
-        z = z_0 + t * c
-
-        # pushes polar coords into the arclength
-        coords = get_arc_coord(x, y, z)
-        arc_coords[0].append(coords[0])
-        arc_coords[1].append(coords[1])
-
-        t += t_0
-
-    # pushes final coords into the arclength
-    coords = get_arc_coord(x_f, y_f, z_f)
-    arc_coords[0].append(coords[0])
-    arc_coords[1].append(coords[1])
-
-    return arc_coords
-
-
-def pol2cart(vert):
-    """
-    converts polar coords to cartesian
-    :param vert:
-    :return:
-    """
-    phi = np.deg2rad(vert[0])
-    theta = np.deg2rad(vert[1])
-    r = 1
-
-    x = r * np.sin(theta) * np.cos(phi)
-    y = r * np.sin(theta) * np.sin(phi)
-    z = r * np.cos(theta)
-
-    return [x, y, z]
-
-
-# # # Plotting # # #
-
-# vector of edges
-def vor_edges(data_dict):
-    return get_regions(data_dict)
-
-# gets lines of particular region
-def get_vor_sec(verts):
-    pairs = []
-
-    for i in range(len(verts)):
-        # first vertex gets paired to last vertex
-        if i == len(verts) - 1:
-            curr_pair = [verts[i], verts[0]]
-        else:
-            curr_pair = [verts[i], verts[i + 1]]
-
-        pairs.append(curr_pair)
-
-    lines = []
-
-    for i in range(len(pairs)):
-        # vector of phi & theta vectors
-        edge = get_pol_coords(pairs[i][0], pairs[i][1])
-
-        if (is_end(edge)):
-            two_edges = split_in_two(edge)
-            lines.append(two_edges[0])
-            lines.append(two_edges[1])
-        else:
-            lines.append(edge)
-
-    return lines
-
-# gets lines of all regions
-def get_regions(data_dict):
-    lines = []
-
-    for i in range(len(data_dict['regions_sv_labels'])):
-        verts = []
-
-        for j in range(len(data_dict['regions_sv_labels'][i])):
-            verts.append(data_dict['vertices_sv_xyz'][data_dict['regions_sv_labels'][i][j]])
-
-        lines.extend(get_vor_sec(verts))
-
-    return lines
-
-# plots 2D and 3D voronoi edges
-def matplotlib_edge_printing(data_dict, dir_, save_status='no'):
-    # The data from the previous
-    phi_raw = data_dict['phi_raw']
-    theta_raw = data_dict['theta_raw']
-    phi_centers = data_dict['phi_skm_centers']
-    theta_centers = data_dict['theta_skm_centers']
-    phi_vertices = data_dict['phi_sv_vertices']
-    theta_vertices = data_dict['theta_sv_vertices']
-
-    # Canonical Designations
-    pucker, phi_cano, theta_cano = read_csv_canonical_designations('CP_params.csv', dir_)
-
-    fig, ax = plt.subplots(facecolor='white')
-    fig_3d = plt.figure()
-    ax_3d = fig_3d.gca(projection='3d')
-
-    major_ticksx = np.arange(0, 372, 60)
-    minor_ticksx = np.arange(0, 372, 12)
-    ax.set_xticks(major_ticksx)
-    ax.set_xticks(minor_ticksx, minor=True)
-
-    major_ticksy = np.arange(0, 182, 30)
-    minor_ticksy = np.arange(0, 182, 10)
-    ax.set_yticks(major_ticksy)
-    ax.set_yticks(minor_ticksy, minor=True)
-
-    ax.set_xlim([-5, 365])
-    ax.set_ylim([185, -5])
-    ax.set_xlabel('Phi (degrees)')
-    ax.set_ylabel('Theta (degrees)')
-
-    hsp = ax.scatter(phi_raw, theta_raw, s=60, c='blue', marker='o')
-    kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h')
-    voronoi = ax.scatter(phi_vertices, theta_vertices, s=60, c='green', marker='s')
-    cano = ax.scatter(phi_cano, theta_cano, s=60, c='black', marker='+')
-
-    #### TEST PURPOSES ####
-    cano_centers = []
-
-    # converts strings to ints
-    for i in range(len(phi_cano)):
-        phi_cano[i] = float(phi_cano[i])
-        theta_cano[i] = float(theta_cano[i])
-
-    # creating cartesian cano_centers
-    for i in range(len(phi_cano)):
-        vert_test = pol2cart([phi_cano[i], theta_cano[i], 1])
-        vert_test = np.asarray(vert_test)
-
-        cano_centers.append(vert_test)
-
-    # Default parameters for spherical voronoi
-    radius = 1
-    center = np.array([0, 0, 0])
-
-    cano_centers = np.asarray(cano_centers)
-
-    # Spherical Voronoi for the centers
-
-    sv_test = SphericalVoronoi(cano_centers, radius, center)
-    sv_test.sort_vertices_of_regions()
-    test_dict = {}
-
-    test_dict['number_clusters'] = len(phi_cano)
-    test_dict['vertices_sv_xyz'] = sv_test.vertices
-    test_dict['regions_sv_labels'] = sv_test.regions
-
-    plot_regions(ax_3d, ax, test_dict)
-
-    #### TEST PURPOSES ####
-
-    # plots wireframe sphere
-    theta, phi = np.linspace(0, 2 * np.pi, 20), np.linspace(0, np.pi, 20)
-    THETA, PHI = np.meshgrid(theta, phi)
-    R = 1.0
-    X = R * np.sin(PHI) * np.cos(THETA)
-    Y = R * np.sin(PHI) * np.sin(THETA)
-    Z = R * np.cos(PHI)
-    ax_3d.plot_wireframe(X, Y, Z, color="lightblue")
-
-    # settings for 3d graph
-    ax_3d.legend()
-    ax_3d.set_xlim([-1, 1])
-    ax_3d.set_ylim([-1, 1])
-    ax_3d.set_zlim([-1, 1])
-
-    plot_regions(ax_3d, ax, data_dict)
-
-    leg = ax.legend((hsp, kmeans, voronoi, cano),
-                    ('HSP local minima', 'k-means center (k = ' + str(data_dict['number_clusters']) + ')',
-                     'voronoi vertice',
-                     'canonical designation'),
-                    scatterpoints=1, fontsize=12, frameon='false')
-
-    leg.get_frame().set_linewidth(0.0)
-
-    if save_status != 'no':
-        filename = create_out_fname('bxyl-k' + str(data_dict['number_clusters']) + '-normal.png', base_dir=dir_)
-        plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
-    else:
-        plt.show()
-
-    return
-
-def plot_vor_sec(ax_3d, ax, verts):
-    """
-    helper function for plotting a single voronoi section (input is the vertices of the section)
-    :param ax: plot being added to
-    :param verts: all vertices of the voronoi section
-    :return: nothing
-    """
-
-    pairs = []
-
-    for i in range(len(verts)):
-        # first vertex gets paired to last vertex
-        if i == len(verts) - 1:
-            curr_pair = [verts[i], verts[0]]
-        else:
-            curr_pair = [verts[i], verts[i + 1]]
-
-        pairs.append(curr_pair)
-
-    for i in range(len(pairs)):
-        # vector of phi & theta vectors
-        edge = get_pol_coords(pairs[i][0], pairs[i][1])
-
-        plot_arc(ax_3d, pairs[i][0], pairs[i][1])
-
-        if (is_end(edge)):
-            two_edges = split_in_two(edge)
-
-            ax.plot(two_edges[0][0], two_edges[0][1], color='green')
-            ax.plot(two_edges[1][0], two_edges[1][1], color='green')
-        else:
-            ax.plot(edge[0], edge[1], color='green')
-
-    return
-
-def plot_regions(ax_3d, ax, data_dict):
-    """
-    plots all voronoi sections
-    :param ax_3d:
-    :param ax:
-    :param data_dict:
-    :return:
-    """
-    for i in range(len(data_dict['regions_sv_labels'])):
-        verts = []
-
-        for j in range(len(data_dict['regions_sv_labels'][i])):
-            verts.append(data_dict['vertices_sv_xyz'][data_dict['regions_sv_labels'][i][j]])
-
-        plot_vor_sec(ax_3d, ax, verts)
-
-    return
-
-def not_in_pairs(pairs, curr_pair):
-    """
-    helper function for plot_vor_sec
-    returns a bool for if a coord pair is not already in the set of coord pairs
-    :param pairs:
-    :param curr_pair:
-    :return:
-    """
-
-    for i in range(len(pairs)):
-        if curr_pair == pairs[i] or \
-            (curr_pair[0] == pairs[i][1] and curr_pair[1] == pairs[i][0]):
-            return False
-
-    return True
-
-def is_end(edge):
-    """
-    helper function to determine if an edge goes across the end
-    (i.e - crosses from 0 to 360)
-    :param edge:
-    :return:
-    """
-    has_0 = False
-    has_360 = False
-
-    for i in range(len(edge[0])):
-        if edge[0][i] < 5:
-            has_0 = True
-        if edge[0][i] > 355:
-            has_360 = True
-
-    return has_0 and has_360
-
-def split_in_two(edge):
-    """
-    helper function to split an edge into two based on the 0 / 360 degree split
-    :param edge: [[phi], [theta]]
-    :return: two edges
-    """
-    edge_one_phi = []
-    edge_one_theta = []
-    edge_two_phi = []
-    edge_two_theta = []
-
-    for i in range(len(edge[0])):
-        if edge[0][i] < 180:
-            edge_one_phi.append(edge[0][i])
-            edge_one_theta.append(edge[1][i])
-        elif edge[0][i] >= 180:
-            edge_two_phi.append(edge[0][i])
-            edge_two_theta.append(edge[1][i])
-
-    edge_one = [edge_one_phi, edge_one_theta]
-    edge_two = [edge_two_phi, edge_two_theta]
-
-    two_edges = [edge_one, edge_two]
-
-    return two_edges
 #endregion
 
 # # # Transition State Functions # # #
@@ -1591,88 +1580,6 @@ def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=Fa
         plt.show()
     return
 
-
-def plotting_local_minima_size(data_dict, sv_skm_dict, cano_point, directory=None, save_status=False, voronoi_status=True):
-    phi_vals = []
-    theta_vals = []
-    phi_centers = []
-    theta_centers = []
-    energy = []
-    for key, key_val in data_dict.items():
-        phi_vals.extend(key_val['phi'])
-        theta_vals.extend(key_val['theta'])
-        phi_centers.append(key_val['mean_phi'])
-        theta_centers.append(key_val['mean_theta'])
-        energy.extend(key_val['energies'])
-    phi_vertices = sv_skm_dict['phi_sv_vertices']
-    theta_vertices = sv_skm_dict['theta_sv_vertices']
-
-    # Generating the marker size based on energy
-    max_energy = float(max(energy))
-    size = []
-
-    for row in energy:
-        size.append(80 * (1 - (float(row) / max_energy)))
-
-    # Organizing the figure plot
-    fig, ax = plt.subplots(facecolor='white')
-    major_ticksx = np.arange(0, 372, 60)
-    minor_ticksx = np.arange(0, 372, 12)
-    ax.set_xticks(major_ticksx)
-    ax.set_xticks(minor_ticksx, minor=True)
-    major_ticksy = np.arange(0, 182, 30)
-    minor_ticksy = np.arange(0, 182, 10)
-    ax.set_yticks(major_ticksy)
-    ax.set_yticks(minor_ticksy, minor=True)
-    ax.set_xlim([-10, 370])
-    ax.set_ylim([185, -5])
-    ax.set_xlabel('Phi (degrees)')
-    ax.set_ylabel('Theta (degrees)')
-
-    cano = ax.scatter(cano_point['phi_cano'], cano_point['theta_cano'], s=60, c='black', marker='+', edgecolor='face')
-    for i, txt in enumerate(cano_point['pucker']):
-        if float(cano_point['theta_cano'][i]) < 120 and float(cano_point['theta_cano'][i]) > 60 and float(cano_point['phi_cano'][i]) < 355:
-            ax.annotate(txt, xy=(cano_point['phi_cano'][i], cano_point['theta_cano'][i]),
-                        xytext=(float(cano_point['phi_cano'][i]) - 7, float(cano_point['theta_cano'][i]) + 12))
-
-    kmeans = ax.scatter(phi_centers, theta_centers, s=80, c='red', marker='h', edgecolor='face')
-    hsp = ax.scatter(phi_vals, theta_vals, s=size, c='blue', marker='o', edgecolor='face')
-
-    # ax.annotate(str(energy[5]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[5], theta_raw[5]),
-    #             xytext=(float(phi_vals[5]) + 18, float(theta_raw[5]) - 15), arrowprops=dict(arrowstyle="->",
-    #                                                                                        connectionstyle="arc3"), )
-
-    # ax.annotate(str(energy[5]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[5], theta_raw[5]),
-    #             xytext=(float(phi_vals[5]) + 18, float(theta_raw[5]) - 15), arrowprops=dict(arrowstyle="->",
-    #                                                                                        connectionstyle="arc3"), )
-    # ax.annotate(str(energy[20]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[20], theta_raw[20]),
-    #         xytext=(float(phi_raw[20]) - 20, float(theta_raw[20]) - 15), arrowprops=dict(arrowstyle="->",
-    #                                                                                      connectionstyle="arc3"), )
-    # ax.annotate(str(energy[11]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[11], theta_raw[11]),
-    #         xytext=(float(phi_raw[11]) - 20, float(theta_raw[11]) - 15), arrowprops=dict(arrowstyle="->",
-    #                                                                                      connectionstyle="arc3"), )
-    # ax.annotate(str(energy[24]) + r' ${\frac{kcal}{mol}}$', xy=(phi_raw[24], theta_raw[24]),
-    #         xytext=(float(phi_raw[24]) - 20, float(theta_raw[24]) - 15), arrowprops=dict(arrowstyle="->",
-    #                                                                                      connectionstyle="arc3"), )
-
-    leg = ax.legend((hsp, kmeans),
-                    ('HSP local minima', 'k-means center (k = ' + str(sv_skm_dict['number_clusters']) + ')',
-                     'voronoi vertice', 'canonical designation'),
-                    scatterpoints=1, fontsize=12, frameon='false')
-
-    leg.get_frame().set_linewidth(0.0)
-    leg.get_frame().set_alpha(0.75)
-
-    if save_status is True and directory is not None:
-        filename = create_out_fname('bxyl-k' + str(sv_skm_dict['number_clusters']) + '-size.png', base_dir=directory)
-        plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
-    else:
-        plt.show()
-    return
-
-    return
-
-
 def polar_organizer(data, type='hemi'):
 
     if type == 'hemi':
@@ -1701,83 +1608,6 @@ def polar_organizer(data, type='hemi'):
     return ts_phi, ts_pro, lm_phi, lm_pro
 
 
-def plotting_northern_southern_equatorial(northern_data, southern_data, equatorial_data, kmeans, directory=None, save_status=False):
-
-    # Generating the information for the plots
-    fig = plt.figure(facecolor='white', dpi=100)
-    gs = gridspec.GridSpec(2, 2)
-    ax1 = plt.subplot(gs[0, 0], projection='polar')
-    ax2 = plt.subplot(gs[0, 1], projection='polar')
-    ax3 = plt.subplot(gs[1, :])
-    thetaticks = np.arange(0, 360, 30)
-
-
-    # Setup for the Northern Plot
-    ax1_ts_phi, ax1_ts_pro, ax1_lm_phi, ax1_lm_pro = polar_organizer(northern_data, type='hemi')
-    ax1_ts_data = ax1.scatter(ax1_ts_phi, ax1_ts_pro, s = 30, c='blue', marker='s', edgecolor='face')
-    ax1_lm_data = ax1.scatter(ax1_lm_phi, ax1_lm_pro, s = 30, c='green', marker='o', edgecolor='face')
-
-    ax1.set_rmax(1.05)
-    ax1.set_rticks([0, 0.5, 1.05])  # less radial ticks
-    ax1.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-    ax1.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
-    ax1.set_theta_zero_location("N")
-    ax1.set_yticklabels([])
-    ax1.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
-    ax1.set_theta_direction(-1)
-
-
-    # Setup for the Southern Plot
-    ax2_ts_phi, ax2_ts_pro, ax2_lm_phi, ax2_lm_pro = polar_organizer(southern_data, type='hemi')
-    ax2_ts_data = ax2.scatter(ax2_ts_phi, ax2_ts_pro, s = 30, c='blue', marker='s', edgecolor='face')
-    ax2_lm_data = ax2.scatter(ax2_lm_phi, ax2_lm_pro, s = 30, c='green', marker='o', edgecolor='face')
-
-    ax2.set_rmax(1.05)
-    ax2.set_rticks([0, 0.5, 1.05])  # less radial ticks
-    ax2.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-    ax2.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
-    ax2.set_theta_zero_location("N")
-    ax2.set_yticklabels([])
-    ax2.set_thetagrids(thetaticks, frac=1.15)
-    ax2.set_theta_direction(-1)
-
-
-    # Setup for the Equatorial Plot
-    ax3_ts_phi, ax3_ts_pro, ax3_lm_phi, ax3_lm_pro = polar_organizer(equatorial_data, type='eq')
-    ax3_ts_data = ax3.scatter(ax3_ts_phi, ax3_ts_pro, s = 30, c='blue', marker='s', edgecolor='face')
-    ax3_lm_data = ax3.scatter(ax3_lm_phi, ax3_lm_pro, s = 30, c='green', marker='o', edgecolor='face')
-
-    major_ticksx = np.arange(0, 372, 60)
-    minor_ticksx = np.arange(0, 372, 12)
-    ax3.set_xticks(major_ticksx)
-    ax3.set_xticks(minor_ticksx, minor=True)
-    major_ticksy = np.arange(75, 110, 10)
-    minor_ticksy = np.arange(75, 110, 5)
-    ax3.set_yticks(major_ticksy)
-    ax3.set_yticks(minor_ticksy, minor=True)
-    ax3.set_xlim([-10, 370])
-    ax3.set_ylim([107, 73])
-    ax3.set_xlabel('Phi (degrees)')
-    ax3.set_ylabel('Theta (degrees)')
-    ax3.set_title("Equatorial", ha='center', va='bottom', loc='left', fontsize=12)
-
-    leg = ax3.legend((ax3_lm_data, ax3_ts_data),
-                    ('local minima', 'transition states'),
-                    scatterpoints=1, fontsize=12, frameon='false')
-
-    leg.get_frame().set_linewidth(0.0)
-    leg.get_frame().set_alpha(0.75)
-
-    if save_status is True and directory is not None:
-        filename = create_out_fname('bxyl-k' + str(len(kmeans.keys())) + '-overall.png', base_dir=directory)
-        plt.savefig(filename, facecolor=fig.get_facecolor(), transparent=True)
-    else:
-        plt.show()
-
-    return
-#endregion
-
-#
 def matplotlib_printing_normal(data_dict, dir_=None, save_status=False, voronoi_status=True, ts_status=False):
     # The data from the previous
     phi_raw = data_dict['phi_raw']
@@ -2090,3 +1920,4 @@ def matplotlib_printing_localmin_transition(lm_phi, lm_theta, ts_phi, ts_theta, 
     plt.show()
 
     return
+#endregion
