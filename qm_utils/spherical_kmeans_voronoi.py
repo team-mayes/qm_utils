@@ -627,6 +627,125 @@ class Local_Minima():
     def wipe_plot(self):
         self.plot = Plots(False, False, True)
 
+
+class Local_Minima_Cano():
+    def __init__(self, cano_points_in):
+        self.sv_kmeans_dict = {}
+        self.groups_dict = {}
+        self.cano_points = cano_points_in
+        self.plot = Plots(False, False, True)
+
+        self.populate_sv_kmeans_dict()
+
+    def populate_sv_kmeans_dict(self):
+        self.sv_kmeans_dict['phi_skm_centers'] = self.cano_points['phi_cano']
+        self.sv_kmeans_dict['theta_skm_centers'] = self.cano_points['theta_cano']
+        self.sv_kmeans_dict['number_clusters'] = len(self.cano_points['phi_cano'])
+
+        cano_centers = []
+
+        # converts strings to ints
+        for i in range(len(self.cano_points['phi_cano'])):
+            self.cano_points['phi_cano'][i] = float(self.cano_points['phi_cano'][i])
+            self.cano_points['theta_cano'][i] = float(self.cano_points['theta_cano'][i])
+
+        # creating cartesian cano_centers
+        for i in range(len(self.cano_points['phi_cano'])):
+            cano_vert = pol2cart([self.cano_points['phi_cano'][i], self.cano_points['theta_cano'][i], 1])
+            cano_vert = np.asarray(cano_vert)
+
+            cano_centers.append(cano_vert)
+
+        # Default parameters for spherical voronoi
+        radius = 1
+        center = np.array([0, 0, 0])
+
+        cano_centers = np.asarray(cano_centers)
+
+        # Spherical Voronoi for the centers
+        sv = SphericalVoronoi(cano_centers, radius, center)
+        sv.sort_vertices_of_regions()
+
+        # Generating the important base datasets for spherical voronoi
+        r_vertices = []
+        phi_vertices = []
+        theta_vertices = []
+
+        # Computing the Spherical Voronoi vertices to spherical coordinates
+        for value in sv.vertices:
+            r = np.sqrt(value[0] ** 2 + value[1] ** 2 + value[2] ** 2)
+            theta_new = np.rad2deg(np.arctan2(np.sqrt(value[0] ** 2 + value[1] ** 2), value[2]))
+            phi_new = np.rad2deg(np.arctan2(value[1], value[0]))
+            if phi_new < 0:
+                phi_new += 360
+
+            r_vertices.append(round(r, 1))
+            phi_vertices.append(round(phi_new, 1))
+            theta_vertices.append(round(theta_new, 1))
+
+        self.sv_kmeans_dict['phi_sv_vertices'] = phi_vertices
+        self.sv_kmeans_dict['theta_sv_vertices'] = theta_vertices
+        self.sv_kmeans_dict['vertices_sv_xyz'] = sv.vertices
+        self.sv_kmeans_dict['regions_sv_labels'] = sv.regions
+
+        return
+
+    def show(self):
+        self.plot.show()
+
+    def plot_cano_points(self):
+        self.plot.ax_rect.scatter(self.cano_points['phi_cano'], self.cano_points['theta_cano'], s=60, c='black',
+                                  marker='+',
+                                  edgecolor='face')
+
+        return
+
+    def plot_vor_sec(self, lm_group):
+        """
+        helper function for plotting a single voronoi section (input is the vertices of the section)
+        :param ax: plot being added to
+        :param verts: all vertices of the voronoi section
+        :return: nothing
+        """
+
+        verts = []
+
+        for j in range(len(self.sv_kmeans_dict['regions_sv_labels'][int(lm_group)])):
+            verts.append(
+                self.sv_kmeans_dict['vertices_sv_xyz'][self.sv_kmeans_dict['regions_sv_labels'][int(lm_group)][j]])
+
+        pairs = []
+
+        for i in range(len(verts)):
+            # first vertex gets paired to last vertex
+            if i == len(verts) - 1:
+                curr_pair = [verts[i], verts[0]]
+            else:
+                curr_pair = [verts[i], verts[i + 1]]
+
+            pairs.append(curr_pair)
+
+        for i in range(len(pairs)):
+            # plot_arc(ax_3d, pairs[i][0], pairs[i][1])
+
+            plot_vor_line(self.plot.ax_rect, pairs[i][0], pairs[i][1], 'green')
+
+        return
+
+    def plot_all_vor_sec(self):
+        for i in range(len(self.sv_kmeans_dict['regions_sv_labels'])):
+            self.plot_vor_sec(i)
+
+        return
+
+    def wipe_plot(self):
+        self.plot = Plots(False, False, True)
+
+
+
+
+
+
 # class for transition states and their pathways
 class Transition_States():
     def __init__(self, ts_data_in, lm_class_obj, save_dir_in):

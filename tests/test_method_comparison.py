@@ -12,7 +12,7 @@ import unittest
 
 from qm_utils.method_comparison import main, Local_Minima_Compare
 from qm_utils.qm_common import capture_stderr, capture_stdout, read_csv_to_dict
-from qm_utils.spherical_kmeans_voronoi import Local_Minima, read_csv_data, read_csv_canonical_designations, Plots
+from qm_utils.spherical_kmeans_voronoi import Local_Minima, read_csv_data, read_csv_canonical_designations, Plots, Local_Minima_Cano
 
 __author__ = 'SPVicchio'
 
@@ -68,8 +68,12 @@ class TestMain(unittest.TestCase):
 
         lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
 
+        lm_class_cano = Local_Minima_Cano(dict_cano)
+
         method_list_dicts = read_csv_to_dict(DATASET_FILE_LM_AM1, mode='r')
 
-        lm_comp_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class)
+        lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
+        lm_comp_cano_class.save_all_figures()
 
-        lm_comp_class.save_all_figures()
+        # lm_comp_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class)
+        # lm_comp_class.save_all_figures()
