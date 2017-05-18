@@ -459,10 +459,10 @@ def arc_length_calculator(phi1, theta1, phi2, theta2, radius=1):
     """
     calculates the arc length between two points on the surface of a sphere using the haversine
     formula (https://en.wikipedia.org/wiki/Great-circle_distance)
-    :param phi1: phi (radians) of structure 1
-    :param theta1: theta (radians) of structure 1
-    :param phi2: phi (radians) of structure 2
-    :param theta2: theta (radians) of structure 2
+    :param phi1: phi (deg) of structure 1
+    :param theta1: theta (deg) of structure 1
+    :param phi2: phi (deg) of structure 2
+    :param theta2: theta (deg) of structure 2
     :param radius: radius used for the surface of sphere (default value is one)
     :return:
     """

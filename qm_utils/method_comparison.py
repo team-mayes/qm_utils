@@ -17,6 +17,9 @@ import pandas as pd
 import math
 import numpy as np
 
+from collections import OrderedDict
+from operator import itemgetter
+
 from qm_utils.igor_mercator_organizer import write_file_data_dict
 from qm_utils.pucker_table import read_hartree_files_lowest_energy, sorting_job_types
 
@@ -64,24 +67,171 @@ WEIGHT_GIBBS = 'Boltz Weight Gibbs'
 WEIGHT_ENTH = 'Boltz Weight Enth'
 FREQ = 'Freq 1'
 
+# # # Directories # # #
+QM_1_DIR = os.path.dirname(__file__)
+QM_0_DIR = os.path.dirname(QM_1_DIR)
+TEST_DIR = os.path.join(QM_0_DIR, 'tests')
+DATA_DIR = os.path.join(TEST_DIR, 'test_data')
+SUB_DATA_DIR = os.path.join(DATA_DIR, 'method_comparison')
+LM_DATA_DIR = os.path.join(SUB_DATA_DIR, 'local_minimum')
+AM1_DATA_DIR = os.path.join(LM_DATA_DIR, 'AM1')
+
 
 # # # Classes # # #
 class Local_Minima_Compare():
     """
     class for organizing the local minima information
     """
-    def __init__(self, list_of_dicts, method, hsp_lm_groups):
-        print(method)
+    def __init__(self, method_in, parsed_hartree, lm_class_in):
+        self.hartree_data = []
+        self.lm_class = lm_class_in
+        self.groupings = []
+        self.method = method_in
+
+        self.populate_hartree_data(parsed_hartree)
+        self.populate_groupings()
 
         # Perform the following operations on the local min data set:
-        # (1) assign each of the unique local min to a particular HSP reference group
-        #       (be sure to store the arc_length value to the closest local min AND the group ID)
         # (2) plot HSP reference groups and the data points associated with each (save all files into a specific folder)
         #       a) overall plot
         #       b) folder for each HSP reference group
         # (3) within each group, perform RMSD calculations on arc_length? and gibbs free energies
 
+    def populate_hartree_data(self, parsed_hartree):
+        for i in range(len(parsed_hartree)):
+            self.hartree_data.append({})
 
+            self.hartree_data[i]['Energy (A.U.)'] = parsed_hartree[i]['Energy (A.U.)']
+            self.hartree_data[i]['Pucker'] = parsed_hartree[i]['Pucker']
+            self.hartree_data[i]['phi'] = parsed_hartree[i]['phi']
+            self.hartree_data[i]['theta'] = parsed_hartree[i]['theta']
+
+            # list for 3 shortest arclengths and their lm_groups
+            arc_lengths = {}
+
+            har_phi = float(self.hartree_data[i]['phi'])
+            har_theta = float(self.hartree_data[i]['theta'])
+
+            for j in range(len(self.lm_class.sv_kmeans_dict['regions_sv_labels'])):
+                skm_phi = self.lm_class.sv_kmeans_dict['phi_skm_centers'][j]
+                skm_theta = self.lm_class.sv_kmeans_dict['theta_skm_centers'][j]
+
+                arc_lengths[j] = arc_length_calculator(har_phi, har_theta, skm_phi, skm_theta)
+
+            ordered_arc_lengths = OrderedDict(sorted(arc_lengths.items(), key=itemgetter(1), reverse=False))
+            ordered_list = []
+            three_shortest_list = []
+
+            for key, val in ordered_arc_lengths.items():
+                ordered_list.append([key, val])
+
+            for k in range(3):
+                three_shortest_list.append(ordered_list[k])
+
+            self.hartree_data[i]['arc_lengths'] = three_shortest_list
+
+        return
+
+    def populate_groupings(self):
+        for i in range(len(self.lm_class.sv_kmeans_dict['regions_sv_labels'])):
+            self.groupings.append({})
+
+            for j in range(len(self.hartree_data)):
+                if self.hartree_data[j]['arc_lengths'][0][0] == i:
+                    self.groupings[i][j] = self.hartree_data[j]
+
+        return
+
+    def plot_grouping(self, grouping):
+        phi = []
+        theta = []
+
+        for key in self.groupings[grouping]:
+            phi.append(self.groupings[grouping][key]['phi'])
+            theta.append(self.groupings[grouping][key]['theta'])
+
+        group_phi = self.lm_class.sv_kmeans_dict['phi_skm_centers'][grouping]
+        group_theta = self.lm_class.sv_kmeans_dict['theta_skm_centers'][grouping]
+
+        self.lm_class.plot.ax_rect.scatter(phi, theta, s=15, c='blue', marker='o', edgecolor='face', zorder = 10)
+        self.lm_class.plot.ax_rect.scatter(group_phi, group_theta, s=30, c='red', marker='o', edgecolor='face', zorder=10)
+
+        self.lm_class.plot_vor_sec(grouping)
+
+        return
+
+    def plot_window(self, grouping):
+        border = 5
+
+        indexes = self.lm_class.sv_kmeans_dict['regions_sv_labels'][grouping]
+
+        min_phi = self.lm_class.sv_kmeans_dict['phi_sv_vertices'][indexes[0]]
+        max_phi = self.lm_class.sv_kmeans_dict['phi_sv_vertices'][indexes[0]]
+        min_theta = self.lm_class.sv_kmeans_dict['theta_sv_vertices'][indexes[0]]
+        max_theta = self.lm_class.sv_kmeans_dict['theta_sv_vertices'][indexes[0]]
+
+        for i in range(len(indexes)):
+            phi = self.lm_class.sv_kmeans_dict['phi_sv_vertices'][indexes[i]]
+            theta = self.lm_class.sv_kmeans_dict['theta_sv_vertices'][indexes[i]]
+
+            if phi < min_phi:
+                min_phi = phi
+            elif phi > max_phi:
+                max_phi = phi
+
+            if theta < min_theta:
+                min_theta = theta
+            elif theta > max_theta:
+                max_theta = theta
+
+        min_phi -= border
+        max_phi += border
+
+        min_theta -= border
+        max_theta += border
+
+        if grouping == 0:
+            min_phi = -border
+            max_phi = 360 + border
+
+            min_theta = -border
+
+        if grouping == len(self.lm_class.sv_kmeans_dict['regions_sv_labels']) - 1:
+            min_phi = -border
+            max_phi = 360 + border
+
+            max_theta = 180 + border
+
+        self.lm_class.plot.ax_rect.set_xlim([min_phi, max_phi])
+        self.lm_class.plot.ax_rect.set_ylim([max_theta, min_theta])
+
+        self.plot_all_groupings()
+
+        return
+
+    def plot_all_groupings(self):
+        for i in range(len(self.groupings)):
+            self.plot_grouping(i)
+
+    def show(self):
+        self.lm_class.show()
+
+    def save_all_figures(self):
+        base_name = "z_dataset-bxyl-LM-" + self.method
+
+        self.plot_all_groupings()
+        self.lm_class.plot.save(base_name + '-all_groupings', AM1_DATA_DIR)
+
+        self.lm_class.wipe_plot()
+
+        for i in range(len(self.groupings)):
+            self.plot_grouping(i)
+            self.lm_class.plot.save(base_name + '-group_' + str(i), AM1_DATA_DIR)
+            self.lm_class.wipe_plot()
+
+            self.plot_window(i)
+            self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', AM1_DATA_DIR)
+            self.lm_class.wipe_plot()
 
 
 class Transition_State_Compare():

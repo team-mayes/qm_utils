@@ -238,9 +238,9 @@ class MainRun(unittest.TestCase):
 
             #lm_class.plot_local_min()
             #lm_class.plot_group_labels()
-            lm_class.plot_cano_vor()
+            #lm_class.plot_cano_vor()
             lm_class.plot_local_min_sizes()
-            lm_class.plot_vor_sec('04')
+            lm_class.plot_vor_sec('08')
             lm_class.show()
 
             ts_class.plot_loc_min_group_2d('00_04')

@@ -591,25 +591,41 @@ class Local_Minima():
         return
 
     def plot_all_vor_sec(self):
+        for i in range(len(self.groups_dict)):
+            self.plot_vor_sec(i)
+
         return
 
     def organize_regions(self):
-        org_dict = {}
-        org_list = []
+        org_sv_reg_dict = {}
+        org_phi_skm_dict = {}
+        org_theta_skm_dict = {}
+        org_sv_reg_list = []
+        org_phi_skm_list = []
+        org_theta_skm_list = []
 
         for group_key in self.groups_dict:
             for i in range(len(self.sv_kmeans_dict['phi_skm_centers'])):
                 if float(self.groups_dict[group_key]['mean_phi']) == float(self.sv_kmeans_dict['phi_skm_centers'][i])\
                     and float(self.groups_dict[group_key]['mean_theta']) == float(self.sv_kmeans_dict['theta_skm_centers'][i]):
 
-                    org_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['regions_sv_labels'][i]
+                    org_sv_reg_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['regions_sv_labels'][i]
+                    org_phi_skm_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['phi_skm_centers'][i]
+                    org_theta_skm_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['theta_skm_centers'][i]
 
-        for key in org_dict:
-            org_list.append(org_dict[key])
+        for key in org_sv_reg_dict:
+            org_sv_reg_list.append(org_sv_reg_dict[key])
+            org_phi_skm_list.append(org_phi_skm_dict[key])
+            org_theta_skm_list.append(org_theta_skm_dict[key])
 
-        self.sv_kmeans_dict['regions_sv_labels'] = org_list
+        self.sv_kmeans_dict['regions_sv_labels'] = org_sv_reg_list
+        self.sv_kmeans_dict['phi_skm_centers'] = org_phi_skm_list
+        self.sv_kmeans_dict['theta_skm_centers'] = org_theta_skm_list
 
         return
+
+    def wipe_plot(self):
+        self.plot = Plots(False, False, True)
 
 # class for transition states and their pathways
 class Transition_States():
@@ -896,13 +912,13 @@ class Transition_States():
 
         return
 
-
 # class for initializing plots
 class Plots():
     # arguments are bools for creating the 2d and 3d plots
     def __init__(self, twoD_arg, threeD_arg, merc_arg):
+        self.fig = plt.figure()
+
         if twoD_arg:
-            self.fig = plt.figure()
             gs = gridspec.GridSpec(2, 2)
             self.ax_rect = self.fig.add_subplot(gs[1:, :], facecolor='white')
             self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
@@ -916,11 +932,10 @@ class Plots():
             lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='green', marker='o', edgecolor='face')
             path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
 
-            self.ax_rect.legend([ts_Artist, lm_Artist, path_Artist], ['Transition State', 'Local Minimum', 'Pathway'])
+            self.ax_rect.legend([lm_Artist, ts_Artist, path_Artist], ['Local Minimum', 'Transition State', 'Pathway'], loc=1).set_zorder(100)
 
         if threeD_arg:
-            self.fig_spher = plt.figure()
-            self.ax_spher = self.fig_spher.gca(projection='3d')
+            self.ax_spher = self.fig.gca(projection='3d')
 
             # settings for spherical plot
             self.threeD_init()
@@ -931,11 +946,11 @@ class Plots():
             self.ax_rect_init()
 
             # Create custom artists
-            ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='blue', marker='s', edgecolor='face')
-            lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='green', marker='o', edgecolor='face')
-            path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+            ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30, c='blue', marker='o', edgecolor='face')
+            met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='red', marker='o', edgecolor='face')
+            path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
-            self.ax_rect.legend([ts_Artist, lm_Artist, path_Artist], ['Transition State', 'Local Minimum', 'Pathway'])
+            self.ax_rect.legend([ref_lm_Artist, met_lm_Artist, path_Artist], ['Reference Local Minimum', 'Method Local Minimum', 'Voronoi Tessellation'], loc=1).set_zorder(100)
 
     def twoD_init(self):
         self.ax_rect_init()
@@ -1002,7 +1017,10 @@ class Plots():
     def show(self):
         plt.show()
 
-        return
+    def save(self, filename, dir_):
+        filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
+        self.fig.savefig(filename1, facecolor=self.fig.get_facecolor(), transparent=True)
+
 #endregion
 
 # # # Local Minima Functions # # #
