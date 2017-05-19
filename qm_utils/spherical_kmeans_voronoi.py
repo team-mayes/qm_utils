@@ -483,12 +483,10 @@ class Local_Minima():
 
         return
 
-    # possibly broken
     def plot_local_min(self, directory=None, save_status=False):
         plotting_local_minima(self.groups_dict, self.sv_kmeans_dict, self.cano_points, directory=directory,
                               save_status=save_status)
 
-    # possibly broken
     def plot_group_labels(self, directory=None, save_status=False):
         plotting_group_labels(self.groups_dict, self.sv_kmeans_dict, directory=directory, save_status=save_status)
 
