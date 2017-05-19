@@ -27,6 +27,8 @@ from qm_utils.pucker_table import read_hartree_files_lowest_energy, sorting_job_
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR, InvalidDataError, INVALID_DATA,
                                 INPUT_ERROR, arc_length_calculator, read_csv_to_dict)
 
+# # # header stuff # # #
+#region
 try:
     # noinspection PyCompatibility
     from ConfigParser import ConfigParser
@@ -51,8 +53,10 @@ TOL_ARC_LENGTH = 0.1
 TOL_ARC_LENGTH_CROSS = 0.2  # THIS WAS THE ORGINAL TOLERANCE6
 DEFAULT_TEMPERATURE = 298.15
 K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
+#endregion
 
 # # Pucker Keys # #
+#region
 FILE_NAME = 'File Name'
 PUCKER = 'Pucker'
 ENERGY_ELECTRONIC = 'Energy (A.U.)'
@@ -67,8 +71,10 @@ GID = 'group ID'
 WEIGHT_GIBBS = 'Boltz Weight Gibbs'
 WEIGHT_ENTH = 'Boltz Weight Enth'
 FREQ = 'Freq 1'
+#endregion
 
 # # # Directories # # #
+#region
 QM_1_DIR = os.path.dirname(__file__)
 QM_0_DIR = os.path.dirname(QM_1_DIR)
 TEST_DIR = os.path.join(QM_0_DIR, 'tests')
@@ -76,9 +82,18 @@ DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'method_comparison')
 LM_DATA_DIR = os.path.join(SUB_DATA_DIR, 'local_minimum')
 AM1_DATA_DIR = os.path.join(LM_DATA_DIR, 'AM1')
+#endregion
 
+# # # Helper Functions # # #
+#region
+def
+
+
+
+#endregion
 
 # # # Classes # # #
+#region
 class Local_Minima_Compare():
     """
     class for organizing the local minima information
@@ -89,10 +104,13 @@ class Local_Minima_Compare():
         self.group_data = []
         self.overall_data = {}
         self.overall_data['method'] = method_in
+        self.group_rows = []
+        self.overall_row = []
 
         self.populate_hartree_data(parsed_hartree)
         self.populate_groupings()
         self.do_calcs()
+        self.populate_print_data()
 
     # # # __init__ functions # # #
     #region
@@ -142,6 +160,26 @@ class Local_Minima_Compare():
                     self.group_data[i]['points'][j] = self.hartree_data[j]
 
         return
+
+    def populate_print_data(self):
+        for i in range(len(self.group_data)):
+            row = []
+            row.append(self.group_data[i]['method'])
+            row.append(self.group_data[i]['group_RMSD'])
+            row.append(self.group_data[i]['group_WRMSD'])
+            row.append(self.group_data[i]['WSS'])
+            row.append(self.group_data[i]['WWSS'])
+
+            self.group_rows.append(row)
+
+        overall_row = []
+        overall_row.append(self.overall_data['method'])
+        overall_row.append(self.overall_data['RMSD'])
+        overall_row.append(self.overall_data['WRMSD'])
+        overall_row.append(self.overall_data['SSE'])
+        overall_row.append(self.overall_data['WSSE'])
+
+        self.overall_row.append(overall_row)
     #endregion
 
     # # # do_calc functions # # #
@@ -176,11 +214,6 @@ class Local_Minima_Compare():
 
         self.group_data[group]['weighted_gibbs'] = round(wt_gibbs, 3)
 
-    # calculates the RMSD of each cluster
-    def calc_RMSD(self):
-
-        return
-
     def calc_WSS(self, group):
         WSS = 0
 
@@ -188,7 +221,7 @@ class Local_Minima_Compare():
             arc_length = self.group_data[group]['points'][key]['arc_lengths'][0][1]
             WSS += arc_length**2
 
-        self.group_data[group]['WSS'] = WSS
+        self.group_data[group]['WSS'] = round(WSS, 5)
 
     def calc_WWSS(self, group):
         WWSS = 0
@@ -198,24 +231,26 @@ class Local_Minima_Compare():
             weighting = self.group_data[group]['points'][key]['weighting']
             WWSS += (arc_length ** 2) * weighting
 
-        self.group_data[group]['WWSS'] = WWSS
+        self.group_data[group]['WWSS'] = round(WWSS, 5)
 
     def calc_group_RMSD(self, group):
         size = len(self.group_data[group]['points'])
         if(size == 0):
             RMSD = 'n/a'
+            self.group_data[group]['group_RMSD'] = RMSD
         else:
             RMSD = (self.group_data[group]['WSS'] / size) ** 0.5
-        self.group_data[group]['group_RMSD'] = RMSD
+            self.group_data[group]['group_RMSD'] = round(RMSD, 5)
 
     def calc_group_WRMSD(self, group):
         size = len(self.group_data[group]['points'])
 
         if (size == 0):
             WRMSD = 'n/a'
+            self.group_data[group]['group_WRMSD'] = WRMSD
         else:
             WRMSD = (self.group_data[group]['WWSS'] / size) ** 0.5
-        self.group_data[group]['group_WRMSD'] = WRMSD
+            self.group_data[group]['group_WRMSD'] = round(WRMSD, 5)
 
     def calc_SSE(self):
         SSE = 0
@@ -223,7 +258,7 @@ class Local_Minima_Compare():
         for i in range(len(self.group_data)):
             SSE += self.group_data[i]['WSS']
 
-        self.overall_data['SSE'] = SSE
+        self.overall_data['SSE'] = round(SSE, 5)
 
     def calc_WSSE(self):
         WSSE = 0
@@ -231,17 +266,17 @@ class Local_Minima_Compare():
         for i in range(len(self.group_data)):
             WSSE += self.group_data[i]['WWSS']
 
-        self.overall_data['WSSE'] = WSSE
+        self.overall_data['WSSE'] = round(WSSE, 5)
 
     def calc_RMSD(self):
         RMSD = (self.overall_data['SSE'] / len(self.group_data)) ** 0.5
-        self.overall_data['RMSD'] = RMSD
+        self.overall_data['RMSD'] = round(RMSD, 5)
 
     def calc_WRMSD(self):
         WRMSD = (self.overall_data['WSSE'] / len(self.group_data)) ** 0.5
-        self.overall_data['WRMSD'] = WRMSD
+        self.overall_data['WRMSD'] = round(WRMSD, 5)
     #endregion
-    
+
     # # # plotting functions # # #
     #region
     def plot_grouping(self, grouping):
@@ -343,39 +378,45 @@ class Local_Minima_Compare():
                 w.writeheader()
                 w.writerow(self.group_data[i])
 
+class LM_comp_all_methods:
+    def __init__(self, methods_data_in):
+        self.methods_data = methods_data_in
+
+    def org_group_rows(self):
+
+        return
+
     def print(self):
-        for i in range(len(self.group_data)):
-            header = []
-            header.append('group_' + str(i))
-            header.append('group_RMSD')
-            header.append('group_WRMSD')
+        tables = []
 
-            table = PrettyTable(header)
+        for i in range(len(self.methods_data)):
+            for j in range(len(self.methods_data[0].group_rows)):
+                header = []
+                header.append('group_' + str(j))
+                header.append('group_RMSD')
+                header.append('group_WRMSD')
+                header.append('WSS')
+                header.append('WWSS')
 
-            row = []
-            row.append(self.group_data[i]['method'])
-            row.append(self.group_data[i]['group_RMSD'])
-            row.append(self.group_data[i]['group_WRMSD'])
+                if len(tables) < len(self.methods_data[0].group_rows):
+                    tables.append(PrettyTable(header))
 
-            table.add_row(row)
+                tables[j].add_row(self.methods_data[i].group_rows[j])
 
-            print(table)
+            if len(tables) < len(self.methods_data[0].group_rows) + 1:
+                header = []
+                header.append('overall')
+                header.append('RMSD')
+                header.append('WRMSD')
+                header.append('SSE')
+                header.append('WSSE')
 
-        header = []
-        header.append('overall')
-        header.append('RMSD')
-        header.append('WRMSD')
+                tables.append(PrettyTable(header))
 
-        table = PrettyTable(header)
+            tables[len(self.groups_rows) + 1].add_row(self.methods_data[i].overall_row)
 
-        row = []
-        row.append(self.overall_data['method'])
-        row.append(self.overall_data['RMSD'])
-        row.append(self.overall_data['WRMSD'])
-
-        table.add_row(row)
-
-        print(table)
+        for i in range(len(tables)):
+            print(tables[i])
 
 class Transition_State_Compare():
     """
@@ -413,10 +454,10 @@ class Transition_State_Compare():
         #       (assigning pathway will need to be on both the transition state AND the local minima connecting them)
         # (3) within each of the assign group, perform RMSD calculations on the arc length and gibbs free energies
         # (4) develop a similar plotting strategy (more thought needed)
-
+#endregion
 
 # # # Command Line Parse # # #
-
+#region
 def parse_cmdline(argv):
     """
     Returns the parsed argument list and return code.
@@ -470,9 +511,10 @@ def parse_cmdline(argv):
         return args, INPUT_ERROR
 
     return args, GOOD_RET
-
+#endregion
 
 # # # Main # # #
+#region
 def main(argv=None):
     """
     Runs the main program
@@ -483,9 +525,7 @@ def main(argv=None):
     if ret != GOOD_RET or args is None:
         return args, ret
     try:
-
         #TODO: import the class information from spherical_kmean_voronoi.py based on the molecule type
-
         # Need to come up with a simple way to local in the necessary HSP reference information based on args.molecule (database? HSP reference files?)
 
         hsp_lm_groups = 1
@@ -507,23 +547,17 @@ def main(argv=None):
                     data_lm = Local_Minima_Compare(method_list_dicts, qm_method, hsp_lm_groups)
 
                     #TODO: run a local min class on this data set...
-
-
                 elif csv_file_read.split('-')[2] == 'TS':
                     print(csv_file_read)
                     #TODO: run a transition state class on this data set...
 
                     data_ts = Transition_State_Compare(method_list_dicts, qm_method, hsp_ts_groups)
-
-
-
                 else:
                     print('WARNING: NOT SURE WHAT TYPE OF JOB THIS IS')
 
             #TODO: come up with a method for storing the information from each run so that later on
-
-            # A class with the important data from the above calculations is probably the best way to go about it?
-            # Also...should write out the data to a csv file for later processing if necessary.
+            #A class with the important data from the above calculations is probably the best way to go about it?
+            #Also...should write out the data to a csv file for later processing if necessary.
 
 
 
@@ -540,3 +574,4 @@ def main(argv=None):
 if __name__ == '__main__':
     status = main()
     sys.exit(status)
+#endregion
