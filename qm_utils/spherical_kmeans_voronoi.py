@@ -627,7 +627,6 @@ class Local_Minima():
     def wipe_plot(self):
         self.plot = Plots(False, False, True)
 
-
 class Local_Minima_Cano():
     def __init__(self, cano_points_in):
         self.sv_kmeans_dict = {}
@@ -741,11 +740,6 @@ class Local_Minima_Cano():
     def wipe_plot(self):
         self.plot = Plots(False, False, True)
 
-
-
-
-
-
 # class for transition states and their pathways
 class Transition_States():
     def __init__(self, ts_data_in, lm_class_obj, save_dir_in):
@@ -826,23 +820,18 @@ class Transition_States():
                     temp_ts_group['ts_group_' + str(i)]['ts_group']['ts_' + str(j)] = uniq_ts
 
                 wt_gibbs = 0
-
-                ind_boltz = []
                 total_boltz = 0
 
                 # finding Boltzmann weighted Gibb's free energy
                 for key in temp_ts_group['ts_group_' + str(i)]['ts_group']:
                     e_val = temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['energy (A.U.)']
                     component = math.exp(-float(e_val) / (K_B * DEFAULT_TEMPERATURE))
-                    ind_boltz.append(component)
+                    temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['ind_boltz'] = component
                     total_boltz += component
 
-                k = 0
                 for key in temp_ts_group['ts_group_' + str(i)]['ts_group']:
-                    wt_gibbs += (ind_boltz[k] / total_boltz) * temp_ts_group['ts_group_' + str(i)]['ts_group'][key][
+                    wt_gibbs += (temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['ind_boltz'] / total_boltz) * temp_ts_group['ts_group_' + str(i)]['ts_group'][key][
                         'energy (A.U.)']
-
-                    k += 1
 
                 temp_ts_group['ts_group_' + str(i)]['ts_group']['weighted_gibbs'] = round(wt_gibbs, 3)
 
