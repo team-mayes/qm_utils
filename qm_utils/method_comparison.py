@@ -17,6 +17,7 @@ import pandas as pd
 import math
 import numpy as np
 
+from prettytable import PrettyTable
 from collections import OrderedDict
 from operator import itemgetter
 
@@ -85,26 +86,24 @@ class Local_Minima_Compare():
     def __init__(self, method_in, parsed_hartree, lm_class_in):
         self.hartree_data = []
         self.lm_class = lm_class_in
-        self.groupings = []
-        self.method = method_in
+        self.group_data = []
+        self.overall_data = {}
+        self.overall_data['method'] = method_in
 
         self.populate_hartree_data(parsed_hartree)
         self.populate_groupings()
+        self.do_calcs()
 
-        # Perform the following operations on the local min data set:
-        # (2) plot HSP reference groups and the data points associated with each (save all files into a specific folder)
-        #       a) overall plot
-        #       b) folder for each HSP reference group
-        # (3) within each group, perform RMSD calculations on arc_length? and gibbs free energies
-
+    # # # __init__ functions # # #
+    #region
     def populate_hartree_data(self, parsed_hartree):
         for i in range(len(parsed_hartree)):
             self.hartree_data.append({})
 
-            self.hartree_data[i]['Energy (A.U.)'] = parsed_hartree[i]['Energy (A.U.)']
-            self.hartree_data[i]['Pucker'] = parsed_hartree[i]['Pucker']
-            self.hartree_data[i]['phi'] = parsed_hartree[i]['phi']
-            self.hartree_data[i]['theta'] = parsed_hartree[i]['theta']
+            self.hartree_data[i]['energy (A.U.)'] = float(parsed_hartree[i]['Energy (A.U.)'])
+            self.hartree_data[i]['pucker'] = parsed_hartree[i]['Pucker']
+            self.hartree_data[i]['phi'] = float(parsed_hartree[i]['phi'])
+            self.hartree_data[i]['theta'] = float(parsed_hartree[i]['theta'])
 
             # list for 3 shortest arclengths and their lm_groups
             arc_lengths = {}
@@ -134,27 +133,130 @@ class Local_Minima_Compare():
 
     def populate_groupings(self):
         for i in range(len(self.lm_class.sv_kmeans_dict['regions_sv_labels'])):
-            self.groupings.append({})
+            self.group_data.append({})
+            self.group_data[i]['method'] = self.overall_data['method']
+            self.group_data[i]['points'] = {}
 
             for j in range(len(self.hartree_data)):
                 if self.hartree_data[j]['arc_lengths'][0][0] == i:
-                    self.groupings[i][j] = self.hartree_data[j]
+                    self.group_data[i]['points'][j] = self.hartree_data[j]
+
+        return
+    #endregion
+
+    # # # do_calc functions # # #
+    #region
+    def do_calcs(self):
+        for i in range(len(self.group_data)):
+            self.calc_WSS(i)
+            self.calc_weighting(i)
+            self.calc_WWSS(i)
+            self.calc_group_RMSD(i)
+            self.calc_group_WRMSD(i)
+
+        self.calc_SSE()
+        self.calc_WSSE()
+        self.calc_RMSD()
+        self.calc_WRMSD()
+
+    # finds Boltzmann weighted Gibb's free energy
+    def calc_weighting(self, group):
+        total_boltz = 0
+
+        for key in self.group_data[group]['points']:
+            e_val = self.group_data[group]['points'][key]['energy (A.U.)']
+            component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+            self.group_data[group]['points'][key]['ind_boltz'] = component
+            total_boltz += component
+
+        wt_gibbs = 0
+        for key in self.group_data[group]['points']:
+            wt_gibbs += (self.group_data[group]['points'][key]['ind_boltz'] / total_boltz) * self.group_data[group]['points'][key]['energy (A.U.)']
+            self.group_data[group]['points'][key]['weighting'] = self.group_data[group]['points'][key]['ind_boltz'] / total_boltz
+
+        self.group_data[group]['weighted_gibbs'] = round(wt_gibbs, 3)
+
+    # calculates the RMSD of each cluster
+    def calc_RMSD(self):
 
         return
 
+    def calc_WSS(self, group):
+        WSS = 0
+
+        for key in self.group_data[group]['points']:
+            arc_length = self.group_data[group]['points'][key]['arc_lengths'][0][1]
+            WSS += arc_length**2
+
+        self.group_data[group]['WSS'] = WSS
+
+    def calc_WWSS(self, group):
+        WWSS = 0
+
+        for key in self.group_data[group]['points']:
+            arc_length = self.group_data[group]['points'][key]['arc_lengths'][0][1]
+            weighting = self.group_data[group]['points'][key]['weighting']
+            WWSS += (arc_length ** 2) * weighting
+
+        self.group_data[group]['WWSS'] = WWSS
+
+    def calc_group_RMSD(self, group):
+        size = len(self.group_data[group]['points'])
+        if(size == 0):
+            RMSD = 'n/a'
+        else:
+            RMSD = (self.group_data[group]['WSS'] / size) ** 0.5
+        self.group_data[group]['group_RMSD'] = RMSD
+
+    def calc_group_WRMSD(self, group):
+        size = len(self.group_data[group]['points'])
+
+        if (size == 0):
+            WRMSD = 'n/a'
+        else:
+            WRMSD = (self.group_data[group]['WWSS'] / size) ** 0.5
+        self.group_data[group]['group_WRMSD'] = WRMSD
+
+    def calc_SSE(self):
+        SSE = 0
+
+        for i in range(len(self.group_data)):
+            SSE += self.group_data[i]['WSS']
+
+        self.overall_data['SSE'] = SSE
+
+    def calc_WSSE(self):
+        WSSE = 0
+
+        for i in range(len(self.group_data)):
+            WSSE += self.group_data[i]['WWSS']
+
+        self.overall_data['WSSE'] = WSSE
+
+    def calc_RMSD(self):
+        RMSD = (self.overall_data['SSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['RMSD'] = RMSD
+
+    def calc_WRMSD(self):
+        WRMSD = (self.overall_data['WSSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['WRMSD'] = WRMSD
+    #endregion
+    
+    # # # plotting functions # # #
+    #region
     def plot_grouping(self, grouping):
         phi = []
         theta = []
 
-        for key in self.groupings[grouping]:
-            phi.append(self.groupings[grouping][key]['phi'])
-            theta.append(self.groupings[grouping][key]['theta'])
+        for key in self.group_data[grouping]['points']:
+            phi.append(self.group_data[grouping]['points'][key]['phi'])
+            theta.append(self.group_data[grouping]['points'][key]['theta'])
 
         group_phi = self.lm_class.sv_kmeans_dict['phi_skm_centers'][grouping]
         group_theta = self.lm_class.sv_kmeans_dict['theta_skm_centers'][grouping]
 
         self.lm_class.plot.ax_rect.scatter(phi, theta, s=15, c='blue', marker='o', edgecolor='face', zorder = 10)
-        self.lm_class.plot.ax_rect.scatter(group_phi, group_theta, s=30, c='red', marker='o', edgecolor='face', zorder=10)
+        self.lm_class.plot.ax_rect.scatter(group_phi, group_theta, s=30, c='red', marker='s', edgecolor='face', zorder=10)
 
         self.lm_class.plot_vor_sec(grouping)
 
@@ -210,11 +312,12 @@ class Local_Minima_Compare():
         return
 
     def plot_all_groupings(self):
-        for i in range(len(self.groupings)):
+        for i in range(len(self.group_data)):
             self.plot_grouping(i)
 
     def show(self):
         self.lm_class.show()
+    #endregion
 
     def save_all_figures(self):
         base_name = "z_dataset-bxyl-LM-" + self.method
@@ -224,7 +327,7 @@ class Local_Minima_Compare():
 
         self.lm_class.wipe_plot()
 
-        for i in range(len(self.groupings)):
+        for i in range(len(self.group_data)):
             self.plot_grouping(i)
             self.lm_class.plot.save(base_name + '-group_' + str(i), AM1_DATA_DIR)
             self.lm_class.wipe_plot()
@@ -233,6 +336,46 @@ class Local_Minima_Compare():
             self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', AM1_DATA_DIR)
             self.lm_class.wipe_plot()
 
+    def write_to_csv(self):
+        for i in range(len(self.group_data)):
+            with open('group' + str(i) + '.csv', 'w') as f:
+                w = csv.DictWriter(f, self.group_data[i].keys())
+                w.writeheader()
+                w.writerow(self.group_data[i])
+
+    def print(self):
+        for i in range(len(self.group_data)):
+            header = []
+            header.append('group_' + str(i))
+            header.append('group_RMSD')
+            header.append('group_WRMSD')
+
+            table = PrettyTable(header)
+
+            row = []
+            row.append(self.group_data[i]['method'])
+            row.append(self.group_data[i]['group_RMSD'])
+            row.append(self.group_data[i]['group_WRMSD'])
+
+            table.add_row(row)
+
+            print(table)
+
+        header = []
+        header.append('overall')
+        header.append('RMSD')
+        header.append('WRMSD')
+
+        table = PrettyTable(header)
+
+        row = []
+        row.append(self.overall_data['method'])
+        row.append(self.overall_data['RMSD'])
+        row.append(self.overall_data['WRMSD'])
+
+        table.add_row(row)
+
+        print(table)
 
 class Transition_State_Compare():
     """

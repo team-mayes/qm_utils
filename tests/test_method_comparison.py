@@ -62,13 +62,30 @@ class TestMain(unittest.TestCase):
         # test_input = ["-s", LIST_OF_DATASET_FILES_BXYL, "-d", SUB_DATA_DIR, "-m", "bxyl"]
         # main(test_input)
 
-        number_clusters = 9
+        number_clusters = 12
         data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR_SV)
         dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR_SV)
 
         lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
         method_list_dicts = read_csv_to_dict(DATASET_FILE_LM_AM1, mode='r')
+        #
+        # lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
+        # lm_comp_cano_class.save_all_figures()
 
+        lm_comp_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class)
+        #lm_comp_class.save_all_figures()
+
+        lm_comp_class.print()
+
+
+
+
+
+
+
+
+
+<<<<<<< HEAD
         # Canonical
         lm_class_cano = Local_Minima_Cano(dict_cano)
         lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
@@ -78,3 +95,6 @@ class TestMain(unittest.TestCase):
         #
         # lm_comp_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class)
         # lm_comp_class.save_all_figures()
+=======
+
+>>>>>>> f771aea107cea364389157d3ffa4e992dabdbd86
