@@ -217,8 +217,8 @@ DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'structure_pairing')
 
 # Input files #
-FILE_SAMPLE_B3LYP_LM = os.path.join(SUB_DATA_DIR, 'z_lm-b3lyp_howsugarspucker.csv')
-FILE_SAMPLE_B3LYP_TS = os.path.join(SUB_DATA_DIR, 'z_TS-b3lyp_howsugarspucker.csv')
+FILE_SAMPLE_B3LYP_LM = os.path.join(SUB_DATA_DIR, 'z_bxyl_lm-b3lyp_howsugarspucker.csv')
+FILE_SAMPLE_B3LYP_TS = os.path.join(SUB_DATA_DIR, 'z_bxyl_TS-b3lyp_howsugarspucker.csv')
 FILE_HARTREE_SAMPLE_DFTB_TS = os.path.join(SUB_DATA_DIR, 'z_pathways-dftb.csv')
 FILE_HARTREE_SAMPLE_DFTB_ALL = os.path.join(SUB_DATA_DIR, 'z_cluster-sorted-ALL-bxyl-dftb.csv')
 LIST_OF_CSV_FILES_BXYL = os.path.join(SUB_DATA_DIR, 'a_list_csv_files.txt')

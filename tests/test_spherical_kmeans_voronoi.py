@@ -43,8 +43,8 @@ TRANS_STA_IMAGES = os.path.join(SUB_DATA_DIR, 'image_transition_state')
 TS_PATHWAYS = os.path.join(TRANS_STA_IMAGES, 'pathways')
 
 # Input files #
-HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
-HSP_TRANS_STA = 'z_TS-b3lyp_howsugarspucker.csv'
+HSP_LOCAL_MIN = 'z_bxyl_lm-b3lyp_howsugarspucker.csv'
+HSP_TRANS_STA = 'z_bxyl_TS-b3lyp_howsugarspucker.csv'
 CANO_DESIGN   = 'CP_params.csv'
 
 # Good output

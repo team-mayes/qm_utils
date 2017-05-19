@@ -33,8 +33,8 @@ DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 SUB_DATA_DIR = os.path.join(DATA_DIR, 'reference_structures')
 
 # Input files #
-FILE_SAMPLE_B3LYP_LM = os.path.join(SUB_DATA_DIR, 'z_lm-b3lyp_howsugarspucker.csv')
-FILE_SAMPLE_B3LYP_TS = os.path.join(SUB_DATA_DIR, 'z_TS-b3lyp_howsugarspucker.csv')
+FILE_SAMPLE_B3LYP_LM = os.path.join(SUB_DATA_DIR, 'z_bxyl_lm-b3lyp_howsugarspucker.csv')
+FILE_SAMPLE_B3LYP_TS = os.path.join(SUB_DATA_DIR, 'z_bxyl_TS-b3lyp_howsugarspucker.csv')
 
 # Good Output #
 
