@@ -439,12 +439,17 @@ class Compare_All_Methods_LM:
 
             tables[len(tables) - 1].add_row(self.methods_data[i].overall_row)
 
+        open('output.txt', 'w')
+
         for i in range(len(tables)):
             print(tables[i])
 
             table_txt = tables[i].get_string()
-            with open('output.txt', 'w') as file:
+
+            filename = os.path.join(LM_DIR, 'comparison_data.txt')
+            with open(filename, 'a') as file:
                 file.write(table_txt)
+                file.write('\n')
 
 class Transition_State_Compare():
     """
@@ -512,10 +517,10 @@ def main():
     comp_all_met_LM = Compare_All_Methods_LM(methods_data_list)
     comp_all_met_LM.print()
 
-    # # save all plots
-    # for i in range(len(methods_data_list)):
-    #     methods_data_list[i].plot_all_groupings()
-    #     methods_data_list[i].save_all_figures()
+    # save all plots
+    for i in range(len(methods_data_list)):
+        methods_data_list[i].plot_all_groupings()
+        methods_data_list[i].save_all_figures()
 
     return
 
