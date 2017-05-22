@@ -410,7 +410,7 @@ class Compare_All_Methods_LM:
     def __init__(self, methods_data_in):
         self.methods_data = methods_data_in
 
-    def print(self):
+    def write_to_csv(self, do_print):
         tables = []
 
         for i in range(len(self.methods_data)):
@@ -430,8 +430,8 @@ class Compare_All_Methods_LM:
             if len(tables) < len(self.methods_data[0].group_rows) + 1:
                 header = []
                 header.append('overall')
-                header.append('RMSD')
-                header.append('WRMSD')
+                header.append('   RMSD   ')
+                header.append('   WRMSD   ')
                 header.append('SSE')
                 header.append('WSSE')
 
@@ -439,14 +439,16 @@ class Compare_All_Methods_LM:
 
             tables[len(tables) - 1].add_row(self.methods_data[i].overall_row)
 
-        open('output.txt', 'w')
+        filename = os.path.join(LM_DIR, 'comparison_data.txt')
+        with open(filename, 'w') as file:
+            file.write('')
 
         for i in range(len(tables)):
-            print(tables[i])
+            if do_print:
+                print(tables[i])
 
             table_txt = tables[i].get_string()
 
-            filename = os.path.join(LM_DIR, 'comparison_data.txt')
             with open(filename, 'a') as file:
                 file.write(table_txt)
                 file.write('\n')
@@ -515,7 +517,7 @@ def main():
             methods_data_list.append(lm_comp_class)
 
     comp_all_met_LM = Compare_All_Methods_LM(methods_data_list)
-    comp_all_met_LM.print()
+    comp_all_met_LM.write_to_csv(False)
 
     # save all plots
     for i in range(len(methods_data_list)):
