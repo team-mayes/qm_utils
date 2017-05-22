@@ -1090,7 +1090,7 @@ class Plots():
 
 
             self.ax_rect.legend([met_lm_Artist, ref_lm_Artist, path_Artist],
-                                ['Reference Local Minimum', 'Method Local Minimum', 'Voronoi Tessellation'],
+                                ['Reference LM', 'Method LM', 'Voronoi Edge'],
                                 scatterpoints=1, fontsize=12, frameon=False, framealpha=0.75,
                                 loc=4).set_zorder(100)
 
