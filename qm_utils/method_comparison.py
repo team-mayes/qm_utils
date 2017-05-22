@@ -86,9 +86,8 @@ TEST_DIR = os.path.join(QM_0_DIR, 'tests')
 TEST_DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 
 MET_COMP_DIR = os.path.join(TEST_DATA_DIR, 'method_comparison')
-LM_DIR = os.path.join(MET_COMP_DIR, 'local_minimum')
-LM_DATA_DIR = os.path.join(LM_DIR, 'z_datasets-LM')
-AM1_DATA_DIR = os.path.join(LM_DIR, 'am1')
+MOL_DIR = os.path.join(MET_COMP_DIR, 'bxyl')
+LM_DIR = os.path.join(MOL_DIR, 'local_minimum')
 
 SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
 #endregion
@@ -110,6 +109,7 @@ HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
 
 # # # Classes # # #
 #region
+#TODO: convert here instead of below
 class Local_Minima_Compare():
     """
     class for organizing the local minima information
@@ -224,8 +224,12 @@ class Local_Minima_Compare():
 
         wt_gibbs = 0
         for key in self.group_data[group]['points']:
-            wt_gibbs += (self.group_data[group]['points'][key]['ind_boltz'] / total_boltz) * self.group_data[group]['points'][key]['G298 (Hartrees)']
-            self.group_data[group]['points'][key]['weighting'] = self.group_data[group]['points'][key]['ind_boltz'] / total_boltz
+            if self.group_data[group]['points'][key]['ind_boltz'] == 0:
+                wt_gibbs += 0
+                self.group_data[group]['points'][key]['weighting'] = 0
+            else:
+                wt_gibbs += (self.group_data[group]['points'][key]['ind_boltz'] / total_boltz) * self.group_data[group]['points'][key]['G298 (Hartrees)']
+                self.group_data[group]['points'][key]['weighting'] = self.group_data[group]['points'][key]['ind_boltz'] / total_boltz
 
         self.group_data[group]['weighted_gibbs'] = round(wt_gibbs, 3)
 
@@ -407,10 +411,11 @@ class Local_Minima_Compare():
             self.lm_class.wipe_plot()
 
 class Compare_All_Methods_LM:
-    def __init__(self, methods_data_in):
+    def __init__(self, methods_data_in, lm_dir_in):
         self.methods_data = methods_data_in
+        self.lm_dir = lm_dir_in
 
-    def write_to_csv(self, do_print):
+    def write_to_txt(self, do_print):
         tables = []
 
         for i in range(len(self.methods_data)):
@@ -453,6 +458,68 @@ class Compare_All_Methods_LM:
                 file.write(table_txt)
                 file.write('\n')
 
+    def write_to_csv(self):
+        group_RMSD_dict = {}
+        group_WRMSD_dict = {}
+        WSS_dict = {}
+        WWSS_dict = {}
+
+        group_RMSD_dict['group'] = []
+        group_WRMSD_dict['group'] = []
+        WSS_dict['group'] = []
+        WWSS_dict['group'] = []
+
+        # listing group names
+        for i in range(len(self.methods_data[0].group_data)):
+            group_RMSD_dict['group'].append(i)
+            group_WRMSD_dict['group'].append(i)
+            WSS_dict['group'].append(i)
+            WWSS_dict['group'].append(i)
+
+        # filling method data for each dict
+        for i in range(len(self.methods_data)):
+            method = self.methods_data[i].overall_data['method']
+
+            group_RMSD_dict[method] = []
+            group_WRMSD_dict[method] = []
+            WSS_dict[method] = []
+            WWSS_dict[method] = []
+
+            for j in range(len(self.methods_data[i].group_data)):
+                group_RMSD_val = self.methods_data[i].group_data[j]['group_RMSD']
+                group_WRMSD_val = self.methods_data[i].group_data[j]['group_WRMSD']
+                WSS_val = self.methods_data[i].group_data[j]['WSS']
+                WWSS_val = self.methods_data[i].group_data[j]['WWSS']
+
+                group_RMSD_dict[method].append(group_RMSD_val)
+                group_WRMSD_dict[method].append(group_WRMSD_val)
+                WSS_dict[method].append(WSS_val)
+                WWSS_dict[method].append(WWSS_val)
+
+        group_RMSD_csv = os.path.join(self.lm_dir, 'group_RMSD.csv')
+        group_WRMSD_csv = os.path.join(self.lm_dir, 'group_WRMSD.csv')
+        WSS_csv = os.path.join(self.lm_dir, 'WSS.csv')
+        WWSS_csv = os.path.join(self.lm_dir, 'WWSS.csv')
+
+        with open(group_RMSD_csv, 'w', newline='') as file:
+            w = csv.writer(file)
+            w.writerow(group_RMSD_dict.keys())
+            w.writerows(zip(*group_RMSD_dict.values()))
+        with open(group_WRMSD_csv, 'w', newline='') as file:
+            w = csv.writer(file)
+            w.writerow(group_WRMSD_dict.keys())
+            w.writerows(zip(*group_WRMSD_dict.values()))
+        with open(WSS_csv, 'w', newline='') as file:
+            w = csv.writer(file)
+            w.writerow(WSS_dict.keys())
+            w.writerows(zip(*WSS_dict.values()))
+        with open(WWSS_csv, 'w', newline='') as file:
+            w = csv.writer(file)
+            w.writerow(WWSS_dict.keys())
+            w.writerows(zip(*WWSS_dict.values()))
+
+        return
+
 class Transition_State_Compare():
     """
     class for organizing the transition state information
@@ -494,35 +561,48 @@ class Transition_State_Compare():
 # # #  Main  # # #
 #region
 def main():
-    methods_data_list = []
+    save = True
+    mol_list_dir = os.listdir(MET_COMP_DIR)
 
-    number_clusters = NUM_CLUSTERS_BXYL
-    dict_cano_bxyl = read_csv_canonical_designations('CP_params.csv', SV_DIR)
-    data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SV_DIR)
-    lm_class = Local_Minima(number_clusters, data_points, dict_cano_bxyl, phi_raw, theta_raw, energy)
+    for i in range(len(mol_list_dir)):
+        mol_dir  = os.path.join(MET_COMP_DIR, mol_list_dir[i])
+        lm_dir = os.path.join(MOL_DIR, 'local_minimum')
+        lm_data_dir = os.path.join(LM_DIR, 'z_datasets-LM')
 
-    # for every local min data file in the directory perform the comparison calculations
-    for filename in os.listdir(LM_DATA_DIR):
-        if filename.endswith(".csv"):
-            method_hartree = read_csv_to_dict(os.path.join(LM_DATA_DIR, filename), mode='r')
+        methods_data_list = []
 
-            # converting hartrees to kcal/mol
-            for i in range(len(method_hartree)):
-                method_hartree[i]['G298 (Hartrees)'] = 627.509 * float(method_hartree[i]['G298 (Hartrees)'])
+        #TODO: setup a way to loop through HSP_LOCAL_MIN for the diff molecules
 
-            method = (filename.split('-', 3)[3]).split('.')[0]
+        number_clusters = NUM_CLUSTERS_BXYL
+        dict_cano_bxyl = read_csv_canonical_designations('CP_params.csv', SV_DIR)
+        data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SV_DIR)
+        lm_class = Local_Minima(number_clusters, data_points, dict_cano_bxyl, phi_raw, theta_raw, energy)
 
-            lm_comp_class = Local_Minima_Compare(method, method_hartree, lm_class)
+        # for every local min data file in the directory perform the comparison calculations
+        for filename in os.listdir(lm_data_dir):
+            if filename.endswith(".csv"):
+                method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
 
-            methods_data_list.append(lm_comp_class)
+                # converting hartrees to kcal/mol
+                for i in range(len(method_hartree)):
+                    method_hartree[i]['G298 (Hartrees)'] = 627.509 * float(method_hartree[i]['G298 (Hartrees)'])
 
-    comp_all_met_LM = Compare_All_Methods_LM(methods_data_list)
-    comp_all_met_LM.write_to_csv(False)
+                method = (filename.split('-', 3)[3]).split('.')[0]
 
-    # save all plots
-    for i in range(len(methods_data_list)):
-        methods_data_list[i].plot_all_groupings()
-        methods_data_list[i].save_all_figures()
+                lm_comp_class = Local_Minima_Compare(method, method_hartree, lm_class)
+
+                methods_data_list.append(lm_comp_class)
+
+        comp_all_met_LM = Compare_All_Methods_LM(methods_data_list, lm_dir)
+
+        if save:
+            # save the comparison data
+            comp_all_met_LM.write_to_csv()
+
+            # save all plots
+            for i in range(len(methods_data_list)):
+                methods_data_list[i].plot_all_groupings()
+                methods_data_list[i].save_all_figures()
 
     return
 
