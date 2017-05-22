@@ -134,7 +134,7 @@ class TestMain(unittest.TestCase):
 
         finally:
             print('hi')
-        #     OXANE_AM1_OUTPUT = os.path.join(SUB_DATA_DIR, 'igor_df_oxane_am1.csv')
+        #     OXANE_AM1_OUTPUT = os.path.join(MET_COMP_DIR, 'igor_df_oxane_am1.csv')
         # finally:
         #     self.assertFalse(diff_lines(OXANE_AM1_OUTPUT, OXANE_FINAL_CSV_GOOD))
         #     silent_remove(OXANE_AM1_OUTPUT)

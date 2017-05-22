@@ -5,6 +5,7 @@
 The purpose of this script is to make comparisons for a particular QM method to the reference set of HSP.
 """
 
+# # # import # # #
 from __future__ import print_function
 
 import argparse
@@ -26,6 +27,7 @@ from qm_utils.pucker_table import read_hartree_files_lowest_energy, sorting_job_
 
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR, InvalidDataError, INVALID_DATA,
                                 INPUT_ERROR, arc_length_calculator, read_csv_to_dict)
+from qm_utils.spherical_kmeans_voronoi import Local_Minima, read_csv_canonical_designations, read_csv_data
 
 # # # header stuff # # #
 #region
@@ -76,12 +78,26 @@ FREQ = 'Freq 1'
 # # # Directories # # #
 #region
 QM_1_DIR = os.path.dirname(__file__)
+
+# root of project
 QM_0_DIR = os.path.dirname(QM_1_DIR)
+
 TEST_DIR = os.path.join(QM_0_DIR, 'tests')
-DATA_DIR = os.path.join(TEST_DIR, 'test_data')
-SUB_DATA_DIR = os.path.join(DATA_DIR, 'method_comparison')
-LM_DATA_DIR = os.path.join(SUB_DATA_DIR, 'local_minimum')
-AM1_DATA_DIR = os.path.join(LM_DATA_DIR, 'AM1')
+TEST_DATA_DIR = os.path.join(TEST_DIR, 'test_data')
+
+MET_COMP_DIR = os.path.join(TEST_DATA_DIR, 'method_comparison')
+LM_DIR = os.path.join(MET_COMP_DIR, 'local_minimum')
+LM_DATA_DIR = os.path.join(LM_DIR, 'z_datasets-LM')
+AM1_DATA_DIR = os.path.join(LM_DIR, 'am1')
+
+SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
+#endregion
+
+NUM_CLUSTERS_BXYL = 9
+
+# # # Input Files # # #
+#region
+HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
 #endregion
 
 # # # Helper Functions # # #
@@ -105,7 +121,6 @@ class Local_Minima_Compare():
         self.overall_data = {}
         self.overall_data['method'] = method_in
         self.group_rows = []
-        self.overall_row = []
 
         self.populate_hartree_data(parsed_hartree)
         self.populate_groupings()
@@ -118,7 +133,7 @@ class Local_Minima_Compare():
         for i in range(len(parsed_hartree)):
             self.hartree_data.append({})
 
-            self.hartree_data[i]['energy (A.U.)'] = float(parsed_hartree[i]['Energy (A.U.)'])
+            self.hartree_data[i]['G298 (Hartrees)'] = float(parsed_hartree[i]['G298 (Hartrees)'])
             self.hartree_data[i]['pucker'] = parsed_hartree[i]['Pucker']
             self.hartree_data[i]['phi'] = float(parsed_hartree[i]['phi'])
             self.hartree_data[i]['theta'] = float(parsed_hartree[i]['theta'])
@@ -179,7 +194,7 @@ class Local_Minima_Compare():
         overall_row.append(self.overall_data['SSE'])
         overall_row.append(self.overall_data['WSSE'])
 
-        self.overall_row.append(overall_row)
+        self.overall_row = overall_row
     #endregion
 
     # # # do_calc functions # # #
@@ -202,14 +217,14 @@ class Local_Minima_Compare():
         total_boltz = 0
 
         for key in self.group_data[group]['points']:
-            e_val = self.group_data[group]['points'][key]['energy (A.U.)']
+            e_val = self.group_data[group]['points'][key]['G298 (Hartrees)']
             component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
             self.group_data[group]['points'][key]['ind_boltz'] = component
             total_boltz += component
 
         wt_gibbs = 0
         for key in self.group_data[group]['points']:
-            wt_gibbs += (self.group_data[group]['points'][key]['ind_boltz'] / total_boltz) * self.group_data[group]['points'][key]['energy (A.U.)']
+            wt_gibbs += (self.group_data[group]['points'][key]['ind_boltz'] / total_boltz) * self.group_data[group]['points'][key]['G298 (Hartrees)']
             self.group_data[group]['points'][key]['weighting'] = self.group_data[group]['points'][key]['ind_boltz'] / total_boltz
 
         self.group_data[group]['weighted_gibbs'] = round(wt_gibbs, 3)
@@ -354,37 +369,46 @@ class Local_Minima_Compare():
         self.lm_class.show()
     #endregion
 
+    # # # saving functions # # #
     def save_all_figures(self):
-        base_name = "z_dataset-bxyl-LM-" + self.method
+        base_name = "z_dataset-bxyl-LM-" + self.overall_data['method']
+        MET_DATA_DIR = os.path.join(LM_DIR, self.overall_data['method'])
 
+        # saves a plot of all groupings
         self.plot_all_groupings()
-        self.lm_class.plot.save(base_name + '-all_groupings', AM1_DATA_DIR)
+        self.lm_class.plot_cano()
+        OVERALL_DIR = os.path.join(MET_DATA_DIR, 'overall')
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(OVERALL_DIR):
+            os.makedirs(OVERALL_DIR)
+        self.lm_class.plot.save(base_name + '-all_groupings', OVERALL_DIR)
 
         self.lm_class.wipe_plot()
 
         for i in range(len(self.group_data)):
+            # saves a plot of each group individually plotted
             self.plot_grouping(i)
-            self.lm_class.plot.save(base_name + '-group_' + str(i), AM1_DATA_DIR)
+            self.lm_class.plot_cano()
+            GROUPS_DIR = os.path.join(MET_DATA_DIR, 'groups')
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(GROUPS_DIR):
+                os.makedirs(GROUPS_DIR)
+            self.lm_class.plot.save(base_name + '-group_' + str(i), GROUPS_DIR)
             self.lm_class.wipe_plot()
 
+            # saves a plot of a focused view of each group
             self.plot_window(i)
-            self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', AM1_DATA_DIR)
+            self.lm_class.plot_cano()
+            WINDOWED_DIR = os.path.join(MET_DATA_DIR, 'groups_windowed')
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(WINDOWED_DIR):
+                os.makedirs(WINDOWED_DIR)
+            self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', WINDOWED_DIR)
             self.lm_class.wipe_plot()
 
-    def write_to_csv(self):
-        for i in range(len(self.group_data)):
-            with open('group' + str(i) + '.csv', 'w') as f:
-                w = csv.DictWriter(f, self.group_data[i].keys())
-                w.writeheader()
-                w.writerow(self.group_data[i])
-
-class LM_comp_all_methods:
+class Compare_All_Methods_LM:
     def __init__(self, methods_data_in):
         self.methods_data = methods_data_in
-
-    def org_group_rows(self):
-
-        return
 
     def print(self):
         tables = []
@@ -413,10 +437,14 @@ class LM_comp_all_methods:
 
                 tables.append(PrettyTable(header))
 
-            tables[len(self.groups_rows) + 1].add_row(self.methods_data[i].overall_row)
+            tables[len(tables) - 1].add_row(self.methods_data[i].overall_row)
 
         for i in range(len(tables)):
             print(tables[i])
+
+            table_txt = tables[i].get_string()
+            with open('output.txt', 'w') as file:
+                file.write(table_txt)
 
 class Transition_State_Compare():
     """
@@ -456,122 +484,163 @@ class Transition_State_Compare():
         # (4) develop a similar plotting strategy (more thought needed)
 #endregion
 
-# # # Command Line Parse # # #
+# # #  Main  # # #
 #region
-def parse_cmdline(argv):
-    """
-    Returns the parsed argument list and return code.
-    `argv` is a list of arguments, or `None` for ``sys.argv[1:]``.
-    """
-    if argv is None:
-        argv = sys.argv[1:]
+def main():
+    methods_data_list = []
 
-    # initialize the parser object:
-    parser = argparse.ArgumentParser(description="The gen_puck_table.py script is designed to combine hartree output "
-                                                 "files to compare different properties across different levels of "
-                                                 "theory. The hartree input files for a variety of levels of theory "
-                                                 "are combined to produce a new data table.")
+    number_clusters = NUM_CLUSTERS_BXYL
+    dict_cano_bxyl = read_csv_canonical_designations('CP_params.csv', SV_DIR)
+    data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SV_DIR)
+    lm_class = Local_Minima(number_clusters, data_points, dict_cano_bxyl, phi_raw, theta_raw, energy)
 
-    parser.add_argument('-s', "--sum_file", help="List of csv files to read.", default=None)
-    parser.add_argument('-d', "--dir_hartree", help="The directory where the hartree files can be found.",
-                        default=None)
-    parser.add_argument('-p', "--pattern", help="The file pattern you are looking for (example: '.csv').",
-                        default=None)
-    parser.add_argument('-m', "--molecule", help="The type of molecule that is currently being studied")
-    parser.add_argument('-c', "--ccsdt", help="The CCSD(T) file for the molecule being studied",
-                        default=None)
+    # for every local min data file in the directory perform the comparison calculations
+    for filename in os.listdir(LM_DATA_DIR):
+        if filename.endswith(".csv"):
+            method_hartree = read_csv_to_dict(os.path.join(LM_DATA_DIR, filename), mode='r')
 
-    args = None
-    try:
-        args = parser.parse_args(argv)
-        if args.sum_file is None:
-            raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
-        elif not os.path.isfile(args.sum_file):
-            raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
-        # Finally, if the summary file is there, and there is no dir_xyz provided
-        if args.dir_hartree is None:
-            args.dir_hartree = os.path.dirname(args.sum_file)
-        # if a  dir_xyz is provided, ensure valid
-        elif not os.path.isdir(args.dir_hartree):
-            raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_hartree', args.dir_hartree))
+            # converting hartrees to kcal/mol
+            for i in range(len(method_hartree)):
+                method_hartree[i]['G298 (Hartrees)'] = 627.509 * float(method_hartree[i]['G298 (Hartrees)'])
 
-    except (KeyError, InvalidDataError) as e:
-        warning(e)
-        parser.print_help()
-        return args, INPUT_ERROR
-    except IOError as e:
-        warning(e)
-        parser.print_help()
-        return args, IO_ERROR
-    except (ValueError, SystemExit) as e:
-        if e.message == 0:
-            return args, GOOD_RET
-        warning(e)
-        parser.print_help()
-        return args, INPUT_ERROR
+            method = (filename.split('-', 3)[3]).split('.')[0]
 
-    return args, GOOD_RET
-#endregion
+            lm_comp_class = Local_Minima_Compare(method, method_hartree, lm_class)
 
-# # # Main # # #
-#region
-def main(argv=None):
-    """
-    Runs the main program
-    :param argv: The command line arguments.
-    :return: The return code for the program's termination.
-    """
-    args, ret = parse_cmdline(argv)
-    if ret != GOOD_RET or args is None:
-        return args, ret
-    try:
-        #TODO: import the class information from spherical_kmean_voronoi.py based on the molecule type
-        # Need to come up with a simple way to local in the necessary HSP reference information based on args.molecule (database? HSP reference files?)
+            methods_data_list.append(lm_comp_class)
 
-        hsp_lm_groups = 1
-        hsp_ts_groups = 1
+    comp_all_met_LM = Compare_All_Methods_LM(methods_data_list)
+    comp_all_met_LM.print()
 
-        with open(args.sum_file) as f:
-            for csv_file_read_newline in f:
-                csv_file_read = csv_file_read_newline.strip("\n")
-                method_list_dicts = read_csv_to_dict(os.path.join(args.dir_hartree, csv_file_read), mode='r')
-                qm_method = csv_file_read.split('-')[3].split('.')[0]
+    # # save all plots
+    # for i in range(len(methods_data_list)):
+    #     methods_data_list[i].plot_all_groupings()
+    #     methods_data_list[i].save_all_figures()
 
-                if csv_file_read.split('-')[1] != args.molecule:
-                    print('\nERROR: THE MOLECULE TYPE DOES NOT MATCH UP.\n')
-                    break
-
-                if csv_file_read.split('-')[2] == 'LM':
-                    print(csv_file_read)
-
-                    data_lm = Local_Minima_Compare(method_list_dicts, qm_method, hsp_lm_groups)
-
-                    #TODO: run a local min class on this data set...
-                elif csv_file_read.split('-')[2] == 'TS':
-                    print(csv_file_read)
-                    #TODO: run a transition state class on this data set...
-
-                    data_ts = Transition_State_Compare(method_list_dicts, qm_method, hsp_ts_groups)
-                else:
-                    print('WARNING: NOT SURE WHAT TYPE OF JOB THIS IS')
-
-            #TODO: come up with a method for storing the information from each run so that later on
-            #A class with the important data from the above calculations is probably the best way to go about it?
-            #Also...should write out the data to a csv file for later processing if necessary.
-
-
-
-    except IOError as e:
-        warning(e)
-        return IO_ERROR
-    except (InvalidDataError, KeyError) as e:
-        warning(e)
-        return INVALID_DATA
-
-    return GOOD_RET  # success
-
+    return
 
 if __name__ == '__main__':
     status = main()
     sys.exit(status)
 #endregion
+
+
+# # # # Command Line Parse # # #
+# #region
+# def parse_cmdline(argv):
+#     """
+#     Returns the parsed argument list and return code.
+#     `argv` is a list of arguments, or `None` for ``sys.argv[1:]``.
+#     """
+#     if argv is None:
+#         argv = sys.argv[1:]
+#
+#     # initialize the parser object:
+#     parser = argparse.ArgumentParser(description="The gen_puck_table.py script is designed to combine hartree output "
+#                                                  "files to compare different properties across different levels of "
+#                                                  "theory. The hartree input files for a variety of levels of theory "
+#                                                  "are combined to produce a new data table.")
+#
+#     parser.add_argument('-s', "--sum_file", help="List of csv files to read.", default=None)
+#     parser.add_argument('-d', "--dir_hartree", help="The directory where the hartree files can be found.",
+#                         default=None)
+#     parser.add_argument('-p', "--pattern", help="The file pattern you are looking for (example: '.csv').",
+#                         default=None)
+#     parser.add_argument('-m', "--molecule", help="The type of molecule that is currently being studied")
+#     parser.add_argument('-c', "--ccsdt", help="The CCSD(T) file for the molecule being studied",
+#                         default=None)
+#
+#     args = None
+#     try:
+#         args = parser.parse_args(argv)
+#         if args.sum_file is None:
+#             raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
+#         elif not os.path.isfile(args.sum_file):
+#             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
+#         # Finally, if the summary file is there, and there is no dir_xyz provided
+#         if args.dir_hartree is None:
+#             args.dir_hartree = os.path.dirname(args.sum_file)
+#         # if a  dir_xyz is provided, ensure valid
+#         elif not os.path.isdir(args.dir_hartree):
+#             raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_hartree', args.dir_hartree))
+#
+#     except (KeyError, InvalidDataError) as e:
+#         warning(e)
+#         parser.print_help()
+#         return args, INPUT_ERROR
+#     except IOError as e:
+#         warning(e)
+#         parser.print_help()
+#         return args, IO_ERROR
+#     except (ValueError, SystemExit) as e:
+#         if e.message == 0:
+#             return args, GOOD_RET
+#         warning(e)
+#         parser.print_help()
+#         return args, INPUT_ERROR
+#
+#     return args, GOOD_RET
+# #endregion
+#
+# # # # Main # # #
+# #region
+# def main(argv=None):
+#     """
+#     Runs the main program
+#     :param argv: The command line arguments.
+#     :return: The return code for the program's termination.
+#     """
+#     args, ret = parse_cmdline(argv)
+#     if ret != GOOD_RET or args is None:
+#         return args, ret
+#     try:
+#         #TODO: import the class information from spherical_kmean_voronoi.py based on the molecule type
+#         # Need to come up with a simple way to local in the necessary HSP reference information based on args.molecule (database? HSP reference files?)
+#
+#         hsp_lm_groups = 1
+#         hsp_ts_groups = 1
+#
+#         with open(args.sum_file) as f:
+#             for csv_file_read_newline in f:
+#                 csv_file_read = csv_file_read_newline.strip("\n")
+#                 method_list_dicts = read_csv_to_dict(os.path.join(args.dir_hartree, csv_file_read), mode='r')
+#                 qm_method = csv_file_read.split('-')[3].split('.')[0]
+#
+#                 if csv_file_read.split('-')[1] != args.molecule:
+#                     print('\nERROR: THE MOLECULE TYPE DOES NOT MATCH UP.\n')
+#                     break
+#
+#                 if csv_file_read.split('-')[2] == 'LM':
+#                     print(csv_file_read)
+#
+#                     data_lm = Local_Minima_Compare(method_list_dicts, qm_method, hsp_lm_groups)
+#
+#                     #TODO: run a local min class on this data set...
+#                 elif csv_file_read.split('-')[2] == 'TS':
+#                     print(csv_file_read)
+#                     #TODO: run a transition state class on this data set...
+#
+#                     data_ts = Transition_State_Compare(method_list_dicts, qm_method, hsp_ts_groups)
+#                 else:
+#                     print('WARNING: NOT SURE WHAT TYPE OF JOB THIS IS')
+#
+#             #TODO: come up with a method for storing the information from each run so that later on
+#             #A class with the important data from the above calculations is probably the best way to go about it?
+#             #Also...should write out the data to a csv file for later processing if necessary.
+#
+#
+#
+#     except IOError as e:
+#         warning(e)
+#         return IO_ERROR
+#     except (InvalidDataError, KeyError) as e:
+#         warning(e)
+#         return INVALID_DATA
+#
+#     return GOOD_RET  # success
+#
+#
+# if __name__ == '__main__':
+#     status = main()
+#     sys.exit(status)
+# #endregion

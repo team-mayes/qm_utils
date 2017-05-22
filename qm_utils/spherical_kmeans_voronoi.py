@@ -515,6 +515,11 @@ class Local_Minima():
             self.plot.ax_rect.scatter(self.groups_dict[key]['phi'], self.groups_dict[key]['theta'], s=size, c='blue',
                                       marker='o', edgecolor='face')
 
+    def plot_cano(self):
+        self.plot.ax_rect.scatter(self.cano_points['phi_cano'], self.cano_points['theta_cano'], s=60, c='black',
+                                  marker='+',
+                                  edgecolor='face')
+
     def show(self):
         self.plot.show()
 
@@ -1064,7 +1069,8 @@ class Plots():
             path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
 
             self.ax_rect.legend([lm_Artist, ts_Artist, path_Artist], ['Local Minimum', 'Transition State', 'Pathway'],
-                                loc=1).set_zorder(100)
+                                loc=1, frameon=False).set_zorder(100)
+
 
         if threeD_arg:
             self.ax_spher = self.fig.gca(projection='3d')
@@ -1085,7 +1091,7 @@ class Plots():
 
             self.ax_rect.legend([met_lm_Artist, ref_lm_Artist, path_Artist],
                                 ['Reference Local Minimum', 'Method Local Minimum', 'Voronoi Tessellation'],
-                                scatterpoints=1, fontsize=12, frameon=None, framealpha=0.75,
+                                scatterpoints=1, fontsize=12, frameon=False, framealpha=0.75,
                                 loc=4).set_zorder(100)
 
 

@@ -290,7 +290,7 @@ class TestStructurePairingFunctions(unittest.TestCase):
 
             # polar_dict = qm_utils.structure_pairing.generate_igor_hemi_plots(matching_ts_dict, BXYL_LM_PARAMS)
             #
-            # output_filename_polar = create_out_fname('igor_polar_' + 'testing' + '_' + str('DFTB'), base_dir=SUB_DATA_DIR, ext='.csv')
+            # output_filename_polar = create_out_fname('igor_polar_' + 'testing' + '_' + str('DFTB'), base_dir=MET_COMP_DIR, ext='.csv')
             # write_file_data_dict(polar_dict, output_filename_polar)
 
             new_lm_dict, hsp_puckering = qm_utils.structure_pairing.comparing_LM_structures_arc_length(lm_dict, BXYL_LM_PARAMS)

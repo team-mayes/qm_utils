@@ -220,13 +220,13 @@ class MainRun(unittest.TestCase):
             # Comparing the LM structures #
             data_points_ts, phi_raw_ts, theta_raw_ts, data_dict_ts = read_csv_data_TS(HSP_TRANS_STA, SUB_DATA_DIR)
             # assigned_lm, hsp_lm_dict, phi_ts_lm, theta_ts_lm = assign_groups_to_TS_LM(data_dict_ts, hsp_lm_dict)
-            # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
-            # matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, SUB_DATA_DIR, save_status=save_status)
+            # matplotlib_printing_ts_local_min(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, MET_COMP_DIR, save_status=save_status)
+            # matplotlib_printing_ts_raw_local_mini(hsp_lm_dict, phi_ts_lm, theta_ts_lm, data_dict, MET_COMP_DIR, save_status=save_status)
 
             # Grouping the TS #
             # sorted_data_dict_ts = sorting_TS_into_groups(number_cluster, data_points_ts, data_dict_ts, phi_raw_ts, theta_raw_ts)
             #
-            # matplotlib_printing_normal(sorted_data_dict_ts, SUB_DATA_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
+            # matplotlib_printing_normal(sorted_data_dict_ts, MET_COMP_DIR, save_status=save_status, voronoi_status=False, ts_status=True)
 
 
 
@@ -252,10 +252,10 @@ class MainRun(unittest.TestCase):
 
             pass
 
-        #     data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_TRANS_STA, SUB_DATA_DIR)
+        #     data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_TRANS_STA, MET_COMP_DIR)
 
         #     final_ts_groups = organizing_information_from_spherical_kmeans(data_dict)
-        #     matplotlib_printing_normal(data_dict, SUB_DATA_DIR, save_status=save_status, voronoi_status='no', ts_status='yes')
+        #     matplotlib_printing_normal(data_dict, MET_COMP_DIR, save_status=save_status, voronoi_status='no', ts_status='yes')
         #     print('\n Done \n ')
         #     pass
 

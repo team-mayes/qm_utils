@@ -62,7 +62,7 @@ HSP_LOCAL_MIN = 'z_bxyl_lm-b3lyp_howsugarspucker.csv'
 
 class TestMain(unittest.TestCase):
     def testMainBxyl(self):
-        # test_input = ["-s", LIST_OF_DATASET_FILES_BXYL, "-d", SUB_DATA_DIR, "-m", "bxyl"]
+        # test_input = ["-s", LIST_OF_DATASET_FILES_BXYL, "-d", MET_COMP_DIR, "-m", "bxyl"]
         # main(test_input)
 
         number_clusters = 9
@@ -94,6 +94,7 @@ class TestMain(unittest.TestCase):
 
         lm_class_cano = Local_Minima_Cano(dict_cano)
         lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
+        lm
         #lm_comp_cano_class.save_all_figures()
 
         # HSP reference
