@@ -22,6 +22,8 @@ from prettytable import PrettyTable
 from collections import OrderedDict
 from operator import itemgetter
 
+import matplotlib.pyplot as plt
+
 from qm_utils.igor_mercator_organizer import write_file_data_dict
 from qm_utils.pucker_table import read_hartree_files_lowest_energy, sorting_job_types
 
@@ -92,24 +94,12 @@ LM_DIR = os.path.join(MOL_DIR, 'local_minimum')
 SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
 #endregion
 
+
+# # # Number of Clusters # # #
 NUM_CLUSTERS_BXYL = 9
-
-# # # Input Files # # #
-#region
-HSP_LOCAL_MIN = 'z_lm-b3lyp_howsugarspucker.csv'
-#endregion
-
-# # # Helper Functions # # #
-#region
-
-
-
-
-#endregion
 
 # # # Classes # # #
 #region
-#TODO: convert here instead of below
 class Local_Minima_Compare():
     """
     class for organizing the local minima information
@@ -121,6 +111,10 @@ class Local_Minima_Compare():
         self.overall_data = {}
         self.overall_data['method'] = method_in
         self.group_rows = []
+
+        # converting hartrees to kcal/mol
+        for i in range(len(parsed_hartree)):
+            parsed_hartree[i]['G298 (Hartrees)'] = 627.509 * float(parsed_hartree[i]['G298 (Hartrees)'])
 
         self.populate_hartree_data(parsed_hartree)
         self.populate_groupings()
@@ -327,10 +321,7 @@ class Local_Minima_Compare():
             theta.append(self.group_data[grouping]['points'][key]['theta'])
 
         self.lm_class.plot.ax_rect.scatter(phi, theta, s=15, c='blue', marker='o', edgecolor='face', zorder = 10)
-
         self.lm_class.plot_vor_sec(grouping)
-
-        return
 
 
     def plot_groupings_raw(self, key):
@@ -341,8 +332,6 @@ class Local_Minima_Compare():
         theta.append(self.lm_class.groups_dict[key]['theta'])
 
         self.lm_class.plot.ax_rect.scatter(phi, theta, s=60, c='black', marker='o', edgecolor='face', zorder=10)
-
-        return
 
 
     def plot_window(self, grouping):
@@ -411,14 +400,31 @@ class Local_Minima_Compare():
         return
 
 
+    def set_title_and_legend(self, artist_list, label_list):
+        self.lm_class.plot.ax_rect.legend(artist_list,
+                                            label_list,
+                                            scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
+                                            bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0).set_zorder(100)
+
+        plt.title(self.overall_data['method'], loc='left')
+
+
     def show(self):
         self.lm_class.show()
-
-
     #endregion
 
     # # # saving functions # # #
     def save_all_figures(self):
+        # Create custom artist
+        size_scaling = 1
+        ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30*size_scaling, c='red', marker='o', edgecolor='face')
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60*size_scaling, c='black', marker='+', edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
+
+        artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
+        label_list = ['Reference LM', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
+
         base_name = "z_dataset-bxyl-LM-" + self.overall_data['method']
         MET_DATA_DIR = os.path.join(LM_DIR, self.overall_data['method'])
 
@@ -430,6 +436,9 @@ class Local_Minima_Compare():
         # saves a plot of all groupings
         self.plot_all_groupings()
         self.lm_class.plot_cano()
+
+        self.set_title_and_legend(artist_list, label_list)
+
         self.lm_class.plot.save(base_name + '-all_groupings', OVERALL_DIR)
         self.lm_class.wipe_plot()
 
@@ -441,6 +450,9 @@ class Local_Minima_Compare():
             # checks if directory exists, and creates it if not
             if not os.path.exists(GROUPS_DIR):
                 os.makedirs(GROUPS_DIR)
+
+            self.set_title_and_legend(artist_list, label_list)
+
             self.lm_class.plot.save(base_name + '-group_' + str(i), GROUPS_DIR)
             self.lm_class.wipe_plot()
 
@@ -451,11 +463,25 @@ class Local_Minima_Compare():
             # checks if directory exists, and creates it if not
             if not os.path.exists(WINDOWED_DIR):
                 os.makedirs(WINDOWED_DIR)
+
+            self.set_title_and_legend(artist_list, label_list)
+
             self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', WINDOWED_DIR)
             self.lm_class.wipe_plot()
 
 #TODO: streamline the plot to also include just the raw data
+
     def save_all_figures_raw(self):
+        # Create custom artists
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
+        raw_ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60*size_scaling, c='black', marker='o', edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60*size_scaling, c='black', marker='+', edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
+
+        artist_list = [raw_ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
+        label_list = ['Raw Reference LM', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
+
         base_name = "z_dataset-bxyl-LM-" + self.overall_data['method']
         MET_DATA_DIR = os.path.join(LM_DIR, self.overall_data['method'])
 
@@ -468,12 +494,11 @@ class Local_Minima_Compare():
         # self.plot_all_groupings_raw()
         self.plot_method_data()
         self.lm_class.plot_cano()
+
+        self.set_title_and_legend(artist_list, label_list)
+
         self.lm_class.plot.save(base_name + '-all_method_raw_data', OVERALL_DIR)
         self.lm_class.wipe_plot()
-
-
-
-
 
 class Compare_All_Methods_LM:
     def __init__(self, methods_data_in, lm_dir_in):
@@ -623,34 +648,54 @@ class Transition_State_Compare():
         # (4) develop a similar plotting strategy (more thought needed)
 #endregion
 
+# # # Helper Functions # # #
+#region
+
+#endregion
+
+
 # # #  Main  # # #
 #region
 def main():
     save = True
     mol_list_dir = os.listdir(MET_COMP_DIR)
 
+    # for each molecule, perform the comparisons
     for i in range(len(mol_list_dir)):
-        mol_dir  = os.path.join(MET_COMP_DIR, mol_list_dir[i])
-        lm_dir = os.path.join(MOL_DIR, 'local_minimum')
-        lm_data_dir = os.path.join(LM_DIR, 'z_datasets-LM')
+        comp_mol_dir  = os.path.join(MET_COMP_DIR, mol_list_dir[i])
+        sv_mol_dir = os.path.join(os.path.join(SV_DIR, 'molecules'), mol_list_dir[i])
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(comp_mol_dir, 'local_minimum')):
+            os.makedirs(os.path.join(comp_mol_dir, 'local_minimum'))
+
+        comp_lm_dir = os.path.join(comp_mol_dir, 'local_minimum')
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(comp_mol_dir, 'transitions_state')):
+            os.makedirs(os.path.join(comp_mol_dir, 'transitions_state'))
+
+        ts_dir = os.path.join(comp_mol_dir, 'transitions_state')
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(comp_lm_dir, 'z_datasets-LM')):
+            os.makedirs(os.path.join(comp_lm_dir, 'z_datasets-LM'))
+
+        lm_data_dir = os.path.join(comp_lm_dir, 'z_datasets-LM')
 
         methods_data_list = []
 
-        #TODO: setup a way to loop through HSP_LOCAL_MIN for the diff molecules
-
+        # initialization info for local minimum clustering for specific molecule
         number_clusters = NUM_CLUSTERS_BXYL
-        dict_cano_bxyl = read_csv_canonical_designations('CP_params.csv', SV_DIR)
-        data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SV_DIR)
-        lm_class = Local_Minima(number_clusters, data_points, dict_cano_bxyl, phi_raw, theta_raw, energy)
+        dict_cano = read_csv_canonical_designations(mol_list_dir[i] + '-CP_params.csv', sv_mol_dir)
+        data_points, phi_raw, theta_raw, energy = read_csv_data('z_' + mol_list_dir[i] + '_lm-b3lyp_howsugarspucker.csv',
+                                                                sv_mol_dir)
+        lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
 
         # for every local min data file in the directory perform the comparison calculations
         for filename in os.listdir(lm_data_dir):
             if filename.endswith(".csv"):
                 method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
-
-                # converting hartrees to kcal/mol
-                for i in range(len(method_hartree)):
-                    method_hartree[i]['G298 (Hartrees)'] = 627.509 * float(method_hartree[i]['G298 (Hartrees)'])
 
                 method = (filename.split('-', 3)[3]).split('.')[0]
 
@@ -658,7 +703,7 @@ def main():
 
                 methods_data_list.append(lm_comp_class)
 
-        comp_all_met_LM = Compare_All_Methods_LM(methods_data_list, lm_dir)
+        comp_all_met_LM = Compare_All_Methods_LM(methods_data_list, comp_lm_dir)
 
         if save:
             # save the comparison data
@@ -666,9 +711,9 @@ def main():
 
             # save all plots
             for i in range(len(methods_data_list)):
-                #TODO: in the legend of each plot show what the method is?
-                # methods_data_list[i].plot_all_groupings()
-                # methods_data_list[i].save_all_figures()
+                methods_data_list[i].plot_all_groupings()
+                methods_data_list[i].save_all_figures()
+
                 #TODO: plots for the HSP raw data and the method data
                 methods_data_list[i].plot_all_groupings_raw()
                 methods_data_list[i].save_all_figures_raw()
@@ -679,120 +724,3 @@ if __name__ == '__main__':
     status = main()
     sys.exit(status)
 #endregion
-
-
-# # # # Command Line Parse # # #
-# #region
-# def parse_cmdline(argv):
-#     """
-#     Returns the parsed argument list and return code.
-#     `argv` is a list of arguments, or `None` for ``sys.argv[1:]``.
-#     """
-#     if argv is None:
-#         argv = sys.argv[1:]
-#
-#     # initialize the parser object:
-#     parser = argparse.ArgumentParser(description="The gen_puck_table.py script is designed to combine hartree output "
-#                                                  "files to compare different properties across different levels of "
-#                                                  "theory. The hartree input files for a variety of levels of theory "
-#                                                  "are combined to produce a new data table.")
-#
-#     parser.add_argument('-s', "--sum_file", help="List of csv files to read.", default=None)
-#     parser.add_argument('-d', "--dir_hartree", help="The directory where the hartree files can be found.",
-#                         default=None)
-#     parser.add_argument('-p', "--pattern", help="The file pattern you are looking for (example: '.csv').",
-#                         default=None)
-#     parser.add_argument('-m', "--molecule", help="The type of molecule that is currently being studied")
-#     parser.add_argument('-c', "--ccsdt", help="The CCSD(T) file for the molecule being studied",
-#                         default=None)
-#
-#     args = None
-#     try:
-#         args = parser.parse_args(argv)
-#         if args.sum_file is None:
-#             raise InvalidDataError("Input files are required. Missing hartree input or two-file inputs")
-#         elif not os.path.isfile(args.sum_file):
-#             raise IOError("Could not find specified hartree summary file: {}".format(args.sum_file))
-#         # Finally, if the summary file is there, and there is no dir_xyz provided
-#         if args.dir_hartree is None:
-#             args.dir_hartree = os.path.dirname(args.sum_file)
-#         # if a  dir_xyz is provided, ensure valid
-#         elif not os.path.isdir(args.dir_hartree):
-#             raise InvalidDataError("Invalid path provided for '{}': ".format('-d, --dir_hartree', args.dir_hartree))
-#
-#     except (KeyError, InvalidDataError) as e:
-#         warning(e)
-#         parser.print_help()
-#         return args, INPUT_ERROR
-#     except IOError as e:
-#         warning(e)
-#         parser.print_help()
-#         return args, IO_ERROR
-#     except (ValueError, SystemExit) as e:
-#         if e.message == 0:
-#             return args, GOOD_RET
-#         warning(e)
-#         parser.print_help()
-#         return args, INPUT_ERROR
-#
-#     return args, GOOD_RET
-# #endregion
-#
-# # # # Main # # #
-# #region
-# def main(argv=None):
-#     """
-#     Runs the main program
-#     :param argv: The command line arguments.
-#     :return: The return code for the program's termination.
-#     """
-#     args, ret = parse_cmdline(argv)
-#     if ret != GOOD_RET or args is None:
-#         return args, ret
-#     try:
-#         # Need to come up with a simple way to local in the necessary HSP reference information based on args.molecule (database? HSP reference files?)
-#
-#         hsp_lm_groups = 1
-#         hsp_ts_groups = 1
-#
-#         with open(args.sum_file) as f:
-#             for csv_file_read_newline in f:
-#                 csv_file_read = csv_file_read_newline.strip("\n")
-#                 method_list_dicts = read_csv_to_dict(os.path.join(args.dir_hartree, csv_file_read), mode='r')
-#                 qm_method = csv_file_read.split('-')[3].split('.')[0]
-#
-#                 if csv_file_read.split('-')[1] != args.molecule:
-#                     print('\nERROR: THE MOLECULE TYPE DOES NOT MATCH UP.\n')
-#                     break
-#
-#                 if csv_file_read.split('-')[2] == 'LM':
-#                     print(csv_file_read)
-#
-#                     data_lm = Local_Minima_Compare(method_list_dicts, qm_method, hsp_lm_groups)
-#
-#                 elif csv_file_read.split('-')[2] == 'TS':
-#                     print(csv_file_read)
-#
-#                     data_ts = Transition_State_Compare(method_list_dicts, qm_method, hsp_ts_groups)
-#                 else:
-#                     print('WARNING: NOT SURE WHAT TYPE OF JOB THIS IS')
-#
-              #A class with the important data from the above calculations is probably the best way to go about it?
-#             #Also...should write out the data to a csv file for later processing if necessary.
-#
-#
-#
-#     except IOError as e:
-#         warning(e)
-#         return IO_ERROR
-#     except (InvalidDataError, KeyError) as e:
-#         warning(e)
-#         return INVALID_DATA
-#
-#     return GOOD_RET  # success
-#
-#
-# if __name__ == '__main__':
-#     status = main()
-#     sys.exit(status)
-# #endregion

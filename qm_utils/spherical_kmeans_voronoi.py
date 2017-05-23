@@ -1047,7 +1047,6 @@ class Transition_States():
 
         return
 
-
 # class for initializing plots
 class Plots():
     # arguments are bools for creating the 2d and 3d plots
@@ -1082,18 +1081,6 @@ class Plots():
             self.fig, self.ax_rect = plt.subplots(facecolor='white')
 
             self.ax_rect_init()
-
-            # Create custom artists
-            ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='blue', marker='o', edgecolor='face')
-            met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='red', marker='o', edgecolor='face')
-            path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
-
-
-            self.ax_rect.legend([met_lm_Artist, ref_lm_Artist, path_Artist],
-                                ['Reference LM', 'Method LM', 'Voronoi Edge'],
-                                scatterpoints=1, fontsize=12, frameon=False, framealpha=0.75,
-                                loc=4).set_zorder(100)
-
 
     def twoD_init(self):
         self.ax_rect_init()
@@ -1162,9 +1149,7 @@ class Plots():
 
     def save(self, filename, dir_):
         filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
-        self.fig.savefig(filename1, facecolor=self.fig.get_facecolor(), transparent=True, dpi=300)
-
-
+        self.fig.savefig(filename1, facecolor=self.fig.get_facecolor(), transparent=True, dpi=300, bbox_inches='tight')
 # endregion
 
 # # # Local Minima Functions # # #
