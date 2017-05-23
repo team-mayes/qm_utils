@@ -309,12 +309,41 @@ class Local_Minima_Compare():
         group_phi = self.lm_class.sv_kmeans_dict['phi_skm_centers'][grouping]
         group_theta = self.lm_class.sv_kmeans_dict['theta_skm_centers'][grouping]
 
+        self.lm_class.plot.ax_rect.scatter(group_phi, group_theta, s=30, c='red', marker='o', edgecolor='face', zorder=10)
         self.lm_class.plot.ax_rect.scatter(phi, theta, s=15, c='blue', marker='o', edgecolor='face', zorder = 10)
-        self.lm_class.plot.ax_rect.scatter(group_phi, group_theta, s=30, c='red', marker='s', edgecolor='face', zorder=10)
+
 
         self.lm_class.plot_vor_sec(grouping)
 
         return
+
+
+    def plot_method_data_raw(self, grouping):
+        phi = []
+        theta = []
+
+        for key in self.group_data[grouping]['points']:
+            phi.append(self.group_data[grouping]['points'][key]['phi'])
+            theta.append(self.group_data[grouping]['points'][key]['theta'])
+
+        self.lm_class.plot.ax_rect.scatter(phi, theta, s=15, c='blue', marker='o', edgecolor='face', zorder = 10)
+
+        self.lm_class.plot_vor_sec(grouping)
+
+        return
+
+
+    def plot_groupings_raw(self, key):
+        phi = []
+        theta = []
+
+        phi.append(self.lm_class.groups_dict[key]['phi'])
+        theta.append(self.lm_class.groups_dict[key]['theta'])
+
+        self.lm_class.plot.ax_rect.scatter(phi, theta, s=60, c='black', marker='o', edgecolor='face', zorder=10)
+
+        return
+
 
     def plot_window(self, grouping):
         border = 5
@@ -365,12 +394,27 @@ class Local_Minima_Compare():
 
         return
 
+
     def plot_all_groupings(self):
         for i in range(len(self.group_data)):
             self.plot_grouping(i)
 
+
+    def plot_method_data(self):
+        for i in range(len(self.group_data)):
+            self.plot_method_data_raw(i)
+
+
+    def plot_all_groupings_raw(self):
+        for key in self.lm_class.groups_dict.keys():
+            self.plot_groupings_raw(key)
+        return
+
+
     def show(self):
         self.lm_class.show()
+
+
     #endregion
 
     # # # saving functions # # #
@@ -378,15 +422,15 @@ class Local_Minima_Compare():
         base_name = "z_dataset-bxyl-LM-" + self.overall_data['method']
         MET_DATA_DIR = os.path.join(LM_DIR, self.overall_data['method'])
 
-        # saves a plot of all groupings
-        self.plot_all_groupings()
-        self.lm_class.plot_cano()
         OVERALL_DIR = os.path.join(MET_DATA_DIR, 'overall')
         # checks if directory exists, and creates it if not
         if not os.path.exists(OVERALL_DIR):
             os.makedirs(OVERALL_DIR)
-        self.lm_class.plot.save(base_name + '-all_groupings', OVERALL_DIR)
 
+        # saves a plot of all groupings
+        self.plot_all_groupings()
+        self.lm_class.plot_cano()
+        self.lm_class.plot.save(base_name + '-all_groupings', OVERALL_DIR)
         self.lm_class.wipe_plot()
 
         for i in range(len(self.group_data)):
@@ -409,6 +453,27 @@ class Local_Minima_Compare():
                 os.makedirs(WINDOWED_DIR)
             self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', WINDOWED_DIR)
             self.lm_class.wipe_plot()
+
+#TODO: streamline the plot to also include just the raw data
+    def save_all_figures_raw(self):
+        base_name = "z_dataset-bxyl-LM-" + self.overall_data['method']
+        MET_DATA_DIR = os.path.join(LM_DIR, self.overall_data['method'])
+
+        OVERALL_DIR = os.path.join(MET_DATA_DIR, 'overall')
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(OVERALL_DIR):
+            os.makedirs(OVERALL_DIR)
+
+        # saves plot of all groupings with the raw group data
+        # self.plot_all_groupings_raw()
+        self.plot_method_data()
+        self.lm_class.plot_cano()
+        self.lm_class.plot.save(base_name + '-all_method_raw_data', OVERALL_DIR)
+        self.lm_class.wipe_plot()
+
+
+
+
 
 class Compare_All_Methods_LM:
     def __init__(self, methods_data_in, lm_dir_in):
@@ -601,8 +666,12 @@ def main():
 
             # save all plots
             for i in range(len(methods_data_list)):
-                methods_data_list[i].plot_all_groupings()
-                methods_data_list[i].save_all_figures()
+                #TODO: in the legend of each plot show what the method is?
+                # methods_data_list[i].plot_all_groupings()
+                # methods_data_list[i].save_all_figures()
+                #TODO: plots for the HSP raw data and the method data
+                methods_data_list[i].plot_all_groupings_raw()
+                methods_data_list[i].save_all_figures_raw()
 
     return
 
@@ -681,7 +750,6 @@ if __name__ == '__main__':
 #     if ret != GOOD_RET or args is None:
 #         return args, ret
 #     try:
-#         #TODO: import the class information from spherical_kmean_voronoi.py based on the molecule type
 #         # Need to come up with a simple way to local in the necessary HSP reference information based on args.molecule (database? HSP reference files?)
 #
 #         hsp_lm_groups = 1
@@ -702,17 +770,14 @@ if __name__ == '__main__':
 #
 #                     data_lm = Local_Minima_Compare(method_list_dicts, qm_method, hsp_lm_groups)
 #
-#                     #TODO: run a local min class on this data set...
 #                 elif csv_file_read.split('-')[2] == 'TS':
 #                     print(csv_file_read)
-#                     #TODO: run a transition state class on this data set...
 #
 #                     data_ts = Transition_State_Compare(method_list_dicts, qm_method, hsp_ts_groups)
 #                 else:
 #                     print('WARNING: NOT SURE WHAT TYPE OF JOB THIS IS')
 #
-#             #TODO: come up with a method for storing the information from each run so that later on
-#             #A class with the important data from the above calculations is probably the best way to go about it?
+              #A class with the important data from the above calculations is probably the best way to go about it?
 #             #Also...should write out the data to a csv file for later processing if necessary.
 #
 #

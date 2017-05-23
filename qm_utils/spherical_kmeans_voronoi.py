@@ -202,7 +202,7 @@ def plot_vor_line(ax, vert_1, vert_2, line_color):
     else:
         ax.plot(line[0], line[1], color=line_color)
 
-    ax.scatter([line[0][0], line[0][-1]], [line[1][0], line[1][-1]], s=60, c='green', marker='s', edgecolor='face',
+    ax.scatter([line[0][0], line[0][-1]], [line[1][0], line[1][-1]], s=30, c='green', marker='s', edgecolor='face',
                zorder=10)
 
     return
@@ -1677,7 +1677,7 @@ def plotting_local_minima(data_dict, sv_skm_dict, cano_point, directory=None, sa
     cano = ax.scatter(cano_point['phi_cano'], cano_point['theta_cano'], s=60, c='black', marker='+', edgecolor='face')
 
     if voronoi_status is True:
-        voronoi = ax.scatter(phi_vertices, theta_vertices, s=60, c='green', marker='s', edgecolor='face')
+        voronoi = ax.scatter(phi_vertices, theta_vertices, s=30, c='green', marker='s', edgecolor='face')
     hsp = ax.scatter(phi_vals, theta_vals, s=60, c='blue', marker='o', edgecolor='face')
     kmeans = ax.scatter(phi_centers, theta_centers, s=60, c='red', marker='h', edgecolor='face')
 
