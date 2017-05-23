@@ -94,23 +94,20 @@ LM_DIR = os.path.join(MOL_DIR, 'local_minimum')
 SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
 #endregion
 
-
-# # # Number of Clusters # # #
-NUM_CLUSTERS_BXYL = 9
-
 # # # Classes # # #
 #region
 class Local_Minima_Compare():
     """
     class for organizing the local minima information
     """
-    def __init__(self, method_in, parsed_hartree, lm_class_in):
+    def __init__(self, method_in, parsed_hartree, lm_class_in, lm_dir_in):
         self.hartree_data = []
         self.lm_class = lm_class_in
         self.group_data = []
         self.overall_data = {}
         self.overall_data['method'] = method_in
         self.group_rows = []
+        self.lm_dir = lm_dir_in
 
         # converting hartrees to kcal/mol
         for i in range(len(parsed_hartree)):
@@ -421,7 +418,7 @@ class Local_Minima_Compare():
     #endregion
 
     # # # saving functions # # #
-    def save_all_figures(self):
+    def save_all_figures(self, mol_name):
         # Create custom artist
         size_scaling = 1
         ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30*size_scaling, c='red', marker='o', edgecolor='face')
@@ -432,13 +429,17 @@ class Local_Minima_Compare():
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
         label_list = ['Reference LM', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-bxyl-LM-" + self.overall_data['method']
-        MET_DATA_DIR = os.path.join(LM_DIR, self.overall_data['method'])
+        base_name = "z_dataset-" + mol_name + "-LM-" + self.overall_data['method']
 
-        OVERALL_DIR = os.path.join(MET_DATA_DIR, 'overall')
+        if not os.path.exists(os.path.join(self.lm_dir, self.overall_data['method'])):
+            os.makedirs(os.path.join(self.lm_dir, self.overall_data['method']))
+
+        met_data_dir = os.path.join(self.lm_dir, self.overall_data['method'])
+
+        overall_dir = os.path.join(met_data_dir, 'overall')
         # checks if directory exists, and creates it if not
-        if not os.path.exists(OVERALL_DIR):
-            os.makedirs(OVERALL_DIR)
+        if not os.path.exists(overall_dir):
+            os.makedirs(overall_dir)
 
         # saves a plot of all groupings
         self.plot_all_groupings()
@@ -446,21 +447,21 @@ class Local_Minima_Compare():
 
         self.set_title_and_legend(artist_list, label_list)
 
-        self.lm_class.plot.save(base_name + '-all_groupings', OVERALL_DIR)
+        self.lm_class.plot.save(base_name + '-all_groupings', overall_dir)
         self.lm_class.wipe_plot()
 
         for i in range(len(self.group_data)):
             # saves a plot of each group individually plotted
             self.plot_grouping(i)
             self.lm_class.plot_cano()
-            GROUPS_DIR = os.path.join(MET_DATA_DIR, 'groups')
+            groups_dir = os.path.join(met_data_dir, 'groups')
             # checks if directory exists, and creates it if not
-            if not os.path.exists(GROUPS_DIR):
-                os.makedirs(GROUPS_DIR)
+            if not os.path.exists(groups_dir):
+                os.makedirs(groups_dir)
 
             self.set_title_and_legend(artist_list, label_list)
 
-            self.lm_class.plot.save(base_name + '-group_' + str(i), GROUPS_DIR)
+            self.lm_class.plot.save(base_name + '-group_' + str(i), groups_dir)
             self.lm_class.wipe_plot()
 
             # # saves a plot of a focused view of each group
@@ -476,7 +477,7 @@ class Local_Minima_Compare():
             # self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', WINDOWED_DIR)
             # self.lm_class.wipe_plot()
 
-    def save_all_figures_raw(self):
+    def save_all_figures_raw(self, mol_name):
         # Create custom artists
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
@@ -487,13 +488,17 @@ class Local_Minima_Compare():
         artist_list = [raw_ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
         label_list = ['Raw Reference LM', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-bxyl-LM-" + self.overall_data['method']
-        MET_DATA_DIR = os.path.join(LM_DIR, self.overall_data['method'])
+        base_name = "z_dataset-" + mol_name + "-LM-" + self.overall_data['method']
 
-        OVERALL_DIR = os.path.join(MET_DATA_DIR, 'overall')
+        if not os.path.exists(os.path.join(self.lm_dir, self.overall_data['method'])):
+            os.makedirs(os.path.join(self.lm_dir, self.overall_data['method']))
+
+        met_data_dir = os.path.join(self.lm_dir, self.overall_data['method'])
+
+        overall_dir = os.path.join(met_data_dir, 'overall')
         # checks if directory exists, and creates it if not
-        if not os.path.exists(OVERALL_DIR):
-            os.makedirs(OVERALL_DIR)
+        if not os.path.exists(overall_dir):
+            os.makedirs(overall_dir)
 
         # saves plot of all groupings with the raw group data
         # self.plot_all_groupings_raw()
@@ -502,7 +507,7 @@ class Local_Minima_Compare():
 
         self.set_title_and_legend(artist_list, label_list)
 
-        self.lm_class.plot.save(base_name + '-all_method_raw_data', OVERALL_DIR)
+        self.lm_class.plot.save(base_name + '-all_method_raw_data', overall_dir)
         self.lm_class.wipe_plot()
 
 class Compare_All_Methods_LM:
@@ -677,9 +682,16 @@ def main():
     save = True
     mol_list_dir = os.listdir(MET_COMP_DIR)
 
+    num_clusters = [9, 8]
+
     # for each molecule, perform the comparisons
     for i in range(len(mol_list_dir)):
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(MET_COMP_DIR, mol_list_dir[i])):
+            os.makedirs(os.path.join(MET_COMP_DIR, mol_list_dir[i]))
+
         comp_mol_dir  = os.path.join(MET_COMP_DIR, mol_list_dir[i])
+
         sv_mol_dir = os.path.join(os.path.join(SV_DIR, 'molecules'), mol_list_dir[i])
 
         # checks if directory exists, and creates it if not
@@ -703,7 +715,7 @@ def main():
         methods_data_list = []
 
         # initialization info for local minimum clustering for specific molecule
-        number_clusters = NUM_CLUSTERS_BXYL
+        number_clusters = num_clusters[i]
         dict_cano = read_csv_canonical_designations(mol_list_dir[i] + '-CP_params.csv', sv_mol_dir)
         data_points, phi_raw, theta_raw, energy = read_csv_data('z_' + mol_list_dir[i] + '_lm-b3lyp_howsugarspucker.csv',
                                                                 sv_mol_dir)
@@ -713,10 +725,8 @@ def main():
         for filename in os.listdir(lm_data_dir):
             if filename.endswith(".csv"):
                 method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
-
                 method = (filename.split('-', 3)[3]).split('.')[0]
-
-                lm_comp_class = Local_Minima_Compare(method, method_hartree, lm_class)
+                lm_comp_class = Local_Minima_Compare(method, method_hartree, lm_class, comp_lm_dir)
 
                 methods_data_list.append(lm_comp_class)
 
@@ -727,12 +737,12 @@ def main():
             comp_all_met_LM.write_to_csv()
 
             # save all plots
-            for i in range(len(methods_data_list)):
-                methods_data_list[i].plot_all_groupings()
-                methods_data_list[i].save_all_figures()
+            for j in range(len(methods_data_list)):
+                methods_data_list[j].plot_all_groupings()
+                methods_data_list[j].save_all_figures(mol_list_dir[i])
 
-                methods_data_list[i].plot_all_groupings_raw()
-                methods_data_list[i].save_all_figures_raw()
+                methods_data_list[j].plot_all_groupings_raw()
+                methods_data_list[j].save_all_figures_raw(mol_list_dir[i])
 
     return
 
