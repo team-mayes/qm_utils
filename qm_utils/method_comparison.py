@@ -164,6 +164,11 @@ class Local_Minima_Compare():
             self.group_data[i]['method'] = self.overall_data['method']
             self.group_data[i]['points'] = {}
 
+            if i < 10:
+                self.group_data[i]['name'] = self.lm_class.groups_dict['group_0' + str(i)]['name']
+            else:
+                self.group_data[i]['name'] = self.lm_class.groups_dict['group_' + str(i)]['name']
+
             for j in range(len(self.hartree_data)):
                 if self.hartree_data[j]['arc_lengths'][0][0] == i:
                     self.group_data[i]['points'][j] = self.hartree_data[j]
@@ -388,6 +393,8 @@ class Local_Minima_Compare():
         for i in range(len(self.group_data)):
             self.plot_grouping(i)
 
+        self.lm_class.plot_group_names()
+
 
     def plot_method_data(self):
         for i in range(len(self.group_data)):
@@ -402,9 +409,9 @@ class Local_Minima_Compare():
 
     def set_title_and_legend(self, artist_list, label_list):
         self.lm_class.plot.ax_rect.legend(artist_list,
-                                            label_list,
-                                            scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
-                                            bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0).set_zorder(100)
+                                          label_list,
+                                          scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
+                                          bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
 
         plt.title(self.overall_data['method'], loc='left')
 
@@ -456,20 +463,18 @@ class Local_Minima_Compare():
             self.lm_class.plot.save(base_name + '-group_' + str(i), GROUPS_DIR)
             self.lm_class.wipe_plot()
 
-            # saves a plot of a focused view of each group
-            self.plot_window(i)
-            self.lm_class.plot_cano()
-            WINDOWED_DIR = os.path.join(MET_DATA_DIR, 'groups_windowed')
-            # checks if directory exists, and creates it if not
-            if not os.path.exists(WINDOWED_DIR):
-                os.makedirs(WINDOWED_DIR)
-
-            self.set_title_and_legend(artist_list, label_list)
-
-            self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', WINDOWED_DIR)
-            self.lm_class.wipe_plot()
-
-#TODO: streamline the plot to also include just the raw data
+            # # saves a plot of a focused view of each group
+            # self.plot_window(i)
+            # self.lm_class.plot_cano()
+            # WINDOWED_DIR = os.path.join(MET_DATA_DIR, 'groups_windowed')
+            # # checks if directory exists, and creates it if not
+            # if not os.path.exists(WINDOWED_DIR):
+            #     os.makedirs(WINDOWED_DIR)
+            #
+            # self.set_title_and_legend(artist_list, label_list)
+            #
+            # self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', WINDOWED_DIR)
+            # self.lm_class.wipe_plot()
 
     def save_all_figures_raw(self):
         # Create custom artists
@@ -559,12 +564,24 @@ class Compare_All_Methods_LM:
         WSS_dict['group'] = []
         WWSS_dict['group'] = []
 
+        group_RMSD_dict['pucker'] = []
+        group_WRMSD_dict['pucker'] = []
+        WSS_dict['pucker'] = []
+        WWSS_dict['pucker'] = []
+
         # listing group names
         for i in range(len(self.methods_data[0].group_data)):
             group_RMSD_dict['group'].append(i)
             group_WRMSD_dict['group'].append(i)
             WSS_dict['group'].append(i)
             WWSS_dict['group'].append(i)
+
+        # listing group pucker
+        for i in range(len(self.methods_data[0].group_data)):
+            group_RMSD_dict['pucker'].append(self.methods_data[0].group_data[i]['name'])
+            group_WRMSD_dict['pucker'].append(self.methods_data[0].group_data[i]['name'])
+            WSS_dict['pucker'].append(self.methods_data[0].group_data[i]['name'])
+            WWSS_dict['pucker'].append(self.methods_data[0].group_data[i]['name'])
 
         # filling method data for each dict
         for i in range(len(self.methods_data)):
@@ -678,10 +695,10 @@ def main():
         ts_dir = os.path.join(comp_mol_dir, 'transitions_state')
 
         # checks if directory exists, and creates it if not
-        if not os.path.exists(os.path.join(comp_lm_dir, 'z_datasets-LM')):
-            os.makedirs(os.path.join(comp_lm_dir, 'z_datasets-LM'))
+        if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
+            os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
 
-        lm_data_dir = os.path.join(comp_lm_dir, 'z_datasets-LM')
+        lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
 
         methods_data_list = []
 
@@ -714,7 +731,6 @@ def main():
                 methods_data_list[i].plot_all_groupings()
                 methods_data_list[i].save_all_figures()
 
-                #TODO: plots for the HSP raw data and the method data
                 methods_data_list[i].plot_all_groupings_raw()
                 methods_data_list[i].save_all_figures_raw()
 

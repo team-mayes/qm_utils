@@ -234,6 +234,7 @@ class MainRun(unittest.TestCase):
             data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR)
             dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR)
             lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
+
             ts_class = Transition_States(data_dict_ts, lm_class, TS_PATHWAYS)
 
             #lm_class.plot_local_min()

@@ -20,6 +20,7 @@ from scipy.spatial import SphericalVoronoi
 import statistics as st
 import math
 from collections import OrderedDict
+from operator import itemgetter
 
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -376,6 +377,9 @@ class Local_Minima():
         self.populate_groups_dict()
         self.organize_regions()
 
+        self.assign_closest_puckers()
+        self.assign_group_name()
+
     def populate_sv_kmeans_dict(self, number_clusters, data_points, phi_raw, theta_raw, energy):
         # Generating the important lists
         phi_centers = []
@@ -483,12 +487,71 @@ class Local_Minima():
 
         return
 
+    def assign_closest_puckers(self):
+        for group_key in self.groups_dict:
+            # list for 3 shortest arclengths and their lm_groups
+            arc_lengths = {}
+
+            group_phi = float(self.groups_dict[group_key]['mean_phi'])
+            group_theta = float(self.groups_dict[group_key]['mean_theta'])
+
+            for j in range(len(self.cano_points['pucker'])):
+                pucker_phi = float(self.cano_points['phi_cano'][j])
+                pucker_theta = float(self.cano_points['theta_cano'][j])
+
+                arc_lengths[self.cano_points['pucker'][j]] = arc_length_calculator(group_phi, group_theta, pucker_phi, pucker_theta)
+
+            ordered_arc_lengths = OrderedDict(sorted(arc_lengths.items(), key=itemgetter(1), reverse=False))
+            ordered_list = []
+            three_shortest_list = []
+
+            for key, val in ordered_arc_lengths.items():
+                ordered_list.append([key, val])
+
+            for k in range(3):
+                three_shortest_list.append(ordered_list[k])
+
+            self.groups_dict[group_key]['closest_puckers'] = three_shortest_list
+
+        return
+
+    def assign_group_name(self):
+        for group_key in self.groups_dict:
+            tolerance = 0.25
+
+            first_arc = self.groups_dict[group_key]['closest_puckers'][0][1]
+            second_arc = self.groups_dict[group_key]['closest_puckers'][1][1]
+
+            total_arc = first_arc + second_arc
+
+            first_weight = first_arc / total_arc
+
+            if first_weight < tolerance:
+                self.groups_dict[group_key]['name'] = self.groups_dict[group_key]['closest_puckers'][0][0]
+            else:
+                self.groups_dict[group_key]['name'] = self.groups_dict[group_key]['closest_puckers'][0][0]\
+                                                      + '/'\
+                                                      + self.groups_dict[group_key]['closest_puckers'][1][0]
+
+    # # # Plotting Functions # # #
+    #region
     def plot_local_min(self, directory=None, save_status=False):
         plotting_local_minima(self.groups_dict, self.sv_kmeans_dict, self.cano_points, directory=directory,
                               save_status=save_status)
 
     def plot_group_labels(self, directory=None, save_status=False):
         plotting_group_labels(self.groups_dict, self.sv_kmeans_dict, directory=directory, save_status=save_status)
+
+    def plot_group_names(self):
+        for key, value in self.groups_dict.items():
+            if float(value['mean_theta']) < 30 or float(value['mean_phi']) < 25:
+                self.plot.ax_rect.annotate(value['name'], xy=(float(value['mean_phi']), float(value['mean_theta'])),
+                            xytext=(float(value['mean_phi']) - 10, float(value['mean_theta']) + 15),
+                            arrowprops=dict(arrowstyle="->", connectionstyle="arc3"), )
+            else:
+                self.plot.ax_rect.annotate(value['name'], xy=(float(value['mean_phi']), float(value['mean_theta'])),
+                            xytext=(float(value['mean_phi']) - 10, float(value['mean_theta']) - 15),
+                            arrowprops=dict(arrowstyle="->", connectionstyle="arc3"), )
 
     def plot_local_min_sizes(self, directory=None, save_status=False):
         # Generating the marker size based on energy
@@ -624,6 +687,10 @@ class Local_Minima():
 
         return
 
+    def wipe_plot(self):
+        self.plot = Plots(False, False, True)
+    #endregion
+
     def organize_regions(self):
         org_sv_reg_dict = {}
         org_phi_skm_dict = {}
@@ -652,8 +719,6 @@ class Local_Minima():
 
         return
 
-    def wipe_plot(self):
-        self.plot = Plots(False, False, True)
 
 class Local_Minima_Cano():
     def __init__(self, cano_points_in):
