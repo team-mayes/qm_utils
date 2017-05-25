@@ -100,9 +100,3 @@ class TestMain(unittest.TestCase):
         #
         # lm_comp_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class)
         # lm_comp_class.save_all_figures()
-
-    def testGroupAssignPucker(self):
-        dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR_SV)
-        lm_class_cano = Local_Minima_Cano(dict_cano)
-
-        print()

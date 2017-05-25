@@ -719,7 +719,6 @@ class Local_Minima():
 
         return
 
-
 class Local_Minima_Cano():
     def __init__(self, cano_points_in):
         self.sv_kmeans_dict = {}
@@ -835,7 +834,7 @@ class Local_Minima_Cano():
 
 # class for transition states and their pathways
 class Transition_States():
-    def __init__(self, ts_data_in, lm_class_obj, save_dir_in):
+    def __init__(self, ts_data_in, lm_class_obj):
         # groups by the unique transition state paths
         __unorg_groups = sorting_TS_into_groups(ts_data_in, lm_class_obj)
 
@@ -844,7 +843,7 @@ class Transition_States():
 
         self.circ_groups_init()
 
-        self.save_dir = save_dir_in
+        self.plot = Plots(True, False, False)
 
     # reorganizes the data structure
     def reorg_groups(self, unorg_groups, lm_class_obj):
@@ -932,38 +931,25 @@ class Transition_States():
 
         return temp_ts_groups
 
+    # # # plotting functions # # #
+    # region
     # plots desired local minimum group pathways for all uniq ts pts
     def plot_loc_min_group_2d(self, lm_key_in):
-        """
-        :param ax_rect:
-        :param ax_circ:
-        :param lm_key_in:
-        :return:
-
-        """
-        plot = Plots(True, False, False)
-
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
             if (lm_key == lm_key_in):
                 for ts_group_key in self.ts_groups[lm_key]:
                     path = self.ts_groups[lm_key][ts_group_key]
 
-                    plot_line(plot.ax_rect, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                    plot_line(plot.ax_rect, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+                    plot_line(self.plot.ax_rect, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                    plot_line(self.plot.ax_rect, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
 
                     if self.north_groups.count(lm_key) == 1:
-                        plot_on_circle(plot.ax_circ_north, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                        plot_on_circle(plot.ax_circ_north, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+                        plot_on_circle(self.plot.ax_circ_north, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                        plot_on_circle(self.plot.ax_circ_north, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
                     elif self.south_groups.count(lm_key) == 1:
-                        plot_on_circle(plot.ax_circ_south, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                        plot_on_circle(plot.ax_circ_south, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
-
-        plot.show()
-
-        make_file_from_plot('test', plot.fig, self.save_dir)
-
-        return
+                        plot_on_circle(self.plot.ax_circ_south, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
+                        plot_on_circle(self.plot.ax_circ_south, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
 
     # plots desired local minimum group pathways for all uniq ts pts
     def plot_loc_min_group_3d(self, lm_key_in):
@@ -988,6 +974,8 @@ class Transition_States():
 
         return
 
+    # # # may be irrelevant # # #
+    #region
     # plots desired local minimum group pathways for all uniq ts pts
     def plot_loc_min_group_with_uniq_ts_2d(self, ax, lm_key_in):
         """
@@ -1039,13 +1027,18 @@ class Transition_States():
         plot_arc(ax_3d, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
 
         return
+    #endregion
+
+    # plots canonical designations
+    def plot_cano(self):
+        self.plot.ax_rect.scatter(self.lm_class.cano_points['phi_cano'], self.lm_class.cano_points['theta_cano'], s=60, c='black',
+                                  marker='+',
+                                  edgecolor='face')
 
     # plots all pathways in 2d
-    def plot_all_2d(self, ax_rect, ax_circ):
+    def plot_all_2d(self):
         for lm_key in self.ts_groups:
-            self.plot_loc_min_group_2d(ax_rect, ax_circ, lm_key)
-
-        return
+            self.plot_loc_min_group_2d(lm_key)
 
     # plots all pathways in 3d
     def plot_all_3d(self, ax_spher):
@@ -1110,6 +1103,16 @@ class Transition_States():
 
             self.plot_vor_sec(ax, verts)
 
+        return
+
+    def show(self):
+        self.plot.show()
+
+    def wipe_plot(self):
+        self.plot = Plots(True, False, False)
+    #endregion
+
+    def arb(self):
         return
 
 # class for initializing plots
@@ -1698,7 +1701,7 @@ def return_lowest_value(value1, value2):
 # endregion
 
 # # # New plotting Functions # # #
-# # region
+# region
 def plotting_local_minima(data_dict, sv_skm_dict, cano_point, directory=None, save_status=False, voronoi_status=True):
     global leg
     phi_vals = []
@@ -1749,8 +1752,7 @@ def plotting_local_minima(data_dict, sv_skm_dict, cano_point, directory=None, sa
     else:
         plt.show()
     return
-#
-#
+
 def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=False):
     phi_values = []
     theta_values = []
@@ -1799,8 +1801,7 @@ def plotting_group_labels(data_dict, sv_skm_dict, directory=None, save_status=Fa
     else:
         plt.show()
     return
-#
-#
+
 # def plotting_local_minima_size(data_dict, sv_skm_dict, cano_point, directory=None, save_status=False,
 #                                voronoi_status=True):
 #     phi_vals = []

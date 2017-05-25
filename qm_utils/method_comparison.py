@@ -29,9 +29,11 @@ from qm_utils.pucker_table import read_hartree_files_lowest_energy, sorting_job_
 
 from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR, InvalidDataError, INVALID_DATA,
                                 INPUT_ERROR, arc_length_calculator, read_csv_to_dict)
-from qm_utils.spherical_kmeans_voronoi import Local_Minima, read_csv_canonical_designations, read_csv_data
+from qm_utils.spherical_kmeans_voronoi import Local_Minima, Transition_States,\
+                                              read_csv_canonical_designations, read_csv_data, read_csv_data_TS,\
+                                              pol2cart, plot_on_circle, plot_line, plot_arc
 
-# # # header stuff # # #
+# # # Header Stuff # # #
 #region
 try:
     # noinspection PyCompatibility
@@ -100,7 +102,7 @@ class Local_Minima_Compare():
     """
     class for organizing the local minima information
     """
-    def __init__(self, method_in, parsed_hartree, lm_class_in, lm_dir_in):
+    def __init__(self, method_in, lm_dataset_in, lm_class_in, lm_dir_in):
         self.hartree_data = []
         self.lm_class = lm_class_in
         self.group_data = []
@@ -108,26 +110,38 @@ class Local_Minima_Compare():
         self.overall_data['method'] = method_in
         self.group_rows = []
         self.lm_dir = lm_dir_in
+        self.lm_dataset = lm_dataset_in
 
-        # converting hartrees to kcal/mol
-        for i in range(len(parsed_hartree)):
-            parsed_hartree[i]['G298 (Hartrees)'] = 627.509 * float(parsed_hartree[i]['G298 (Hartrees)'])
-
-        self.populate_hartree_data(parsed_hartree)
+        self.fix_hartrees()
+        self.populate_hartree_data()
         self.populate_groupings()
         self.do_calcs()
         self.populate_print_data()
 
     # # # __init__ functions # # #
     #region
-    def populate_hartree_data(self, parsed_hartree):
-        for i in range(len(parsed_hartree)):
+    def fix_hartrees(self):
+        # converting hartrees to kcal/mol
+        for i in range(len(self.lm_dataset)):
+            self.lm_dataset[i]['G298 (Hartrees)'] = 627.509 * float(self.lm_dataset[i]['G298 (Hartrees)'])
+
+        min_G298 = self.lm_dataset[0]['G298 (Hartrees)']
+
+        for i in range(len(self.lm_dataset)):
+            if self.lm_dataset[i]['G298 (Hartrees)'] < min_G298:
+                min_G298 = self.lm_dataset[i]['G298 (Hartrees)']
+
+        for i in range(len(self.lm_dataset)):
+            self.lm_dataset[i]['G298 (Hartrees)'] -= min_G298
+
+    def populate_hartree_data(self):
+        for i in range(len(self.lm_dataset)):
             self.hartree_data.append({})
 
-            self.hartree_data[i]['G298 (Hartrees)'] = float(parsed_hartree[i]['G298 (Hartrees)'])
-            self.hartree_data[i]['pucker'] = parsed_hartree[i]['Pucker']
-            self.hartree_data[i]['phi'] = float(parsed_hartree[i]['phi'])
-            self.hartree_data[i]['theta'] = float(parsed_hartree[i]['theta'])
+            self.hartree_data[i]['G298 (Hartrees)'] = float(self.lm_dataset[i]['G298 (Hartrees)'])
+            self.hartree_data[i]['pucker'] = self.lm_dataset[i]['Pucker']
+            self.hartree_data[i]['phi'] = float(self.lm_dataset[i]['phi'])
+            self.hartree_data[i]['theta'] = float(self.lm_dataset[i]['theta'])
 
             # list for 3 shortest arclengths and their lm_groups
             arc_lengths = {}
@@ -418,6 +432,7 @@ class Local_Minima_Compare():
     #endregion
 
     # # # saving functions # # #
+    #region
     def save_all_figures(self, mol_name):
         # Create custom artist
         size_scaling = 1
@@ -509,10 +524,420 @@ class Local_Minima_Compare():
 
         self.lm_class.plot.save(base_name + '-all_method_raw_data', overall_dir)
         self.lm_class.wipe_plot()
+    #endregion
+
+    def arb(self):
+        return
+
+class Transition_State_Compare():
+    """
+    class for organizing the transition state information
+    """
+    def  __init__(self, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in):
+        self.lm_class = lm_class_in
+        self.ts_class = ts_class_in
+        self.ts_dataset = ts_dataset_in
+        self.method = method_in
+
+        self.ts_dir = ts_dir_in
+
+        self.hartree_data = []
+        self.path_group_data = {}
+        self.ref_path_group_data = {}
+
+        self.fix_hartrees()
+        self.populate_hartree_data()
+        self.populate_path_group_data()
+        self.populate_ref_path_group_data()
+        self.circ_groups_init()
+
+        # Perform the following operations on the transition state data set:
+        # (3) within each of the assign group, perform RMSD calculations on the arc length and gibbs free energies
+        # (4) develop a similar plotting strategy (more thought needed)
+
+    # # # __init__ functions # # #
+    # region
+    def fix_hartrees(self):
+        # converting hartrees to kcal/mol
+        for i in range(len(self.ts_dataset)):
+            self.ts_dataset[i]['G298 (Hartrees)'] = 627.509 * float(self.ts_dataset[i]['G298 (Hartrees)'])
+
+        min_G298 = self.ts_dataset[0]['G298 (Hartrees)']
+
+        for i in range(len(self.ts_dataset)):
+            if self.ts_dataset[i]['G298 (Hartrees)'] < min_G298:
+                min_G298 = self.ts_dataset[i]['G298 (Hartrees)']
+
+        for i in range(len(self.ts_dataset)):
+            self.ts_dataset[i]['G298 (Hartrees)'] -= min_G298
+
+    def populate_hartree_data(self):
+        for i in range(len(self.ts_dataset)):
+            self.hartree_data.append({})
+
+            self.hartree_data[i]['G298 (Hartrees)'] = float(self.ts_dataset[i]['G298 (Hartrees)'])
+            self.hartree_data[i]['pucker'] = self.ts_dataset[i]['Pucker']
+            self.hartree_data[i]['phi'] = float(self.ts_dataset[i]['phi'])
+            self.hartree_data[i]['theta'] = float(self.ts_dataset[i]['theta'])
+            self.hartree_data[i]['lm1'] = {}
+            self.hartree_data[i]['lm2'] = {}
+            self.hartree_data[i]['lm1']['phi'] = float(self.ts_dataset[i]['phi_lm1'])
+            self.hartree_data[i]['lm1']['theta'] = float(self.ts_dataset[i]['theta_lm1'])
+            self.hartree_data[i]['lm2']['phi'] = float(self.ts_dataset[i]['phi_lm2'])
+            self.hartree_data[i]['lm2']['theta'] = float(self.ts_dataset[i]['theta_lm2'])
+
+            # list for 3 shortest arclengths and their lm_groups
+            arc_lengths_lm1 = {}
+            arc_lengths_lm2 = {}
+
+            lm1_phi = self.hartree_data[i]['lm1']['phi']
+            lm1_theta = self.hartree_data[i]['lm1']['theta']
+
+            lm2_phi = self.hartree_data[i]['lm2']['phi']
+            lm2_theta =self.hartree_data[i]['lm2']['theta']
+
+            # calculate the closest ref groups
+            for j in range(len(self.lm_class.sv_kmeans_dict['regions_sv_labels'])):
+                skm_phi = self.lm_class.sv_kmeans_dict['phi_skm_centers'][j]
+                skm_theta = self.lm_class.sv_kmeans_dict['theta_skm_centers'][j]
+
+                arc_lengths_lm1[j] = arc_length_calculator(lm1_phi, lm1_theta, skm_phi, skm_theta)
+                arc_lengths_lm2[j] = arc_length_calculator(lm2_phi, lm2_theta, skm_phi, skm_theta)
+
+            ordered_arc_lengths_lm1 = OrderedDict(sorted(arc_lengths_lm1.items(), key=itemgetter(1), reverse=False))
+            ordered_list_lm1 = []
+            three_shortest_list_lm1 = []
+
+            ordered_arc_lengths_lm2 = OrderedDict(sorted(arc_lengths_lm2.items(), key=itemgetter(1), reverse=False))
+            ordered_list_lm2 = []
+            three_shortest_list_lm2 = []
+
+            for key, val in ordered_arc_lengths_lm1.items():
+                ordered_list_lm1.append([key, val])
+            for k in range(3):
+                three_shortest_list_lm1.append(ordered_list_lm1[k])
+            self.hartree_data[i]['lm1']['arc_lengths'] = three_shortest_list_lm1
+            self.hartree_data[i]['lm1']['group'] = self.hartree_data[i]['lm1']['arc_lengths'][0][0]
+
+            for key, val in ordered_arc_lengths_lm2.items():
+                ordered_list_lm2.append([key, val])
+            for k in range(3):
+                three_shortest_list_lm2.append(ordered_list_lm2[k])
+            self.hartree_data[i]['lm2']['arc_lengths'] = three_shortest_list_lm2
+            self.hartree_data[i]['lm2']['group'] = self.hartree_data[i]['lm2']['arc_lengths'][0][0]
+
+    def populate_path_group_data(self):
+        for i in range(len(self.hartree_data)):
+            first = self.hartree_data[i]['lm1']['group']
+            second = self.hartree_data[i]['lm2']['group']
+
+            if first < second:
+                key = str(first) + '_' + str(second)
+            else:
+                key = str(second) + '_' + str(first)
+
+            if key not in self.path_group_data:
+                self.path_group_data[key] = []
+
+            self.path_group_data[key].append(self.hartree_data[i])
+
+    def populate_ref_path_group_data(self):
+        for i in range(len(self.hartree_data)):
+            first = self.hartree_data[i]['lm1']['group']
+            second = self.hartree_data[i]['lm2']['group']
+
+            if first < second:
+                key = str(first) + '_' + str(second)
+            else:
+                key = str(second) + '_' + str(first)
+
+            if key not in self.path_group_data:
+                self.path_group_data[key] = []
+
+            self.path_group_data[key].append(self.hartree_data[i])
+
+    def populate_print_data(self):
+        for i in range(len(self.group_data)):
+            row = []
+            row.append(self.group_data[i]['method'])
+            row.append(self.group_data[i]['group_RMSD'])
+            row.append(self.group_data[i]['group_WRMSD'])
+            row.append(self.group_data[i]['WSS'])
+            row.append(self.group_data[i]['WWSS'])
+
+            self.group_rows.append(row)
+
+        overall_row = []
+        overall_row.append(self.overall_data['method'])
+        overall_row.append(self.overall_data['RMSD'])
+        overall_row.append(self.overall_data['WRMSD'])
+        overall_row.append(self.overall_data['SSE'])
+        overall_row.append(self.overall_data['WSSE'])
+
+        self.overall_row = overall_row
+    # endregion
+
+    # # # do_calc functions # # #
+    # region
+    def do_calcs(self):
+        for i in range(len(self.group_data)):
+            self.calc_WSS(i)
+            self.calc_weighting(i)
+            self.calc_WWSS(i)
+            self.calc_group_RMSD(i)
+            self.calc_group_WRMSD(i)
+
+        self.calc_SSE()
+        self.calc_WSSE()
+        self.calc_RMSD()
+        self.calc_WRMSD()
+
+    # finds Boltzmann weighted Gibb's free energy
+    def calc_weighting(self, group):
+        total_boltz = 0
+
+        for key in self.group_data[group]['points']:
+            e_val = self.group_data[group]['points'][key]['G298 (Hartrees)']
+            component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+            self.group_data[group]['points'][key]['ind_boltz'] = component
+            total_boltz += component
+
+        wt_gibbs = 0
+        for key in self.group_data[group]['points']:
+            if self.group_data[group]['points'][key]['ind_boltz'] == 0:
+                wt_gibbs += 0
+                self.group_data[group]['points'][key]['weighting'] = 0
+            else:
+                wt_gibbs += (self.group_data[group]['points'][key]['ind_boltz'] / total_boltz) * \
+                            self.group_data[group]['points'][key]['G298 (Hartrees)']
+                self.group_data[group]['points'][key]['weighting'] = self.group_data[group]['points'][key][
+                                                                         'ind_boltz'] / total_boltz
+
+        self.group_data[group]['weighted_gibbs'] = round(wt_gibbs, 3)
+
+    def calc_WSS(self, group):
+        WSS = 0
+
+        for key in self.group_data[group]['points']:
+            arc_length = self.group_data[group]['points'][key]['arc_lengths'][0][1]
+            WSS += arc_length ** 2
+
+        self.group_data[group]['WSS'] = round(WSS, 5)
+
+    def calc_WWSS(self, group):
+        WWSS = 0
+
+        for key in self.group_data[group]['points']:
+            arc_length = self.group_data[group]['points'][key]['arc_lengths'][0][1]
+            weighting = self.group_data[group]['points'][key]['weighting']
+            WWSS += (arc_length ** 2) * weighting
+
+        self.group_data[group]['WWSS'] = round(WWSS, 5)
+
+    def calc_group_RMSD(self, group):
+        size = len(self.group_data[group]['points'])
+        if (size == 0):
+            RMSD = 'n/a'
+            self.group_data[group]['group_RMSD'] = RMSD
+        else:
+            RMSD = (self.group_data[group]['WSS'] / size) ** 0.5
+            self.group_data[group]['group_RMSD'] = round(RMSD, 5)
+
+    def calc_group_WRMSD(self, group):
+        size = len(self.group_data[group]['points'])
+
+        if (size == 0):
+            WRMSD = 'n/a'
+            self.group_data[group]['group_WRMSD'] = WRMSD
+        else:
+            WRMSD = (self.group_data[group]['WWSS'] / size) ** 0.5
+            self.group_data[group]['group_WRMSD'] = round(WRMSD, 5)
+
+    def calc_SSE(self):
+        SSE = 0
+
+        for i in range(len(self.group_data)):
+            SSE += self.group_data[i]['WSS']
+
+        self.overall_data['SSE'] = round(SSE, 5)
+
+    def calc_WSSE(self):
+        WSSE = 0
+
+        for i in range(len(self.group_data)):
+            WSSE += self.group_data[i]['WWSS']
+
+        self.overall_data['WSSE'] = round(WSSE, 5)
+
+    def calc_RMSD(self):
+        RMSD = (self.overall_data['SSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['RMSD'] = round(RMSD, 5)
+
+    def calc_WRMSD(self):
+        WRMSD = (self.overall_data['WSSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['WRMSD'] = round(WRMSD, 5)
+    # endregion
+
+    # # # plotting functions # # #
+    # region
+    # get group keys associated with north, south, and equatorial
+    def circ_groups_init(self):
+        self.north_groups = []
+        self.south_groups = []
+        self.equat_groups = []
+
+        key_list = list(self.path_group_data.keys())
+        key_list.sort()
+
+        for key in self.path_group_data:
+            if int(key.split("_")[0]) == int(key_list[0].split("_")[0]):
+                self.north_groups.append(key)
+            elif int(key.split("_")[1]) == int(key_list[-1].split("_")[1]):
+                self.south_groups.append(key)
+            else:
+                self.equat_groups.append(key)
+
+        return
+
+    def plot_path_group(self, path_group):
+        for i in range(len(self.path_group_data[path_group])):
+            ts_vert = pol2cart([self.path_group_data[path_group][i]['phi'], self.path_group_data[path_group][i]['theta']])
+            lm1_vert = pol2cart([self.path_group_data[path_group][i]['lm1']['phi'], self.path_group_data[path_group][i]['lm1']['theta']])
+            lm2_vert = pol2cart([self.path_group_data[path_group][i]['lm2']['phi'], self.path_group_data[path_group][i]['lm2']['theta']])
+
+            plot_line(self.ts_class.plot.ax_rect, ts_vert, lm1_vert, 'red')
+            plot_line(self.ts_class.plot.ax_rect, ts_vert, lm2_vert, 'red')
+
+            if self.north_groups.count(path_group) == 1:
+                plot_on_circle(self.ts_class.plot.ax_circ_north, ts_vert, lm1_vert, 'red')
+                plot_on_circle(self.ts_class.plot.ax_circ_north, ts_vert, lm2_vert, 'red')
+            elif self.south_groups.count(path_group) == 1:
+                plot_on_circle(self.ts_class.plot.ax_circ_south, ts_vert, lm1_vert, 'red')
+                plot_on_circle(self.ts_class.plot.ax_circ_south, ts_vert, lm2_vert, 'red')
+
+    def plot_path_group_avg(self, path_group):
+        if int(path_group.split('_')[0]) < 10:
+            lm1_key = 'group_0' + path_group.split('_')[0]
+        else:
+            lm1_key = 'group_' + path_group.split('_')[0]
+
+        if int(path_group.split('_')[1]) < 10:
+            lm2_key = 'group_0' + path_group.split('_')[1]
+        else:
+            lm2_key = 'group_' + path_group.split('_')[1]
+
+        lm1_data = self.lm_class.groups_dict[lm1_key]
+        lm2_data = self.lm_class.groups_dict[lm2_key]
+
+        lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+        lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+        for i in range(len(self.path_group_data[path_group])):
+            ts_vert = pol2cart([self.path_group_data[path_group][i]['phi'], self.path_group_data[path_group][i]['theta']])
+
+            plot_line(self.ts_class.plot.ax_rect, ts_vert, lm1_vert, 'red')
+            plot_line(self.ts_class.plot.ax_rect, ts_vert, lm2_vert, 'red')
+
+            if self.north_groups.count(path_group) == 1:
+                plot_on_circle(self.ts_class.plot.ax_circ_north, ts_vert, lm1_vert, 'red')
+                plot_on_circle(self.ts_class.plot.ax_circ_north, ts_vert, lm2_vert, 'red')
+            elif self.south_groups.count(path_group) == 1:
+                plot_on_circle(self.ts_class.plot.ax_circ_south, ts_vert, lm1_vert, 'red')
+                plot_on_circle(self.ts_class.plot.ax_circ_south, ts_vert, lm2_vert, 'red')
+
+    def plot_all_path_groups(self):
+        for key in self.path_group_data:
+            self.plot_path_group(key)
+
+        # self.lm_class.plot_group_names()
+
+    def plot_all_path_groups_avg(self):
+        for key in self.path_group_data:
+            self.plot_path_group_avg(key)
+
+    def set_title_and_legend(self, artist_list, label_list):
+        self.ts_class.plot.ax_rect.legend(artist_list,
+                                          label_list,
+                                          scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
+                                          bbox_to_anchor=(0.5, -0.3), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
+
+    def show(self):
+        self.lm_class.show()
+    # endregion
+
+    # # # saving functions # # #
+    # region
+    def save_all_figures(self, mol_name):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15 * size_scaling, c='blue', marker='o',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+
+        artist_list = [met_lm_Artist, met_ts_Artist, path_Artist, cano_lm_Artist]
+        label_list = [self.method + ' LM', self.method + ' TS', 'Pathway', 'Canonical Designation']
+
+        base_name = "z_dataset-" + mol_name + "-TS-" + self.method
+
+        if not os.path.exists(os.path.join(self.ts_dir, self.method)):
+            os.makedirs(os.path.join(self.ts_dir, self.method))
+
+        met_data_dir = os.path.join(self.ts_dir, self.method)
+
+        for key in self.path_group_data:
+            # saves a plot of each group individually plotted
+            self.plot_path_group(key)
+            self.ts_class.plot_cano()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.ts_class.plot.save(base_name + '-' + key, met_data_dir)
+            self.ts_class.wipe_plot()
+
+    def save_all_figures_avg(self, mol_name):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15 * size_scaling, c='blue', marker='o',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+
+        artist_list = [met_lm_Artist, met_ts_Artist, path_Artist, cano_lm_Artist]
+        label_list = [self.method + ' LM', self.method + ' TS', 'Pathway', 'Canonical Designation']
+
+        base_name = "z_dataset-" + mol_name + "-TS-" + self.method
+
+        if not os.path.exists(os.path.join(self.ts_dir, self.method)):
+            os.makedirs(os.path.join(self.ts_dir, self.method))
+
+        met_data_dir = os.path.join(self.ts_dir, self.method)
+
+        if not os.path.exists(os.path.join(met_data_dir, 'single_LMs')):
+            os.makedirs(os.path.join(met_data_dir, 'single_LMs'))
+
+        avg_data_dir = os.path.join(met_data_dir, 'single_LMs')
+
+        for key in self.path_group_data:
+            # saves a plot of each group individually plotted
+            self.plot_path_group_avg(key)
+            self.ts_class.plot_cano()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.ts_class.plot.save(base_name + '-' + key, avg_data_dir)
+            self.ts_class.wipe_plot()
+    # endregion
 
 
+class Compare_All_Methods:
 
-class Compare_All_Methods_LM:
     def __init__(self, methods_data_in, lm_dir_in):
         self.methods_data = methods_data_in
         self.lm_dir = lm_dir_in
@@ -636,7 +1061,6 @@ class Compare_All_Methods_LM:
 
         return
 
-
     def organize_data_for_plotting(self, order_in):
 
         for j in range(len(self.methods_data[0].group_data)):
@@ -658,6 +1082,7 @@ class Compare_All_Methods_LM:
 
     def ploting_all_method_information(self, order_in):
 
+        pass
         #
         #
         # # self.fig, self.ax_rect = plt.subplots(facecolor='white')
@@ -678,7 +1103,7 @@ class Compare_All_Methods_LM:
         #     plt.show()
 
 
-        return
+
 
 
 
@@ -718,32 +1143,102 @@ class Transition_State_Compare():
         #       (assigning pathway will need to be on both the transition state AND the local minima connecting them)
         # (3) within each of the assign group, perform RMSD calculations on the arc length and gibbs free energies
         # (4) develop a similar plotting strategy (more thought needed)
+
 #endregion
 
 # # # Helper Functions # # #
 #region
+# creates a .csv file in the form of the hsp ts .csv file
+def rewrite_ts_hartree(ts_hartree_dict_list, method, molecule, dir):
+    filename = 'z_dataset-' + molecule + '-TS-' + method + '.csv'
 
+    ts_path_dict = {}
+
+    ts_count = 0
+    lm_count = 0
+
+    # separate the dicts in terms of pathway
+    for i in range(len(ts_hartree_dict_list)):
+        ts_path = ts_hartree_dict_list[i]['File Name'].split('_')[0]
+
+        if ts_path not in ts_path_dict:
+            ts_path_dict[ts_path] = []
+
+        ts_path_dict[ts_path].append(ts_hartree_dict_list[i])
+
+        if float(ts_hartree_dict_list[i]['Freq 1']) < 0:
+            ts_count += 1
+        else:
+            lm_count += 1
+
+    assert(lm_count / ts_count == 2)
+
+    new_ts_path_list = []
+
+    for key in ts_path_dict:
+        new_ts_path = {}
+
+        for i in range(len(ts_path_dict[key])):
+            # if the dict is the TS pt
+            if float(ts_path_dict[key][i]['Freq 1']) < 0:
+                new_ts_path['phi'] = ts_path_dict[key][i]['phi']
+                new_ts_path['theta'] = ts_path_dict[key][i]['theta']
+                new_ts_path['energy (A.U.)'] = ts_path_dict[key][i]['Energy (A.U.)']
+                new_ts_path['G298 (Hartrees)'] = ts_path_dict[key][i]['G298 (Hartrees)']
+                new_ts_path['Pucker'] = ts_path_dict[key][i]['Pucker']
+            # else if it is a the forward lm
+            elif 'ircf' in ts_path_dict[key][i]['File Name']:
+                new_ts_path['phi_lm1'] = ts_path_dict[key][i]['phi']
+                new_ts_path['theta_lm1'] = ts_path_dict[key][i]['theta']
+            # else it is the reverse lm
+            else:
+                new_ts_path['phi_lm2'] = ts_path_dict[key][i]['phi']
+                new_ts_path['theta_lm2'] = ts_path_dict[key][i]['theta']
+
+        new_ts_path_list.append(new_ts_path)
+
+    ts_paths_dict = {}
+
+    for i in range(len(new_ts_path_list)):
+        for key in new_ts_path_list[i]:
+            if key not in ts_paths_dict:
+                ts_paths_dict[key] = []
+
+            ts_paths_dict[key].append(new_ts_path_list[i][key])
+
+    full_filename = os.path.join(dir, filename)
+
+    with open(full_filename, 'w', newline='') as file:
+        w = csv.writer(file)
+        w.writerow(ts_paths_dict.keys())
+        w.writerows(zip(*ts_paths_dict.values()))
+
+    return
 #endregion
-
 
 # # #  Main  # # #
 #region
 def main():
     save = True
-    mol_list_dir = os.listdir(MET_COMP_DIR)
+    sv_all_mol_dir = os.path.join(SV_DIR, 'molecules')
+    mol_list_dir = os.listdir(sv_all_mol_dir)
 
     num_clusters = [9, 8]
 
     # for each molecule, perform the comparisons
     for i in range(len(mol_list_dir)):
+        molecule = mol_list_dir[i]
+
         # checks if directory exists, and creates it if not
         if not os.path.exists(os.path.join(MET_COMP_DIR, mol_list_dir[i])):
             os.makedirs(os.path.join(MET_COMP_DIR, mol_list_dir[i]))
 
         comp_mol_dir = os.path.join(MET_COMP_DIR, mol_list_dir[i])
 
-        sv_mol_dir = os.path.join(os.path.join(SV_DIR, 'molecules'), mol_list_dir[i])
+        sv_mol_dir = os.path.join(sv_all_mol_dir, mol_list_dir[i])
 
+        # # # local minimum directory init # # #
+        #region
         # checks if directory exists, and creates it if not
         if not os.path.exists(os.path.join(comp_mol_dir, 'local_minimum')):
             os.makedirs(os.path.join(comp_mol_dir, 'local_minimum'))
@@ -751,18 +1246,35 @@ def main():
         comp_lm_dir = os.path.join(comp_mol_dir, 'local_minimum')
 
         # checks if directory exists, and creates it if not
-        if not os.path.exists(os.path.join(comp_mol_dir, 'transitions_state')):
-            os.makedirs(os.path.join(comp_mol_dir, 'transitions_state'))
-
-        ts_dir = os.path.join(comp_mol_dir, 'transitions_state')
-
-        # checks if directory exists, and creates it if not
         if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
             os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
 
         lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
+        #endregion
 
-        methods_data_list = []
+        # # # transition states directory init # # #
+        #region
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(comp_mol_dir, 'transitions_state')):
+            os.makedirs(os.path.join(comp_mol_dir, 'transitions_state'))
+
+        comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state')
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-TS')):
+            os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-TS'))
+
+        ts_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(sv_mol_dir, 'TS-unformatted')):
+            os.makedirs(os.path.join(sv_mol_dir, 'TS-unformatted'))
+
+        ts_unformatted_dir = os.path.join(sv_mol_dir, 'TS-unformatted')
+        #endregion
+
+        lm_comp_data_list = []
+        ts_comp_data_list = []
 
         # initialization info for local minimum clustering for specific molecule
         number_clusters = num_clusters[i]
@@ -771,6 +1283,12 @@ def main():
                                                                 sv_mol_dir)
         lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
 
+        ts_data_dict = read_csv_data_TS('z_' + mol_list_dir[i] + '_TS-b3lyp_howsugarspucker.csv',
+                                                                sv_mol_dir)[3]
+        ts_class = Transition_States(ts_data_dict, lm_class)
+
+        # # # local minimum comparison data initialization # # #
+        #region
         # for every local min data file in the directory perform the comparison calculations
         for filename in os.listdir(lm_data_dir):
             if filename.endswith(".csv"):
@@ -778,9 +1296,29 @@ def main():
                 method = (filename.split('-', 3)[3]).split('.')[0]
                 lm_comp_class = Local_Minima_Compare(method, method_hartree, lm_class, comp_lm_dir)
 
-                methods_data_list.append(lm_comp_class)
+                lm_comp_data_list.append(lm_comp_class)
+        #endregion
 
-        comp_all_met_LM = Compare_All_Methods_LM(methods_data_list, comp_lm_dir)
+        # # # transition state comparison data initialization # # #
+        #region
+        # for every ts data file in the directory reformat
+        for filename in os.listdir(ts_unformatted_dir):
+            if filename.endswith(".csv"):
+                ts_hartree = read_csv_to_dict(os.path.join(ts_unformatted_dir, filename), mode='r')
+                method = (filename.split('-', 3)[3]).split('.')[0]
+                rewrite_ts_hartree(ts_hartree, method, molecule, ts_data_dir)
+
+        # for every ts data file in the directory perform the comparison calculations
+        for filename in os.listdir(ts_data_dir):
+            if filename.endswith(".csv"):
+                ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
+                method = (filename.split('-', 3)[3]).split('.')[0]
+                ts_comp_class = Transition_State_Compare(method, ts_hartree, lm_class, ts_class, comp_ts_dir)
+
+                ts_comp_data_list.append(ts_comp_class)
+        #endregion
+
+        comp_all_met_LM = Compare_All_Methods(lm_comp_data_list, comp_lm_dir)
 
         order_in = ['reference', 'b3lyp', 'dftb', 'am1', 'pm6', 'pm3mm', 'pm3']
 
@@ -792,13 +1330,18 @@ def main():
             # save the comparison data
             comp_all_met_LM.write_to_csv()
 
-            # save all plots
-            for j in range(len(methods_data_list)):
-                methods_data_list[j].plot_all_groupings()
-                methods_data_list[j].save_all_figures(mol_list_dir[i])
+            # # save all lm plots
+            # for j in range(len(lm_comp_data_list)):
+            #     lm_comp_data_list[j].plot_all_groupings()
+            #     lm_comp_data_list[j].save_all_figures(mol_list_dir[i])
+            #
+            #     lm_comp_data_list[j].plot_all_groupings_raw()
+            #     lm_comp_data_list[j].save_all_figures_raw(mol_list_dir[i])
 
-                methods_data_list[j].plot_all_groupings_raw()
-                methods_data_list[j].save_all_figures_raw(mol_list_dir[i])
+            # # save all ts plots
+            # for j in range(len(ts_comp_data_list)):
+            #     ts_comp_data_list[j].save_all_figures(mol_list_dir[i])
+            #     ts_comp_data_list[j].save_all_figures_avg(mol_list_dir[i])
 
     return
 
