@@ -1461,13 +1461,13 @@ def main():
             comp_all_met.write_lm_to_csv()
             comp_all_met.write_ts_to_csv()
 
-            # # save all lm plots
-            # for j in range(len(lm_comp_data_list)):
-            #     lm_comp_data_list[j].plot_all_groupings()
-            #     lm_comp_data_list[j].save_all_figures(mol_list_dir[i])
-            #
-            #     lm_comp_data_list[j].plot_all_groupings_raw()
-            #     lm_comp_data_list[j].save_all_figures_raw(mol_list_dir[i])
+            # save all lm plots
+            for j in range(len(lm_comp_data_list)):
+                lm_comp_data_list[j].plot_all_groupings()
+                lm_comp_data_list[j].save_all_figures(mol_list_dir[i])
+
+                lm_comp_data_list[j].plot_all_groupings_raw()
+                lm_comp_data_list[j].save_all_figures_raw(mol_list_dir[i])
 
             # save all ts plots
             for j in range(len(ts_comp_data_list)):
