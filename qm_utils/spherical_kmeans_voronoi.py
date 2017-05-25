@@ -1214,7 +1214,9 @@ class Plots():
 
     def save(self, filename, dir_):
         filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
+        self.fig.set_size_inches(9, 5)
         self.fig.savefig(filename1, facecolor=self.fig.get_facecolor(), transparent=True, dpi=300, bbox_inches='tight')
+
 # endregion
 
 # # # Local Minima Functions # # #
@@ -1646,9 +1648,10 @@ def sorting_TS_into_groups(data_points, lm_class_obj, show_status=False):
             if rmsd < 0.1:
                 if show_status is True:
                     # TODO: plot each of the TS group assignments to visualize
-                    matplotlib_printing_localmin_transition(lm_phi_vals, lm_theta_vals, ts_phi_vals, ts_theta_vals,
-                                                            phi_centers, theta_centers, group_key)
-                break
+                    # matplotlib_printing_localmin_transition(lm_phi_vals, lm_theta_vals, ts_phi_vals, ts_theta_vals,
+                    #                                         phi_centers, theta_centers, group_key)
+                    pass
+                    break
 
         inner_dict = {}
         inner_dict['center_phi'] = phi_centers

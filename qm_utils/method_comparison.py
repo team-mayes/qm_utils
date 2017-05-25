@@ -423,7 +423,7 @@ class Local_Minima_Compare():
         size_scaling = 1
         ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30*size_scaling, c='red', marker='o', edgecolor='face')
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
-        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60*size_scaling, c='black', marker='+', edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=45*size_scaling, c='black', marker='+', edgecolor='face')
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
@@ -510,10 +510,14 @@ class Local_Minima_Compare():
         self.lm_class.plot.save(base_name + '-all_method_raw_data', overall_dir)
         self.lm_class.wipe_plot()
 
+
+
 class Compare_All_Methods_LM:
     def __init__(self, methods_data_in, lm_dir_in):
         self.methods_data = methods_data_in
         self.lm_dir = lm_dir_in
+        self.group_RMSD_vals = {}
+        self.group_WRMSD_vals = {}
 
     def write_to_txt(self, do_print):
         tables = []
@@ -632,6 +636,52 @@ class Compare_All_Methods_LM:
 
         return
 
+
+    def organize_data_for_plotting(self, order_in):
+
+        for j in range(len(self.methods_data[0].group_data)):
+            self.group_RMSD_vals[str(j)] = []
+            self.group_WRMSD_vals[str(j)] = []
+
+            for k in range(len(order_in)):
+                for i in range(len(self.methods_data)):
+                    if self.methods_data[i].overall_data['method'] == order_in[k]:
+                        for j in range(len(self.methods_data[i].group_data)):
+                            if self.methods_data[i].group_data[j]['group_RMSD'] != 'n/a':
+                                self.group_RMSD_vals[str(j)].append(self.methods_data[i].group_data[j]['group_RMSD'])
+                                self.group_WRMSD_vals[str(j)].append(self.methods_data[i].group_data[j]['group_WRMSD'])
+                            else:
+                                self.group_RMSD_vals[str(j)].append(float(0))
+                                self.group_WRMSD_vals[str(j)].append(float(0))
+
+        return
+
+    def ploting_all_method_information(self, order_in):
+
+        #
+        #
+        # # self.fig, self.ax_rect = plt.subplots(facecolor='white')
+        # for j in range(len(self.methods_data[0].group_data)):
+        #     plt.figure(j, facecolor='white')
+        #     objects = order_in
+        #
+        #     y_pos = np.arange(len(objects))
+        #     performance = group_RMSD_vals[str(j)]
+        #
+        #     plt.bar(y_pos, performance, align='center', alpha=0.5)
+        #     plt.xticks(y_pos, objects)
+        #
+        #     plt.ylim([0, 0.5])
+        #     plt.ylabel('RMSD')
+        #     plt.title('Group ' + str(j))
+        #
+        #     plt.show()
+
+
+        return
+
+
+
 class Transition_State_Compare():
     """
     class for organizing the transition state information
@@ -690,7 +740,7 @@ def main():
         if not os.path.exists(os.path.join(MET_COMP_DIR, mol_list_dir[i])):
             os.makedirs(os.path.join(MET_COMP_DIR, mol_list_dir[i]))
 
-        comp_mol_dir  = os.path.join(MET_COMP_DIR, mol_list_dir[i])
+        comp_mol_dir = os.path.join(MET_COMP_DIR, mol_list_dir[i])
 
         sv_mol_dir = os.path.join(os.path.join(SV_DIR, 'molecules'), mol_list_dir[i])
 
@@ -731,6 +781,12 @@ def main():
                 methods_data_list.append(lm_comp_class)
 
         comp_all_met_LM = Compare_All_Methods_LM(methods_data_list, comp_lm_dir)
+
+        order_in = ['reference', 'b3lyp', 'dftb', 'am1', 'pm6', 'pm3mm', 'pm3']
+
+        comp_all_met_LM.organize_data_for_plotting(order_in)
+
+        # comp_all_met_LM.ploting_all_method_information(order_in)
 
         if save:
             # save the comparison data
