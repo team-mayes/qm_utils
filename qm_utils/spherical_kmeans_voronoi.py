@@ -172,8 +172,9 @@ def get_pol_coords(vert_1, vert_2):
 
 
 # plots a line on a rectangular plot (2D)
+# vert_n: [vert in polar, color, size]
 def plot_line(ax, vert_1, vert_2, line_color):
-    line = get_pol_coords(vert_1, vert_2)
+    line = get_pol_coords(vert_1[0], vert_2[0])
 
     if (is_end(line)):
         two_edges = split_in_two(line)
@@ -183,10 +184,8 @@ def plot_line(ax, vert_1, vert_2, line_color):
     else:
         ax.plot(line[0], line[1], color=line_color)
 
-    ax.scatter(line[0][0], line[1][0], s=60, c='blue', marker='s', edgecolor='face', zorder=10,
-               label="Transition State")
-    ax.scatter(line[0][-1], line[1][-1], s=60, c='green', marker='o', edgecolor='face', zorder=10,
-               label="Local Minimum")
+    ax.scatter(line[0][0], line[1][0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor='face', zorder=10)
+    ax.scatter(line[0][-1], line[1][-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=10)
 
     return
 
@@ -274,18 +273,9 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
 
 
 # plots a line on a circular plot (2D)
-# verts are in polar
+# vert_n: [vert in polar, color, size]
 def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black'):
-    """
-
-    :param ax_circle: plot being added to
-    :param vert_1:
-    :param vert_2:
-    :param color_in:
-    :return:
-    """
-
-    pol_coords = get_pol_coords(vert_1, vert_2)
+    pol_coords = get_pol_coords(vert_1[0], vert_2[0])
 
     # theta
     r = []
@@ -301,8 +291,8 @@ def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black'):
 
     ax_circ.plot(theta, r, color=line_color, zorder=1)
 
-    ax_circ.scatter(theta[0], r[0], s=60, c='blue', marker='s', edgecolor='face', zorder=10)
-    ax_circ.scatter(theta[-1], r[-1], s=60, c='green', marker='o', edgecolor='face', zorder=10)
+    ax_circ.scatter(theta[0], r[0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor='face', zorder=10)
+    ax_circ.scatter(theta[-1], r[-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=10)
 
     return
 
@@ -704,9 +694,9 @@ class Local_Minima():
                 if float(self.groups_dict[group_key]['mean_phi']) == float(self.sv_kmeans_dict['phi_skm_centers'][i]) \
                     and float(self.groups_dict[group_key]['mean_theta']) == float(
                         self.sv_kmeans_dict['theta_skm_centers'][i]):
-                    org_sv_reg_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['regions_sv_labels'][i]
-                    org_phi_skm_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['phi_skm_centers'][i]
-                    org_theta_skm_dict[group_key.split("_")[1]] = self.sv_kmeans_dict['theta_skm_centers'][i]
+                    org_sv_reg_dict[group_key] = self.sv_kmeans_dict['regions_sv_labels'][i]
+                    org_phi_skm_dict[group_key] = self.sv_kmeans_dict['phi_skm_centers'][i]
+                    org_theta_skm_dict[group_key] = self.sv_kmeans_dict['theta_skm_centers'][i]
 
         for key in org_sv_reg_dict:
             org_sv_reg_list.append(org_sv_reg_dict[key])
@@ -841,10 +831,15 @@ class Transition_States():
         self.ts_groups = self.reorg_groups(__unorg_groups, lm_class_obj)
         self.lm_class = lm_class_obj
 
+        self.assign_closest_puckers()
+        self.assign_group_name()
+
         self.circ_groups_init()
 
         self.plot = Plots(True, False, False)
 
+    # # # init functions # # #
+    #region
     # reorganizes the data structure
     def reorg_groups(self, unorg_groups, lm_class_obj):
         temp_ts_groups = {}
@@ -859,12 +854,12 @@ class Transition_States():
                 ts_vert = [curr_lm_group['center_phi'][i],
                            curr_lm_group['center_theta'][i]]
 
-                temp_ts_group['ts_group_' + str(i)] = {}
-                temp_ts_group['ts_group_' + str(i)]['ts_vert'] = np.asarray(pol2cart(ts_vert))
+                temp_ts_group[i] = {}
+                temp_ts_group[i]['ts_vert'] = np.asarray(pol2cart(ts_vert))
 
                 lm_keys = lm_key.split("_")
-                lm1_key = 'group_' + lm_keys[0]
-                lm2_key = 'group_' + lm_keys[1]
+                lm1_key = int(lm_keys[0])
+                lm2_key = int(lm_keys[1])
 
                 lm1_phi = lm_class_obj.groups_dict[lm1_key]['mean_phi']
                 lm1_theta = lm_class_obj.groups_dict[lm1_key]['mean_theta']
@@ -876,16 +871,16 @@ class Transition_States():
 
                 lm2_vert = [float(lm2_phi), float(lm2_theta)]
 
-                temp_ts_group['ts_group_' + str(i)]['lm1_vert_cart'] = np.asarray(pol2cart(lm1_vert))
-                temp_ts_group['ts_group_' + str(i)]['lm2_vert_cart'] = np.asarray(pol2cart(lm2_vert))
-                temp_ts_group['ts_group_' + str(i)]['ts_vert_cart'] = np.asarray(pol2cart(ts_vert))
+                temp_ts_group[i]['lm1_vert_cart'] = np.asarray(pol2cart(lm1_vert))
+                temp_ts_group[i]['lm2_vert_cart'] = np.asarray(pol2cart(lm2_vert))
+                temp_ts_group[i]['ts_vert_cart'] = np.asarray(pol2cart(ts_vert))
 
-                temp_ts_group['ts_group_' + str(i)]['lm1_vert_pol'] = np.asarray(lm1_vert)
-                temp_ts_group['ts_group_' + str(i)]['lm2_vert_pol'] = np.asarray(lm2_vert)
-                temp_ts_group['ts_group_' + str(i)]['ts_vert_pol'] = np.asarray(ts_vert)
+                temp_ts_group[i]['lm1_vert_pol'] = np.asarray(lm1_vert)
+                temp_ts_group[i]['lm2_vert_pol'] = np.asarray(lm2_vert)
+                temp_ts_group[i]['ts_vert_pol'] = np.asarray(ts_vert)
 
                 # creating a dict of uniq ts's
-                temp_ts_group['ts_group_' + str(i)]['ts_group'] = {}
+                temp_ts_group[i]['ts_group'] = {}
 
                 # creating a dict for each unique transition state
                 for j in range(len(curr_lm_group['gibbs_energy'])):
@@ -909,30 +904,101 @@ class Transition_States():
                         uniq_ts['uniq_lm2_vert_pol'] = np.asarray([curr_lm_group['lm_vals_phi'][j][1],
                                                                    curr_lm_group['lm_vals_theta'][j][1]])
 
-                    temp_ts_group['ts_group_' + str(i)]['ts_group']['ts_' + str(j)] = uniq_ts
+                    temp_ts_group[i]['ts_group'][j] = uniq_ts
 
                 wt_gibbs = 0
                 total_boltz = 0
 
                 # finding Boltzmann weighted Gibb's free energy
-                for key in temp_ts_group['ts_group_' + str(i)]['ts_group']:
-                    e_val = temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['energy (A.U.)']
+                for key in temp_ts_group[i]['ts_group']:
+                    e_val = temp_ts_group[i]['ts_group'][key]['energy (A.U.)']
                     component = math.exp(-float(e_val) / (K_B * DEFAULT_TEMPERATURE))
-                    temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['ind_boltz'] = component
+                    temp_ts_group[i]['ts_group'][key]['ind_boltz'] = component
                     total_boltz += component
 
-                for key in temp_ts_group['ts_group_' + str(i)]['ts_group']:
-                    wt_gibbs += (temp_ts_group['ts_group_' + str(i)]['ts_group'][key]['ind_boltz'] / total_boltz) * temp_ts_group['ts_group_' + str(i)]['ts_group'][key][
+                for key in temp_ts_group[i]['ts_group']:
+                    wt_gibbs += (temp_ts_group[i]['ts_group'][key]['ind_boltz'] / total_boltz) * temp_ts_group[i]['ts_group'][key][
                         'energy (A.U.)']
 
-                temp_ts_group['ts_group_' + str(i)]['ts_group']['weighted_gibbs'] = round(wt_gibbs, 3)
+                temp_ts_group[i]['G298 (Hartrees)'] = round(wt_gibbs, 3)
 
             temp_ts_groups[lm_key] = temp_ts_group
 
         return temp_ts_groups
 
+    def assign_closest_puckers(self):
+        for group_key in self.ts_groups:
+            for i in self.ts_groups[group_key]:
+                # list for 3 shortest arclengths and their lm_groups
+                arc_lengths = {}
+
+                ts_phi = float(self.ts_groups[group_key][i]['ts_vert_pol'][0])
+                ts_theta = float(self.ts_groups[group_key][i]['ts_vert_pol'][1])
+
+                for k in range(len(self.lm_class.cano_points['pucker'])):
+                    pucker_phi = float(self.lm_class.cano_points['phi_cano'][k])
+                    pucker_theta = float(self.lm_class.cano_points['theta_cano'][k])
+
+                    arc_lengths[self.lm_class.cano_points['pucker'][k]] = arc_length_calculator(ts_phi, ts_theta,
+                                                                                                pucker_phi,
+                                                                                                pucker_theta)
+
+                ordered_arc_lengths = OrderedDict(sorted(arc_lengths.items(), key=itemgetter(1), reverse=False))
+                ordered_list = []
+                three_shortest_list = []
+
+                for key, val in ordered_arc_lengths.items():
+                    ordered_list.append([key, val])
+
+                for k in range(3):
+                    three_shortest_list.append(ordered_list[k])
+
+                self.ts_groups[group_key][i]['closest_puckers'] = three_shortest_list
+
+        return
+
+    def assign_group_name(self):
+        for group_key in self.ts_groups:
+            for i in range(len(self.ts_groups[group_key])):
+                tolerance = 0.25
+
+                first_arc = self.ts_groups[group_key][i]['closest_puckers'][0][1]
+                second_arc = self.ts_groups[group_key][i]['closest_puckers'][1][1]
+
+                total_arc = first_arc + second_arc
+
+                first_weight = first_arc / total_arc
+
+                if first_weight < tolerance:
+                    self.ts_groups[group_key][i]['name'] = self.ts_groups[group_key][i]['closest_puckers'][0][0]
+                else:
+                    self.ts_groups[group_key][i]['name'] = self.ts_groups[group_key][i]['closest_puckers'][0][0] \
+                                                 + '/' \
+                                                 + self.ts_groups[group_key][i]['closest_puckers'][1][0]
+
+    # get group keys associated with north, south, and equatorial
+    def circ_groups_init(self):
+        self.north_groups = []
+        self.south_groups = []
+        self.equat_groups = []
+
+        lm_key_list = list(self.lm_class.groups_dict.keys())
+
+        lm_key_list.sort()
+
+        for lm_key in self.ts_groups:
+            if lm_key.split("_")[0] == lm_key_list[0]:
+                self.north_groups.append(lm_key)
+            elif lm_key.split("_")[1] == lm_key_list[-1]:
+                self.south_groups.append(lm_key)
+            else:
+                self.equat_groups.append(lm_key)
+
+        return
+    #endregion
+
     # # # plotting functions # # #
-    # region
+    #region
     # plots desired local minimum group pathways for all uniq ts pts
     def plot_loc_min_group_2d(self, lm_key_in):
         for lm_key in self.ts_groups:
@@ -952,15 +1018,7 @@ class Transition_States():
                         plot_on_circle(self.plot.ax_circ_south, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
 
     # plots desired local minimum group pathways for all uniq ts pts
-    def plot_loc_min_group_3d(self, lm_key_in):
-        """
-
-        :param ax: plot being added to
-        :param lm_key_in: lm group key
-        :return:
-        """
-        plot = Plots(False, True)
-
+    def plot_loc_min_group_3d(self, plot, lm_key_in):
         for lm_key in self.ts_groups:
             # if the key is the local min group, plot it
             if (lm_key == lm_key_in):
@@ -974,61 +1032,6 @@ class Transition_States():
 
         return
 
-    # # # may be irrelevant # # #
-    #region
-    # plots desired local minimum group pathways for all uniq ts pts
-    def plot_loc_min_group_with_uniq_ts_2d(self, ax, lm_key_in):
-        """
-
-        :param ax: plot being added to
-        :param lm_key_in: lm group key
-        :return:
-        """
-
-        for ts_group_key in self.ts_groups[lm_key_in]:
-            print('ts_group_key: ', ts_group_key)
-            for ts_key in self.ts_groups[lm_key_in][ts_group_key]['ts_group']:
-                if (ts_key != 'weighted_gibbs'):
-                    self.plot_uniq_ts_path(ax, lm_key_in, ts_group_key, ts_key)
-
-        return
-
-    # plots desired local minimum group pathways for all uniq ts pts
-    def plot_loc_min_group_with_uniq_ts_3d(self, ax_3d, lm_key_in):
-        """
-
-        :param ax: plot being added to
-        :param lm_key_in: lm group key
-        :return:
-        """
-
-        for ts_group_key in self.ts_groups[lm_key_in]:
-            print('ts_group_key: ', ts_group_key)
-            for ts_key in self.ts_groups[lm_key_in][ts_group_key]['ts_group']:
-                if (ts_key != 'weighted_gibbs'):
-                    self.plot_uniq_ts_path_3d(ax_3d, lm_key_in, ts_group_key, ts_key)
-
-        return
-
-    # plots desired unique transition state pathway
-    def plot_uniq_ts_path_2d(self, ax, lm_key_in, ts_group_key_in, ts_key_in):
-        path = self.ts_groups[lm_key_in][ts_group_key_in]['ts_group'][ts_key_in]
-
-        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm1_vert_cart'])
-        plot_line(ax, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
-
-        return
-
-    # plots desired unique transition state pathway
-    def plot_uniq_ts_path_3d(self, ax_3d, lm_key_in, ts_group_key_in, ts_key_in):
-        path = self.ts_groups[lm_key_in][ts_group_key_in]['ts_group'][ts_key_in]
-
-        plot_arc(ax_3d, path['uniq_ts_vert_cart'], path['uniq_lm1_vert_cart'])
-        plot_arc(ax_3d, path['uniq_ts_vert_cart'], path['uniq_lm2_vert_cart'])
-
-        return
-    #endregion
-
     # plots canonical designations
     def plot_cano(self):
         self.plot.ax_rect.scatter(self.lm_class.cano_points['phi_cano'], self.lm_class.cano_points['theta_cano'], s=60, c='black',
@@ -1041,31 +1044,13 @@ class Transition_States():
             self.plot_loc_min_group_2d(lm_key)
 
     # plots all pathways in 3d
-    def plot_all_3d(self, ax_spher):
-        for lm_key in self.ts_groups:
-            self.plot_loc_min_group_3d(ax_spher, lm_key)
-
-        return
-
-    # get group keys associated with north, south, and equatorial
-    def circ_groups_init(self):
-        self.north_groups = []
-        self.south_groups = []
-        self.equat_groups = []
-
-        lm_key_list = list(self.lm_class.groups_dict.keys())
-
-        lm_key_list.sort()
+    def plot_all_3d(self):
+        plot = Plots(False, True, False)
 
         for lm_key in self.ts_groups:
-            if lm_key.split("_")[0] == lm_key_list[0].split("_")[1]:
-                self.north_groups.append(lm_key)
-            elif lm_key.split("_")[1] == lm_key_list[-1].split("_")[1]:
-                self.south_groups.append(lm_key)
-            else:
-                self.equat_groups.append(lm_key)
+            self.plot_loc_min_group_3d(plot, lm_key)
 
-        return
+        plot.show()
 
     def plot_vor_sec(self, ax, verts):
         """
@@ -1196,7 +1181,7 @@ class Plots():
         self.ax_circ_north.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_north.set_theta_zero_location("N")
         self.ax_circ_north.set_yticklabels([])
-        self.ax_circ_north.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
+        self.ax_circ_north.set_thetagrids(thetaticks, frac=1.25, fontsize=12)
         self.ax_circ_north.set_theta_direction(-1)
 
     def ax_circ_south_init(self):
@@ -1208,7 +1193,7 @@ class Plots():
         self.ax_circ_south.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_south.set_theta_zero_location("N")
         self.ax_circ_south.set_yticklabels([])
-        self.ax_circ_south.set_thetagrids(thetaticks, frac=1.15, fontsize=12)
+        self.ax_circ_south.set_thetagrids(thetaticks, frac=1.25, fontsize=12)
         self.ax_circ_south.set_theta_direction(-1)
 
     # shows all plots
@@ -1456,19 +1441,19 @@ def correcting_group_order(groups):
     for row in order_top:
         for key, key_val in groups.items():
             if row == key_val['mean_theta']:
-                final_dict['group_' + str(group_count).rjust(2, '0')] = key_val
+                final_dict[group_count] = key_val
                 group_count += 1
 
     for row in order_mid:
         for key, key_val in groups.items():
             if row == key_val['mean_theta']:
-                final_dict['group_' + str(group_count).rjust(2, '0')] = key_val
+                final_dict[group_count] = key_val
                 group_count += 1
 
     for row in order_bot:
         for key, key_val in groups.items():
             if row == key_val['mean_theta']:
-                final_dict['group_' + str(group_count).rjust(2, '0')] = key_val
+                final_dict[group_count] = key_val
                 group_count += 1
 
     return final_dict
@@ -1579,7 +1564,7 @@ def sorting_TS_into_groups(data_points, lm_class_obj, show_status=False):
     assign_groups_to_TS_LM(data_points, lm_class_obj.groups_dict)
 
     for row in data_points:
-        first, second = return_lowest_value(row['assign_lm1'].split('_')[1], row['assign_lm2'].split('_')[1])
+        first, second = return_lowest_value(row['assign_lm1'], row['assign_lm2'])
 
         if str(first) + '_' + str(second) not in local_min_structure.keys():
             inner_dict = {}

@@ -78,12 +78,12 @@ class TestMain(unittest.TestCase):
         method_list_dicts = read_csv_to_dict(DATASET_FILE_LM_AM1, mode='r')
 
         # lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
-        # lm_comp_cano_class.save_all_figures()
+        # lm_comp_cano_class.save_all_figures_raw()
 
         AM1_comp = Local_Minima_Compare('AM1', AM1_list_dicts, lm_class)
         #HSP_comp = Local_Minima_Compare('ref', HSP_list_dicts, lm_class)
-        #AM1_comp.save_all_figures()
-        #HSP_comp.save_all_figures()
+        #AM1_comp.save_all_figures_raw()
+        #HSP_comp.save_all_figures_raw()
 
         #AM1_comp.print()
         #HSP_comp.print()
@@ -94,9 +94,9 @@ class TestMain(unittest.TestCase):
 
         lm_class_cano = Local_Minima_Cano(dict_cano)
         lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
-        #lm_comp_cano_class.save_all_figures()
+        #lm_comp_cano_class.save_all_figures_raw()
 
         # HSP reference
         #
         # lm_comp_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class)
-        # lm_comp_class.save_all_figures()
+        # lm_comp_class.save_all_figures_raw()
