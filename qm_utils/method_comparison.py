@@ -31,7 +31,8 @@ from qm_utils.qm_common import (GOOD_RET, create_out_fname, warning, IO_ERROR, I
                                 INPUT_ERROR, arc_length_calculator, read_csv_to_dict)
 from qm_utils.spherical_kmeans_voronoi import Local_Minima, Transition_States,\
                                               read_csv_canonical_designations, read_csv_data, read_csv_data_TS,\
-                                              pol2cart, plot_on_circle, plot_line, plot_arc
+                                              pol2cart, plot_on_circle, plot_line, plot_arc, is_end, split_in_two,\
+                                              get_pol_coords
 
 # # # Header Stuff # # #
 #region
@@ -412,7 +413,7 @@ class Local_Minima_Compare():
 
     # # # saving functions # # #
     #region
-    def save_all_figures(self, mol_name, overwrite):
+    def save_all_figures(self, overwrite):
         # Create custom artist
         size_scaling = 1
         ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30*size_scaling, c='red', marker='o', edgecolor='face')
@@ -423,7 +424,7 @@ class Local_Minima_Compare():
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
         label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-" + mol_name + "-LM-" + self.overall_data['method']
+        base_name = "z_dataset-" + self.molecule + "-LM-" + self.overall_data['method']
 
         if not os.path.exists(os.path.join(self.lm_dir, self.overall_data['method'])):
             os.makedirs(os.path.join(self.lm_dir, self.overall_data['method']))
@@ -435,7 +436,7 @@ class Local_Minima_Compare():
         if not os.path.exists(overall_dir):
             os.makedirs(overall_dir)
 
-        if not os.path.exists(os.path.join(base_name + '-all_groupings', overall_dir)) or overwrite:
+        if not os.path.exists(os.path.join(overall_dir, base_name + '-all_groupings' + '.png')) or overwrite:
             # saves a plot of all groupings
             self.plot_all_groupings()
             self.lm_class.plot_cano()
@@ -452,7 +453,7 @@ class Local_Minima_Compare():
 
             groups_dir = os.path.join(met_data_dir, 'groups')
 
-            if not os.path.exists(os.path.join(base_name + '-group_' + str(i), groups_dir)) or overwrite:
+            if not os.path.exists(os.path.join(groups_dir, base_name + '-group_' + str(i) + '.png')) or overwrite:
                 # saves a plot of each group individually plotted
                 self.plot_grouping(i)
                 self.lm_class.plot_cano()
@@ -462,9 +463,7 @@ class Local_Minima_Compare():
                 self.lm_class.plot.save(base_name + '-group_' + str(i), groups_dir)
                 self.lm_class.wipe_plot()
 
-    def save_all_figures_raw(self, mol_name, overwrite):
-        mol_name
-
+    def save_all_figures_raw(self, overwrite):
         # Create custom artists
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
@@ -475,7 +474,7 @@ class Local_Minima_Compare():
         artist_list = [raw_ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
         label_list = ['Raw Reference LM', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-" + mol_name + "-LM-" + self.overall_data['method']
+        base_name = "z_dataset-" + self.molecule + "-LM-" + self.overall_data['method']
 
         if not os.path.exists(os.path.join(self.lm_dir, self.overall_data['method'])):
             os.makedirs(os.path.join(self.lm_dir, self.overall_data['method']))
@@ -487,7 +486,7 @@ class Local_Minima_Compare():
         if not os.path.exists(overall_dir):
             os.makedirs(overall_dir)
 
-        if not os.path.exists(os.path.join(base_name + '-all_method_raw_data', overall_dir)) or overwrite:
+        if not os.path.exists(os.path.join(overall_dir, base_name + '-all_method_raw_data' + '.png')) or overwrite:
             # saves plot of all groupings with the raw group data
             self.plot_method_data()
             self.lm_class.plot_cano()
@@ -949,15 +948,15 @@ class Transition_State_Compare():
         for i in range(len(self.ref_path_group_data[path_group])):
             ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
 
-            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray')
-            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray')
+            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray', '-.')
+            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray', '-.')
 
             if self.north_groups.count(path_group) == 1:
-                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray')
-                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray')
+                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray', '-.')
+                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray', '-.')
             elif self.south_groups.count(path_group) == 1:
-                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray')
-                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray')
+                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray', '-.')
+                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray', '-.')
 
     def plot_all_path_groups_raw(self):
         for key in self.path_group_data:
@@ -968,6 +967,70 @@ class Transition_State_Compare():
     def plot_all_path_groups_single(self):
         for key in self.path_group_data:
             self.plot_path_group_single(key)
+
+    def plot_heatmap(self):
+        for path_group in self.ref_path_group_data:
+            lm1_key = int(path_group.split('_')[0])
+            lm2_key = int(path_group.split('_')[1])
+
+            lm1_data = self.lm_class.groups_dict[lm1_key]
+            lm2_data = self.lm_class.groups_dict[lm2_key]
+
+            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+            for i in range(len(self.ref_path_group_data[path_group])):
+                point = self.ref_path_group_data[path_group][i]
+
+                if point['group_WRMSD'] == 'n/a':
+                    # ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
+                    #                     self.ref_path_group_data[path_group][i]['theta']])
+                    #
+                    # vert_1 = ts_vert
+                    # vert_2 = lm2_vert
+                    #
+                    # line = get_pol_coords(vert_1[0], vert_2[0])
+                    #
+                    # if (is_end(line)):
+                    #     two_edges = split_in_two(line)
+                    #
+                    #     self.ts_class.plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color='gray', linestyle='-.', zorder=1)
+                    #     self.ts_class.plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color='gray', linestyle='-.', zorder=1)
+                    # else:
+                    #     self.ts_class.plot.ax_rect.plot(line[0], line[1], color='gray', linestyle='-.')
+                    #
+                    # vert_3 = ts_vert
+                    # vert_4 = lm1_vert
+                    #
+                    # line = get_pol_coords(vert_3[0], vert_4[0])
+                    #
+                    # if (is_end(line)):
+                    #     two_edges = split_in_two(line)
+                    #
+                    #     self.ts_class.plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color='gray', linestyle='-.',
+                    #                                     zorder=1)
+                    #     self.ts_class.plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color='gray', linestyle='-.',
+                    #                                     zorder=1)
+                    # else:
+                    #     self.ts_class.plot.ax_rect.plot(line[0], line[1], color='gray', linestyle='-.')
+
+                    self.ts_class.plot.ax_rect.scatter(point['phi'], point['theta'], s=60, c='white', marker='s', edgecolor='black',
+                               zorder=10)
+                else:
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'red')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'red')
+
+                    if self.north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'green', 30], [lm1_vert, 'green', 60], 'red')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'green', 30], [lm2_vert, 'green', 60], 'red')
+                    elif self.south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'green', 30], [lm1_vert, 'green', 60], 'red')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'green', 30], [lm2_vert, 'green', 60], 'red')
+
+
+        return
 
     def set_title_and_legend(self, artist_list, label_list):
         self.ts_class.plot.ax_rect.legend(artist_list,
@@ -980,7 +1043,7 @@ class Transition_State_Compare():
     # endregion
 
     # # # saving functions # # #
-    def save_all_figures_raw(self, mol_name, overwrite):
+    def save_all_figures_raw(self, overwrite):
         # Create custom artist
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
@@ -994,7 +1057,7 @@ class Transition_State_Compare():
         artist_list = [met_lm_Artist, met_ts_Artist, path_Artist, cano_lm_Artist]
         label_list = [self.method + ' LM', self.method + ' TS', 'Pathway', 'Canonical Designation']
 
-        base_name = "z_dataset-" + mol_name + "-TS-" + self.method
+        base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
         if not os.path.exists(os.path.join(self.ts_dir, self.method)):
             os.makedirs(os.path.join(self.ts_dir, self.method))
@@ -1007,18 +1070,17 @@ class Transition_State_Compare():
         raw_data_dir = os.path.join(met_data_dir, 'raw_LMs')
 
         for key in self.path_group_data:
-            if not os.path.exists(os.path.join(base_name + '-' + key, raw_data_dir)) or overwrite:
+            if not os.path.exists(os.path.join(raw_data_dir, base_name + '-' + key + '.png')) or overwrite:
                 # saves a plot of each group individually plotted
                 self.plot_path_group_raw(key)
                 self.ts_class.plot_cano()
-                self.plot_group_names(key)
 
                 self.set_title_and_legend(artist_list, label_list)
 
                 self.ts_class.plot.save(base_name + '-' + key, raw_data_dir)
                 self.ts_class.wipe_plot()
 
-    def save_all_figures_single(self, mol_name, overwrite):
+    def save_all_figures_single(self, overwrite):
         # Create custom artist
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
@@ -1028,12 +1090,12 @@ class Transition_State_Compare():
         cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
                                      edgecolor='face')
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
-        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s')
+        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
 
         artist_list = [met_lm_Artist, met_ts_Artist, path_Artist, ref_path_Artist, cano_lm_Artist]
         label_list = [self.method + ' LM', self.method + ' TS', 'Pathway', 'Reference pathway', 'Canonical Designation']
 
-        base_name = "z_dataset-" + mol_name + "-TS-" + self.method
+        base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
         if not os.path.exists(os.path.join(self.ts_dir, self.method)):
             os.makedirs(os.path.join(self.ts_dir, self.method))
@@ -1046,7 +1108,7 @@ class Transition_State_Compare():
         single_data_dir = os.path.join(met_data_dir, 'single_LMs')
 
         for key in self.path_group_data:
-            if not os.path.exists(os.path.join(base_name + '-' + key, single_data_dir)) or overwrite:
+            if not os.path.exists(os.path.join(single_data_dir, base_name + '-' + key + '.png')) or overwrite:
                 # saves a plot of each group individually plotted
                 self.plot_path_group_single(key)
                 if key in self.ref_path_group_data:
@@ -1121,10 +1183,10 @@ class Compare_All_Methods:
                 WSS_dict[method].append(WSS_val)
                 WWSS_dict[method].append(WWSS_val)
 
-        group_RMSD_csv = os.path.join(self.lm_dir, molecule + '-group_RMSD.csv')
-        group_WRMSD_csv = os.path.join(self.lm_dir, molecule + '-group_WRMSD.csv')
-        WSS_csv = os.path.join(self.lm_dir, molecule + '-WSS.csv')
-        WWSS_csv = os.path.join(self.lm_dir, molecule + '-WWSS.csv')
+        group_RMSD_csv = os.path.join(self.lm_dir, molecule + '-lm-group_RMSD.csv')
+        group_WRMSD_csv = os.path.join(self.lm_dir, molecule + '-lm-group_WRMSD.csv')
+        WSS_csv = os.path.join(self.lm_dir, molecule + '-lm-WSS.csv')
+        WWSS_csv = os.path.join(self.lm_dir, molecule + '-lm-WWSS.csv')
 
         with open(group_RMSD_csv, 'w', newline='') as file:
             w = csv.writer(file)
@@ -1200,10 +1262,10 @@ class Compare_All_Methods:
                     WSS_dict[method].append(WSS_val)
                     WWSS_dict[method].append(WWSS_val)
 
-        group_RMSD_csv = os.path.join(self.ts_dir, molecule + '-group_RMSD.csv')
-        group_WRMSD_csv = os.path.join(self.ts_dir, molecule + '-group_WRMSD.csv')
-        WSS_csv = os.path.join(self.ts_dir, molecule + '-WSS.csv')
-        WWSS_csv = os.path.join(self.ts_dir, molecule + '-WWSS.csv')
+        group_RMSD_csv = os.path.join(self.ts_dir, molecule + '-ts-group_RMSD.csv')
+        group_WRMSD_csv = os.path.join(self.ts_dir, molecule + '-ts-group_WRMSD.csv')
+        WSS_csv = os.path.join(self.ts_dir, molecule + '-ts-WSS.csv')
+        WWSS_csv = os.path.join(self.ts_dir, molecule + '-ts-WWSS.csv')
 
         with open(group_RMSD_csv, 'w', newline='') as file:
             w = csv.writer(file)
@@ -1249,6 +1311,9 @@ class Compare_All_Methods:
 
             debug_lm_csv = os.path.join(os.path.join(self.lm_dir, method), molecule + '-' + method + '-debug_lm.csv')
 
+            if not os.path.exists(os.path.join(self.lm_dir, method)):
+                os.makedirs(os.path.join(self.lm_dir, method))
+
             with open(debug_lm_csv, 'w', newline='') as file:
                 w = csv.writer(file)
                 w.writerow(debug_lm_dict.keys())
@@ -1281,6 +1346,9 @@ class Compare_All_Methods:
                         debug_ts_dict['weighting'].append(point['weighting'])
 
             debug_ts_csv = os.path.join(os.path.join(self.ts_dir, method), molecule + '-' + method + '-debug_ts.csv')
+
+            if not os.path.exists(os.path.join(self.ts_dir, method)):
+                os.makedirs(os.path.join(self.ts_dir, method))
 
             with open(debug_ts_csv, 'w', newline='') as file:
                 w = csv.writer(file)
@@ -1410,7 +1478,7 @@ def main():
     save = True
     overwrite = False
 
-    debug = True
+    debug = False
 
     sv_all_mol_dir = os.path.join(SV_DIR, 'molecules')
     mol_list_dir = os.listdir(sv_all_mol_dir)
@@ -1507,6 +1575,10 @@ def main():
                 method = (filename.split('-', 3)[3]).split('.')[0]
                 ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir)
 
+
+                ts_comp_class.plot_heatmap()
+                ts_comp_class.show()
+
                 ts_comp_data_list.append(ts_comp_class)
         #endregion
 
@@ -1526,15 +1598,15 @@ def main():
             # save all lm plots
             for j in range(len(lm_comp_data_list)):
                 #lm_comp_data_list[j].plot_all_groupings()
-                lm_comp_data_list[j].save_all_figures(mol_list_dir[i], overwrite)
+                lm_comp_data_list[j].save_all_figures(overwrite)
 
                 #lm_comp_data_list[j].plot_all_groupings_raw()
-                lm_comp_data_list[j].save_all_figures_raw(mol_list_dir[i], overwrite)
+                lm_comp_data_list[j].save_all_figures_raw(overwrite)
 
-            # # save all ts plots
-            # for j in range(len(ts_comp_data_list)):
-            #     ts_comp_data_list[j].save_all_figures_raw(mol_list_dir[i], overwrite)
-            #     ts_comp_data_list[j].save_all_figures_single(mol_list_dir[i], overwrite)
+            # save all ts plots
+            for j in range(len(ts_comp_data_list)):
+                ts_comp_data_list[j].save_all_figures_raw(overwrite)
+                ts_comp_data_list[j].save_all_figures_single(overwrite)
 
     return
 

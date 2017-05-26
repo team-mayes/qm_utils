@@ -173,16 +173,16 @@ def get_pol_coords(vert_1, vert_2):
 
 # plots a line on a rectangular plot (2D)
 # vert_n: [vert in polar, color, size]
-def plot_line(ax, vert_1, vert_2, line_color):
+def plot_line(ax, vert_1, vert_2, line_color, line_style='-'):
     line = get_pol_coords(vert_1[0], vert_2[0])
 
     if (is_end(line)):
         two_edges = split_in_two(line)
 
-        ax.plot(two_edges[0][0], two_edges[0][1], color=line_color, zorder=1)
-        ax.plot(two_edges[1][0], two_edges[1][1], color=line_color, zorder=1)
+        ax.plot(two_edges[0][0], two_edges[0][1], color=line_color, linestyle=line_style, zorder=1)
+        ax.plot(two_edges[1][0], two_edges[1][1], color=line_color, linestyle=line_style, zorder=1)
     else:
-        ax.plot(line[0], line[1], color=line_color)
+        ax.plot(line[0], line[1], color=line_color, linestyle=line_style)
 
     ax.scatter(line[0][0], line[1][0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor='face', zorder=10)
     ax.scatter(line[0][-1], line[1][-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=10)
@@ -274,7 +274,7 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
 
 # plots a line on a circular plot (2D)
 # vert_n: [vert in polar, color, size]
-def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black'):
+def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', line_style='-'):
     pol_coords = get_pol_coords(vert_1[0], vert_2[0])
 
     # theta
@@ -289,7 +289,7 @@ def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black'):
 
     theta[0] = theta[1]
 
-    ax_circ.plot(theta, r, color=line_color, zorder=1)
+    ax_circ.plot(theta, r, color=line_color, linestyle=line_style, zorder=1)
 
     ax_circ.scatter(theta[0], r[0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor='face', zorder=10)
     ax_circ.scatter(theta[-1], r[-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=10)
