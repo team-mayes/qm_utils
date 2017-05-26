@@ -421,7 +421,7 @@ class Local_Minima_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
-        label_list = ['LM Kmeans Center', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
+        label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
 
         base_name = "z_dataset-" + mol_name + "-LM-" + self.overall_data['method']
 
@@ -463,6 +463,8 @@ class Local_Minima_Compare():
                 self.lm_class.wipe_plot()
 
     def save_all_figures_raw(self, mol_name, overwrite):
+        mol_name
+
         # Create custom artists
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
@@ -471,7 +473,7 @@ class Local_Minima_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [raw_ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
-        label_list = ['Raw Reference LM', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
+        label_list = ['Raw Reference LM', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
 
         base_name = "z_dataset-" + mol_name + "-LM-" + self.overall_data['method']
 
@@ -1240,7 +1242,7 @@ class Compare_All_Methods:
                 for key in self.methods_lm_data[k].group_data[i]['points']:
                     point = self.methods_lm_data[k].group_data[i]['points'][key]
 
-                    debug_lm_dict['group'].append(str(i) + '-' + str(key))
+                    debug_lm_dict['group'].append(str(i) + '_' + str(key))
                     debug_lm_dict['arclength'].append(self.methods_lm_data[k].hartree_data[key]['arc_lengths'][0][1])
                     debug_lm_dict['gibbs'].append(point['G298 (Hartrees)'])
                     debug_lm_dict['weighting'].append(point['weighting'])
