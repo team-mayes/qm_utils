@@ -18,6 +18,9 @@ import pandas as pd
 import math
 import numpy as np
 
+import matplotlib
+matplotlib.use('TkAgg')
+
 from prettytable import PrettyTable
 from collections import OrderedDict
 from operator import itemgetter
@@ -1475,10 +1478,13 @@ def check_for_overwrite(filename, dir, overwrite_bool):
 # # #  Main  # # #
 #region
 def main():
-    save = True
-    overwrite = False
 
-    debug = False
+    print('Hi mom')
+
+    save = False
+    overwrite = False # will overwrite
+
+    debug = False #has those CSV files
 
     sv_all_mol_dir = os.path.join(SV_DIR, 'molecules')
     mol_list_dir = os.listdir(sv_all_mol_dir)
@@ -1488,6 +1494,8 @@ def main():
     # for each molecule, perform the comparisons
     for i in range(len(mol_list_dir)):
         molecule = mol_list_dir[i]
+
+        print('\nCurrently running: {}\n'.format(molecule))
 
         # checks if directory exists, and creates it if not
         if not os.path.exists(os.path.join(MET_COMP_DIR, mol_list_dir[i])):
@@ -1554,6 +1562,7 @@ def main():
             if filename.endswith(".csv"):
                 method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
                 method = (filename.split('-', 3)[3]).split('.')[0]
+                print('\nCurrently running: LM for {}\n'.format(method))
                 lm_comp_class = Local_Minima_Compare(molecule, method, method_hartree, lm_class, comp_lm_dir)
 
                 lm_comp_data_list.append(lm_comp_class)
@@ -1573,11 +1582,12 @@ def main():
             if filename.endswith(".csv"):
                 ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
                 method = (filename.split('-', 3)[3]).split('.')[0]
+                print('\nCurrently running: TS for {}\n'.format(method))
                 ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir)
+                print('I MADE IT OUT')
 
-
-                ts_comp_class.plot_heatmap()
-                ts_comp_class.show()
+                # ts_comp_class.plot_heatmap()
+                # ts_comp_class.show()
 
                 ts_comp_data_list.append(ts_comp_class)
         #endregion
@@ -1586,27 +1596,29 @@ def main():
 
         order_in = ['reference', 'b3lyp', 'dftb', 'am1', 'pm6', 'pm3mm', 'pm3']
 
-        if debug:
-            comp_all_met.write_debug_lm_to_csv()
-            comp_all_met.write_debug_ts_to_csv()
+        # if debug:
+        #     comp_all_met.write_debug_lm_to_csv()
+        #     comp_all_met.write_debug_ts_to_csv()
+        #
+        # if save:
+        #     # save the comparison data
+        #     comp_all_met.write_lm_to_csv()
+        #     comp_all_met.write_ts_to_csv()
+        #
+        #     # save all lm plots
+        #     for j in range(len(lm_comp_data_list)):
+        #         #lm_comp_data_list[j].plot_all_groupings()
+        #         lm_comp_data_list[j].save_all_figures(overwrite)
+        #
+        #         #lm_comp_data_list[j].plot_all_groupings_raw()
+        #         lm_comp_data_list[j].save_all_figures_raw(overwrite)
+        #
+        #     # save all ts plots
+        #     for j in range(len(ts_comp_data_list)):
+        #         ts_comp_data_list[j].save_all_figures_raw(overwrite)
+        #         ts_comp_data_list[j].save_all_figures_single(overwrite)
 
-        if save:
-            # save the comparison data
-            comp_all_met.write_lm_to_csv()
-            comp_all_met.write_ts_to_csv()
-
-            # save all lm plots
-            for j in range(len(lm_comp_data_list)):
-                #lm_comp_data_list[j].plot_all_groupings()
-                lm_comp_data_list[j].save_all_figures(overwrite)
-
-                #lm_comp_data_list[j].plot_all_groupings_raw()
-                lm_comp_data_list[j].save_all_figures_raw(overwrite)
-
-            # save all ts plots
-            for j in range(len(ts_comp_data_list)):
-                ts_comp_data_list[j].save_all_figures_raw(overwrite)
-                ts_comp_data_list[j].save_all_figures_single(overwrite)
+    print('this ended...')
 
     return
 
