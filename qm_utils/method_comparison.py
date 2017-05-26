@@ -1377,7 +1377,7 @@ def rewrite_ts_hartree(ts_hartree_dict_list, method, molecule, dir):
 # # #  Main  # # #
 #region
 def main():
-    save = True
+    save = False
     sv_all_mol_dir = os.path.join(SV_DIR, 'molecules')
     mol_list_dir = os.listdir(sv_all_mol_dir)
 
