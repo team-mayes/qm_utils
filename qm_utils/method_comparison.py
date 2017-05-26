@@ -102,7 +102,10 @@ class Local_Minima_Compare():
     """
     class for organizing the local minima information
     """
-    def __init__(self, method_in, lm_dataset_in, lm_class_in, lm_dir_in):
+    def __init__(self, molecule_in, method_in, lm_dataset_in, lm_class_in, lm_dir_in):
+        self.molecule = molecule_in
+        self.method = method_in
+
         self.hartree_data = []
         self.lm_class = lm_class_in
         self.group_data = []
@@ -409,7 +412,7 @@ class Local_Minima_Compare():
 
     # # # saving functions # # #
     #region
-    def save_all_figures(self, mol_name):
+    def save_all_figures(self, mol_name, overwrite):
         # Create custom artist
         size_scaling = 1
         ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30*size_scaling, c='red', marker='o', edgecolor='face')
@@ -418,7 +421,7 @@ class Local_Minima_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
-        label_list = ['Reference LM', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
+        label_list = ['LM Kmeans Center', 'Method LM', 'Voronoi Edge', 'Canonical Designation']
 
         base_name = "z_dataset-" + mol_name + "-LM-" + self.overall_data['method']
 
@@ -432,44 +435,34 @@ class Local_Minima_Compare():
         if not os.path.exists(overall_dir):
             os.makedirs(overall_dir)
 
-        # saves a plot of all groupings
-        self.plot_all_groupings()
-        self.lm_class.plot_cano()
+        if not os.path.exists(os.path.join(base_name + '-all_groupings', overall_dir)) or overwrite:
+            # saves a plot of all groupings
+            self.plot_all_groupings()
+            self.lm_class.plot_cano()
 
-        self.set_title_and_legend(artist_list, label_list)
+            self.set_title_and_legend(artist_list, label_list)
 
-        self.lm_class.plot.save(base_name + '-all_groupings', overall_dir)
-        self.lm_class.wipe_plot()
+            self.lm_class.plot.save(base_name + '-all_groupings', overall_dir)
+            self.lm_class.wipe_plot()
 
         for i in range(len(self.group_data)):
-            # saves a plot of each group individually plotted
-            self.plot_grouping(i)
-            self.lm_class.plot_cano()
             # checks if directory exists, and creates it if not
             if not os.path.exists(os.path.join(met_data_dir, 'groups')):
                 os.makedirs(os.path.join(met_data_dir, 'groups'))
 
             groups_dir = os.path.join(met_data_dir, 'groups')
 
-            self.set_title_and_legend(artist_list, label_list)
+            if not os.path.exists(os.path.join(base_name + '-group_' + str(i), groups_dir)) or overwrite:
+                # saves a plot of each group individually plotted
+                self.plot_grouping(i)
+                self.lm_class.plot_cano()
 
-            self.lm_class.plot.save(base_name + '-group_' + str(i), groups_dir)
-            self.lm_class.wipe_plot()
+                self.set_title_and_legend(artist_list, label_list)
 
-            # # saves a plot of a focused view of each group
-            # self.plot_window(i)
-            # self.lm_class.plot_cano()
-            # WINDOWED_DIR = os.path.join(MET_DATA_DIR, 'groups_windowed')
-            # # checks if directory exists, and creates it if not
-            # if not os.path.exists(WINDOWED_DIR):
-            #     os.makedirs(WINDOWED_DIR)
-            #
-            # self.set_title_and_legend(artist_list, label_list)
-            #
-            # self.lm_class.plot.save(base_name + '-group_' + str(i) + '-windowed', WINDOWED_DIR)
-            # self.lm_class.wipe_plot()
+                self.lm_class.plot.save(base_name + '-group_' + str(i), groups_dir)
+                self.lm_class.wipe_plot()
 
-    def save_all_figures_raw(self, mol_name):
+    def save_all_figures_raw(self, mol_name, overwrite):
         # Create custom artists
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
@@ -492,15 +485,15 @@ class Local_Minima_Compare():
         if not os.path.exists(overall_dir):
             os.makedirs(overall_dir)
 
-        # saves plot of all groupings with the raw group data
-        # self.plot_all_groupings_raw()
-        self.plot_method_data()
-        self.lm_class.plot_cano()
+        if not os.path.exists(os.path.join(base_name + '-all_method_raw_data', overall_dir)) or overwrite:
+            # saves plot of all groupings with the raw group data
+            self.plot_method_data()
+            self.lm_class.plot_cano()
 
-        self.set_title_and_legend(artist_list, label_list)
+            self.set_title_and_legend(artist_list, label_list)
 
-        self.lm_class.plot.save(base_name + '-all_method_raw_data', overall_dir)
-        self.lm_class.wipe_plot()
+            self.lm_class.plot.save(base_name + '-all_method_raw_data', overall_dir)
+            self.lm_class.wipe_plot()
     #endregion
 
     def arb(self):
@@ -510,10 +503,12 @@ class Transition_State_Compare():
     """
     class for organizing the transition state information
     """
-    def  __init__(self, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in):
+    def  __init__(self, molecule_in, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in):
         self.lm_class = lm_class_in
         self.ts_class = ts_class_in
         self.ts_dataset = ts_dataset_in
+
+        self.molecule = molecule_in
         self.method = method_in
 
         self.ts_dir = ts_dir_in
@@ -660,6 +655,8 @@ class Transition_State_Compare():
                 self.ref_path_group_data[key][i]['group_RMSD'] = 'n/a'
 
         for key in self.path_group_data:
+            keyaa = key
+
             if key in self.ref_path_group_data:
                 for i in range(len(self.path_group_data[key])):
                     # list for shortest arclengths
@@ -981,7 +978,7 @@ class Transition_State_Compare():
     # endregion
 
     # # # saving functions # # #
-    def save_all_figures_raw(self, mol_name):
+    def save_all_figures_raw(self, mol_name, overwrite):
         # Create custom artist
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
@@ -1008,17 +1005,18 @@ class Transition_State_Compare():
         raw_data_dir = os.path.join(met_data_dir, 'raw_LMs')
 
         for key in self.path_group_data:
-            # saves a plot of each group individually plotted
-            self.plot_path_group_raw(key)
-            self.ts_class.plot_cano()
-            self.plot_group_names(key)
+            if not os.path.exists(os.path.join(base_name + '-' + key, raw_data_dir)) or overwrite:
+                # saves a plot of each group individually plotted
+                self.plot_path_group_raw(key)
+                self.ts_class.plot_cano()
+                self.plot_group_names(key)
 
-            self.set_title_and_legend(artist_list, label_list)
+                self.set_title_and_legend(artist_list, label_list)
 
-            self.ts_class.plot.save(base_name + '-' + key, raw_data_dir)
-            self.ts_class.wipe_plot()
+                self.ts_class.plot.save(base_name + '-' + key, raw_data_dir)
+                self.ts_class.wipe_plot()
 
-    def save_all_figures_single(self, mol_name):
+    def save_all_figures_single(self, mol_name, overwrite):
         # Create custom artist
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
@@ -1043,19 +1041,20 @@ class Transition_State_Compare():
         if not os.path.exists(os.path.join(met_data_dir, 'single_LMs')):
             os.makedirs(os.path.join(met_data_dir, 'single_LMs'))
 
-        avg_data_dir = os.path.join(met_data_dir, 'single_LMs')
+        single_data_dir = os.path.join(met_data_dir, 'single_LMs')
 
         for key in self.path_group_data:
-            # saves a plot of each group individually plotted
-            self.plot_path_group_single(key)
-            if key in self.ref_path_group_data:
-                self.plot_ref_path_group_single(key)
-            self.ts_class.plot_cano()
+            if not os.path.exists(os.path.join(base_name + '-' + key, single_data_dir)) or overwrite:
+                # saves a plot of each group individually plotted
+                self.plot_path_group_single(key)
+                if key in self.ref_path_group_data:
+                    self.plot_ref_path_group_single(key)
+                self.ts_class.plot_cano()
 
-            self.set_title_and_legend(artist_list, label_list)
+                self.set_title_and_legend(artist_list, label_list)
 
-            self.ts_class.plot.save(base_name + '-' + key, avg_data_dir)
-            self.ts_class.wipe_plot()
+                self.ts_class.plot.save(base_name + '-' + key, single_data_dir)
+                self.ts_class.wipe_plot()
     # endregion
 
 class Compare_All_Methods:
@@ -1068,50 +1067,9 @@ class Compare_All_Methods:
         self.methods_ts_data = methods_ts_data_in
         self.ts_dir = ts_dir_in
 
-    def write_to_txt(self, do_print):
-        tables = []
-
-        for i in range(len(self.methods_lm_data)):
-            for j in range(len(self.methods_lm_data[0].group_rows)):
-                header = []
-                header.append('group_' + str(j))
-                header.append('group_RMSD')
-                header.append('group_WRMSD')
-                header.append('WSS')
-                header.append('WWSS')
-
-                if len(tables) < len(self.methods_lm_data[0].group_rows):
-                    tables.append(PrettyTable(header))
-
-                tables[j].add_row(self.methods_lm_data[i].group_rows[j])
-
-            if len(tables) < len(self.methods_lm_data[0].group_rows) + 1:
-                header = []
-                header.append('overall')
-                header.append('   RMSD   ')
-                header.append('   WRMSD   ')
-                header.append('SSE')
-                header.append('WSSE')
-
-                tables.append(PrettyTable(header))
-
-            tables[len(tables) - 1].add_row(self.methods_lm_data[i].overall_row)
-
-        filename = os.path.join(LM_DIR, 'comparison_data.txt')
-        with open(filename, 'w') as file:
-            file.write('')
-
-        for i in range(len(tables)):
-            if do_print:
-                print(tables[i])
-
-            table_txt = tables[i].get_string()
-
-            with open(filename, 'a') as file:
-                file.write(table_txt)
-                file.write('\n')
-
     def write_lm_to_csv(self):
+        molecule = self.methods_lm_data[0].molecule
+
         group_RMSD_dict = {}
         group_WRMSD_dict = {}
         WSS_dict = {}
@@ -1161,10 +1119,10 @@ class Compare_All_Methods:
                 WSS_dict[method].append(WSS_val)
                 WWSS_dict[method].append(WWSS_val)
 
-        group_RMSD_csv = os.path.join(self.lm_dir, 'group_RMSD.csv')
-        group_WRMSD_csv = os.path.join(self.lm_dir, 'group_WRMSD.csv')
-        WSS_csv = os.path.join(self.lm_dir, 'WSS.csv')
-        WWSS_csv = os.path.join(self.lm_dir, 'WWSS.csv')
+        group_RMSD_csv = os.path.join(self.lm_dir, molecule + '-group_RMSD.csv')
+        group_WRMSD_csv = os.path.join(self.lm_dir, molecule + '-group_WRMSD.csv')
+        WSS_csv = os.path.join(self.lm_dir, molecule + '-WSS.csv')
+        WWSS_csv = os.path.join(self.lm_dir, molecule + '-WWSS.csv')
 
         with open(group_RMSD_csv, 'w', newline='') as file:
             w = csv.writer(file)
@@ -1186,6 +1144,8 @@ class Compare_All_Methods:
         return
 
     def write_ts_to_csv(self):
+        molecule = self.methods_ts_data[0].molecule
+
         group_RMSD_dict = {}
         group_WRMSD_dict = {}
         WSS_dict = {}
@@ -1238,10 +1198,10 @@ class Compare_All_Methods:
                     WSS_dict[method].append(WSS_val)
                     WWSS_dict[method].append(WWSS_val)
 
-        group_RMSD_csv = os.path.join(self.ts_dir, 'group_RMSD.csv')
-        group_WRMSD_csv = os.path.join(self.ts_dir, 'group_WRMSD.csv')
-        WSS_csv = os.path.join(self.ts_dir, 'WSS.csv')
-        WWSS_csv = os.path.join(self.ts_dir, 'WWSS.csv')
+        group_RMSD_csv = os.path.join(self.ts_dir, molecule + '-group_RMSD.csv')
+        group_WRMSD_csv = os.path.join(self.ts_dir, molecule + '-group_WRMSD.csv')
+        WSS_csv = os.path.join(self.ts_dir, molecule + '-WSS.csv')
+        WWSS_csv = os.path.join(self.ts_dir, molecule + '-WWSS.csv')
 
         with open(group_RMSD_csv, 'w', newline='') as file:
             w = csv.writer(file)
@@ -1259,6 +1219,71 @@ class Compare_All_Methods:
             w = csv.writer(file)
             w.writerow(WWSS_dict.keys())
             w.writerows(zip(*WWSS_dict.values()))
+
+        return
+
+    def write_debug_lm_to_csv(self):
+        molecule = self.methods_lm_data[0].molecule
+
+        debug_lm_dict = {}
+
+        debug_lm_dict['group'] = []
+        debug_lm_dict['arclength'] = []
+        debug_lm_dict['gibbs'] = []
+        debug_lm_dict['weighting'] = []
+
+        for k in range(len(self.methods_lm_data)):
+            method = self.methods_lm_data[k].method
+
+            # filling the dict
+            for i in range(len(self.methods_lm_data[k].group_data)):
+                for key in self.methods_lm_data[k].group_data[i]['points']:
+                    point = self.methods_lm_data[k].group_data[i]['points'][key]
+
+                    debug_lm_dict['group'].append(str(i) + '-' + str(key))
+                    debug_lm_dict['arclength'].append(self.methods_lm_data[k].hartree_data[key]['arc_lengths'][0][1])
+                    debug_lm_dict['gibbs'].append(point['G298 (Hartrees)'])
+                    debug_lm_dict['weighting'].append(point['weighting'])
+
+            debug_lm_csv = os.path.join(os.path.join(self.lm_dir, method), molecule + '-' + method + '-debug_lm.csv')
+
+            with open(debug_lm_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(debug_lm_dict.keys())
+                w.writerows(zip(*debug_lm_dict.values()))
+
+        return
+
+    def write_debug_ts_to_csv(self):
+        molecule = self.methods_ts_data[0].molecule
+
+        debug_ts_dict = {}
+
+        debug_ts_dict['group'] = []
+        debug_ts_dict['arclength'] = []
+        debug_ts_dict['gibbs'] = []
+        debug_ts_dict['weighting'] = []
+
+        for k in range(len(self.methods_ts_data)):
+            method = self.methods_ts_data[k].method
+
+            # filling the dict
+            for key in self.methods_ts_data[k].ref_path_group_data:
+                for i in range(len(self.methods_ts_data[k].ref_path_group_data[key])):
+                    for j in range(len(self.methods_ts_data[k].ref_path_group_data[key][i]['points'])):
+                        point = self.methods_ts_data[k].ref_path_group_data[key][i]['points'][j]
+
+                        debug_ts_dict['group'].append(key + '-' + str(i) + '-' + str(j))
+                        debug_ts_dict['arclength'].append(point['arc_lengths'][0][1])
+                        debug_ts_dict['gibbs'].append(point['G298 (Hartrees)'])
+                        debug_ts_dict['weighting'].append(point['weighting'])
+
+            debug_ts_csv = os.path.join(os.path.join(self.ts_dir, method), molecule + '-' + method + '-debug_ts.csv')
+
+            with open(debug_ts_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(debug_ts_dict.keys())
+                w.writerows(zip(*debug_ts_dict.values()))
 
         return
 
@@ -1281,7 +1306,7 @@ class Compare_All_Methods:
 
         return
 
-    def ploting_all_method_information(self, order_in):
+    def plotting_all_method_information(self, order_in):
 
         pass
         #
@@ -1372,12 +1397,19 @@ def rewrite_ts_hartree(ts_hartree_dict_list, method, molecule, dir):
         w.writerows(zip(*ts_paths_dict.values()))
 
     return
+
+def check_for_overwrite(filename, dir, overwrite_bool):
+    return
 #endregion
 
 # # #  Main  # # #
 #region
 def main():
-    save = False
+    save = True
+    overwrite = False
+
+    debug = True
+
     sv_all_mol_dir = os.path.join(SV_DIR, 'molecules')
     mol_list_dir = os.listdir(sv_all_mol_dir)
 
@@ -1452,7 +1484,7 @@ def main():
             if filename.endswith(".csv"):
                 method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
                 method = (filename.split('-', 3)[3]).split('.')[0]
-                lm_comp_class = Local_Minima_Compare(method, method_hartree, lm_class, comp_lm_dir)
+                lm_comp_class = Local_Minima_Compare(molecule, method, method_hartree, lm_class, comp_lm_dir)
 
                 lm_comp_data_list.append(lm_comp_class)
         #endregion
@@ -1471,7 +1503,7 @@ def main():
             if filename.endswith(".csv"):
                 ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
                 method = (filename.split('-', 3)[3]).split('.')[0]
-                ts_comp_class = Transition_State_Compare(method, ts_hartree, lm_class, ts_class, comp_ts_dir)
+                ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir)
 
                 ts_comp_data_list.append(ts_comp_class)
         #endregion
@@ -1480,9 +1512,9 @@ def main():
 
         order_in = ['reference', 'b3lyp', 'dftb', 'am1', 'pm6', 'pm3mm', 'pm3']
 
-        # comp_all_met_LM.organize_data_for_plotting(order_in)
-
-        # comp_all_met_LM.ploting_all_method_information(order_in)
+        if debug:
+            comp_all_met.write_debug_lm_to_csv()
+            comp_all_met.write_debug_ts_to_csv()
 
         if save:
             # save the comparison data
@@ -1491,16 +1523,16 @@ def main():
 
             # save all lm plots
             for j in range(len(lm_comp_data_list)):
-                lm_comp_data_list[j].plot_all_groupings()
-                lm_comp_data_list[j].save_all_figures(mol_list_dir[i])
+                #lm_comp_data_list[j].plot_all_groupings()
+                lm_comp_data_list[j].save_all_figures(mol_list_dir[i], overwrite)
 
-                lm_comp_data_list[j].plot_all_groupings_raw()
-                lm_comp_data_list[j].save_all_figures_raw(mol_list_dir[i])
+                #lm_comp_data_list[j].plot_all_groupings_raw()
+                lm_comp_data_list[j].save_all_figures_raw(mol_list_dir[i], overwrite)
 
-            # save all ts plots
-            for j in range(len(ts_comp_data_list)):
-                ts_comp_data_list[j].save_all_figures_raw(mol_list_dir[i])
-                ts_comp_data_list[j].save_all_figures_single(mol_list_dir[i])
+            # # save all ts plots
+            # for j in range(len(ts_comp_data_list)):
+            #     ts_comp_data_list[j].save_all_figures_raw(mol_list_dir[i], overwrite)
+            #     ts_comp_data_list[j].save_all_figures_single(mol_list_dir[i], overwrite)
 
     return
 
