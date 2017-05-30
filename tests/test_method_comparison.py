@@ -12,7 +12,7 @@ import unittest
 
 from qm_utils.method_comparison import main, Local_Minima_Compare
 from qm_utils.qm_common import capture_stderr, capture_stdout, read_csv_to_dict
-from qm_utils.spherical_kmeans_voronoi import Local_Minima, read_csv_data, read_csv_canonical_designations, Plots, Local_Minima_Cano
+from qm_utils.spherical_kmeans_voronoi import Transition_States, Local_Minima, read_csv_data, read_csv_data_TS, read_csv_canonical_designations, Plots, Local_Minima_Cano
 
 __author__ = 'SPVicchio'
 
@@ -62,41 +62,22 @@ HSP_LOCAL_MIN = 'z_bxyl_lm-b3lyp_howsugarspucker.csv'
 
 class TestMain(unittest.TestCase):
     def testMainBxyl(self):
-        # test_input = ["-s", LIST_OF_DATASET_FILES_BXYL, "-d", MET_COMP_DIR, "-m", "bxyl"]
-        # main(test_input)
-
-        number_clusters = 9
-        data_points, phi_raw, theta_raw, energy = read_csv_data(HSP_LOCAL_MIN, SUB_DATA_DIR_SV)
+        # initialization info for local minimum clustering for specific molecule
+        number_clusters = 15
         dict_cano = read_csv_canonical_designations('CP_params.csv', SUB_DATA_DIR_SV)
-
+        data_points, phi_raw, theta_raw, energy = read_csv_data(
+            'z_aglc_lm-b3lyp_howsugarspucker.csv',
+            SUB_DATA_DIR_SV)
         lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
-        lm_class_cano = Local_Minima_Cano(dict_cano)
 
-        AM1_list_dicts = read_csv_to_dict(DATASET_FILE_LM_AM1, mode='r')
-        #HSP_list_dicts = read_csv_to_dict(DATASET_FILE_LM_HSP, mode='r')
+        lm_class.plot_all_vor_sec()
+        lm_class.plot_local_min_sizes()
+        lm_class.plot_cano()
 
-        method_list_dicts = read_csv_to_dict(DATASET_FILE_LM_AM1, mode='r')
+        ts_data_dict = read_csv_data_TS('z_aglc_TS-b3lyp_howsugarspucker.csv',
+                                        SUB_DATA_DIR_SV)[3]
+        ts_class = Transition_States(ts_data_dict, lm_class)
 
-        # lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
-        # lm_comp_cano_class.save_all_figures_raw()
-
-        AM1_comp = Local_Minima_Compare('AM1', AM1_list_dicts, lm_class)
-        #HSP_comp = Local_Minima_Compare('ref', HSP_list_dicts, lm_class)
-        #AM1_comp.save_all_figures_raw()
-        #HSP_comp.save_all_figures_raw()
-
-        #AM1_comp.print()
-        #HSP_comp.print()
-
-        # Canonical
-        lm_class.plot_group_labels()
-        lm_class.show()
-
-        lm_class_cano = Local_Minima_Cano(dict_cano)
-        lm_comp_cano_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class_cano)
-        #lm_comp_cano_class.save_all_figures_raw()
-
-        # HSP reference
-        #
-        # lm_comp_class = Local_Minima_Compare('AM1', method_list_dicts, lm_class)
-        # lm_comp_class.save_all_figures_raw()
+        ts_class.plot_cano()
+        ts_class.plot_all_2d()
+        ts_class.show()

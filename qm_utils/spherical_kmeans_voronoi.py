@@ -1009,15 +1009,15 @@ class Transition_States():
                 for ts_group_key in self.ts_groups[lm_key]:
                     path = self.ts_groups[lm_key][ts_group_key]
 
-                    plot_line(self.plot.ax_rect, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                    plot_line(self.plot.ax_rect, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+                    plot_line(self.plot.ax_rect, [path['ts_vert_cart'], 'blue', 60], [path['lm1_vert_cart'], 'green', 60], 'red')
+                    plot_line(self.plot.ax_rect, [path['ts_vert_cart'], 'blue', 60], [path['lm2_vert_cart'], 'green', 60], 'red')
 
                     if self.north_groups.count(lm_key) == 1:
-                        plot_on_circle(self.plot.ax_circ_north, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                        plot_on_circle(self.plot.ax_circ_north, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+                        plot_on_circle(self.plot.ax_circ_north, [path['ts_vert_cart'], 'blue', 60], [path['lm1_vert_cart'], 'green', 60], 'red')
+                        plot_on_circle(self.plot.ax_circ_north, [path['ts_vert_cart'], 'blue', 60], [path['lm2_vert_cart'], 'green', 60], 'red')
                     elif self.south_groups.count(lm_key) == 1:
-                        plot_on_circle(self.plot.ax_circ_south, path['ts_vert_cart'], path['lm1_vert_cart'], 'red')
-                        plot_on_circle(self.plot.ax_circ_south, path['ts_vert_cart'], path['lm2_vert_cart'], 'red')
+                        plot_on_circle(self.plot.ax_circ_south, [path['ts_vert_cart'], 'blue', 60], [path['lm1_vert_cart'], 'green', 60], 'red')
+                        plot_on_circle(self.plot.ax_circ_south, [path['ts_vert_cart'], 'blue', 60], [path['lm2_vert_cart'], 'green', 60], 'red')
 
     # plots desired local minimum group pathways for all uniq ts pts
     def plot_loc_min_group_3d(self, plot, lm_key_in):
