@@ -965,13 +965,24 @@ class Transition_State_Compare():
         for key in self.path_group_data:
             self.plot_path_group_raw(key)
 
-        # self.lm_class.plot_group_names()
-
     def plot_all_path_groups_single(self):
         for key in self.path_group_data:
             self.plot_path_group_single(key)
 
     def plot_heatmap(self):
+        heatmap = plt.get_cmap('Blues')
+
+        # finding max group_RMSD
+        max_RMSD = 0
+
+        for path_group in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[path_group])):
+                group_WRMSD = self.ref_path_group_data[path_group][i]['group_WRMSD']
+
+                if group_WRMSD != 'n/a' and group_WRMSD > max_RMSD:
+                    max_RMSD = group_WRMSD
+
+        # plotting heatmap
         for path_group in self.ref_path_group_data:
             lm1_key = int(path_group.split('_')[0])
             lm2_key = int(path_group.split('_')[1])
@@ -985,53 +996,34 @@ class Transition_State_Compare():
             for i in range(len(self.ref_path_group_data[path_group])):
                 point = self.ref_path_group_data[path_group][i]
 
+                # if no data matches to current ts group
                 if point['group_WRMSD'] == 'n/a':
-                    # ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
-                    #                     self.ref_path_group_data[path_group][i]['theta']])
-                    #
-                    # vert_1 = ts_vert
-                    # vert_2 = lm2_vert
-                    #
-                    # line = get_pol_coords(vert_1[0], vert_2[0])
-                    #
-                    # if (is_end(line)):
-                    #     two_edges = split_in_two(line)
-                    #
-                    #     self.ts_class.plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color='gray', linestyle='-.', zorder=1)
-                    #     self.ts_class.plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color='gray', linestyle='-.', zorder=1)
-                    # else:
-                    #     self.ts_class.plot.ax_rect.plot(line[0], line[1], color='gray', linestyle='-.')
-                    #
-                    # vert_3 = ts_vert
-                    # vert_4 = lm1_vert
-                    #
-                    # line = get_pol_coords(vert_3[0], vert_4[0])
-                    #
-                    # if (is_end(line)):
-                    #     two_edges = split_in_two(line)
-                    #
-                    #     self.ts_class.plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color='gray', linestyle='-.',
-                    #                                     zorder=1)
-                    #     self.ts_class.plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color='gray', linestyle='-.',
-                    #                                     zorder=1)
-                    # else:
-                    #     self.ts_class.plot.ax_rect.plot(line[0], line[1], color='gray', linestyle='-.')
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
+                                        self.ref_path_group_data[path_group][i]['theta']])
 
-                    self.ts_class.plot.ax_rect.scatter(point['phi'], point['theta'], s=60, c='white', marker='s', edgecolor='black',
-                               zorder=10)
-                else:
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'red')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'red')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
 
                     if self.north_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'green', 30], [lm1_vert, 'green', 60], 'red')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'green', 30], [lm2_vert, 'green', 60], 'red')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
                     elif self.south_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'green', 30], [lm1_vert, 'green', 60], 'red')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'green', 30], [lm2_vert, 'green', 60], 'red')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+                else:
+                    ts_color = heatmap(1 - point['group_WRMSD'] / max_RMSD)
 
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30], [lm1_vert, 'green', 60], 'red', '-', 'black')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30], [lm2_vert, 'green', 60], 'red', '-', 'black')
+
+                    if self.north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30], [lm1_vert, 'green', 60], 'red', '-', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30], [lm2_vert, 'green', 60], 'red', '-', 'black')
+                    elif self.south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30], [lm1_vert, 'green', 60], 'red', '-', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30], [lm2_vert, 'green', 60], 'red', '-', 'black')
 
         return
 
@@ -1122,6 +1114,38 @@ class Transition_State_Compare():
 
                 self.ts_class.plot.save(base_name + '-' + key, single_data_dir)
                 self.ts_class.wipe_plot()
+    # endregion
+
+    def save_heatmap(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='blue', marker='s',
+                                    edgecolor='black')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
+
+        artist_list = [met_lm_Artist, met_ts_Artist, path_Artist, ref_path_Artist, cano_lm_Artist]
+        label_list = [self.method + ' LM', self.method + ' TS', 'Pathway', 'Reference pathway', 'Canonical Designation']
+
+        base_name = "z_dataset-" + self.molecule + "-TS-heatmap-" + self.method
+
+        if not os.path.exists(os.path.join(self.ts_dir, 'heatmaps')):
+            os.makedirs(os.path.join(self.ts_dir, 'heatmaps'))
+
+        heatmap_data_dir = os.path.join(self.ts_dir, 'heatmaps')
+
+        if not os.path.exists(os.path.join(heatmap_data_dir, base_name + '.png')) or overwrite:
+            self.plot_heatmap()
+            self.ts_class.plot_cano()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.ts_class.plot.save(base_name, heatmap_data_dir)
+            self.ts_class.wipe_plot()
     # endregion
 
 class Compare_All_Methods:
@@ -1470,18 +1494,12 @@ def rewrite_ts_hartree(ts_hartree_dict_list, method, molecule, dir):
         w.writerows(zip(*ts_paths_dict.values()))
 
     return
-
-def check_for_overwrite(filename, dir, overwrite_bool):
-    return
 #endregion
 
 # # #  Main  # # #
 #region
 def main():
-
-    print('Hi mom')
-
-    save = False
+    save = True
     overwrite = False # will overwrite
 
     debug = False #has those CSV files
@@ -1494,8 +1512,6 @@ def main():
     # for each molecule, perform the comparisons
     for i in range(len(mol_list_dir)):
         molecule = mol_list_dir[i]
-
-        print('\nCurrently running: {}\n'.format(molecule))
 
         # checks if directory exists, and creates it if not
         if not os.path.exists(os.path.join(MET_COMP_DIR, mol_list_dir[i])):
@@ -1562,7 +1578,6 @@ def main():
             if filename.endswith(".csv"):
                 method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
                 method = (filename.split('-', 3)[3]).split('.')[0]
-                print('\nCurrently running: LM for {}\n'.format(method))
                 lm_comp_class = Local_Minima_Compare(molecule, method, method_hartree, lm_class, comp_lm_dir)
 
                 lm_comp_data_list.append(lm_comp_class)
@@ -1582,12 +1597,7 @@ def main():
             if filename.endswith(".csv"):
                 ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
                 method = (filename.split('-', 3)[3]).split('.')[0]
-                print('\nCurrently running: TS for {}\n'.format(method))
                 ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir)
-                print('I MADE IT OUT')
-
-                # ts_comp_class.plot_heatmap()
-                # ts_comp_class.show()
 
                 ts_comp_data_list.append(ts_comp_class)
         #endregion
@@ -1596,29 +1606,28 @@ def main():
 
         order_in = ['reference', 'b3lyp', 'dftb', 'am1', 'pm6', 'pm3mm', 'pm3']
 
-        # if debug:
-        #     comp_all_met.write_debug_lm_to_csv()
-        #     comp_all_met.write_debug_ts_to_csv()
-        #
-        # if save:
-        #     # save the comparison data
-        #     comp_all_met.write_lm_to_csv()
-        #     comp_all_met.write_ts_to_csv()
-        #
-        #     # save all lm plots
-        #     for j in range(len(lm_comp_data_list)):
-        #         #lm_comp_data_list[j].plot_all_groupings()
-        #         lm_comp_data_list[j].save_all_figures(overwrite)
-        #
-        #         #lm_comp_data_list[j].plot_all_groupings_raw()
-        #         lm_comp_data_list[j].save_all_figures_raw(overwrite)
-        #
-        #     # save all ts plots
-        #     for j in range(len(ts_comp_data_list)):
-        #         ts_comp_data_list[j].save_all_figures_raw(overwrite)
-        #         ts_comp_data_list[j].save_all_figures_single(overwrite)
+        if debug:
+            comp_all_met.write_debug_lm_to_csv()
+            comp_all_met.write_debug_ts_to_csv()
 
-    print('this ended...')
+        if save:
+            # save the comparison data
+            comp_all_met.write_lm_to_csv()
+            comp_all_met.write_ts_to_csv()
+
+            # save all lm plots
+            for j in range(len(lm_comp_data_list)):
+                #lm_comp_data_list[j].plot_all_groupings()
+                lm_comp_data_list[j].save_all_figures(overwrite)
+
+                #lm_comp_data_list[j].plot_all_groupings_raw()
+                lm_comp_data_list[j].save_all_figures_raw(overwrite)
+
+            # save all ts plots
+            for j in range(len(ts_comp_data_list)):
+                ts_comp_data_list[j].save_all_figures_raw(overwrite)
+                ts_comp_data_list[j].save_all_figures_single(overwrite)
+                ts_comp_data_list[j].save_heatmap(overwrite)
 
     return
 
