@@ -1,0 +1,272 @@
+
+"""
+The purpose of this script is to make comparisons for a particular QM method to the reference set of HSP.
+"""
+
+# # # import # # #
+from __future__ import print_function
+
+import argparse
+import os
+import statistics as st
+import sys
+
+import csv
+import matplotlib
+matplotlib.use('TkAgg')
+
+from qm_utils.qm_common import read_csv_to_dict
+from qm_utils.spherical_kmeans_voronoi import Local_Minima, Transition_States,\
+                                              read_csv_canonical_designations, read_csv_data, read_csv_data_TS
+from qm_utils.method_comparison import Local_Minima_Compare, Transition_State_Compare, Compare_All_Methods
+
+# # # Directories # # #
+#region
+QM_1_DIR = os.path.dirname(__file__)
+
+# root of project
+QM_0_DIR = os.path.dirname(QM_1_DIR)
+
+TEST_DIR = os.path.join(QM_0_DIR, 'tests')
+TEST_DATA_DIR = os.path.join(TEST_DIR, 'test_data')
+
+MET_COMP_DIR = os.path.join(TEST_DATA_DIR, 'method_comparison')
+MOL_DIR = os.path.join(MET_COMP_DIR, 'bxyl')
+LM_DIR = os.path.join(MOL_DIR, 'local_minimum')
+
+SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
+#endregion
+
+# # # Helper Functions # # #
+#region
+# creates a .csv file in the form of the hsp ts .csv file
+def rewrite_ts_hartree(ts_hartree_dict_list, method, molecule, dir):
+    filename = 'z_dataset-' + molecule + '-TS-' + method + '.csv'
+
+    ts_path_dict = {}
+
+    ts_count = 0
+    lm_count = 0
+
+    # separate the dicts in terms of pathway
+    for i in range(len(ts_hartree_dict_list)):
+        ts_path = ts_hartree_dict_list[i]['File Name'].split('_')[0]
+
+        if ts_path not in ts_path_dict:
+            ts_path_dict[ts_path] = []
+
+        ts_path_dict[ts_path].append(ts_hartree_dict_list[i])
+
+        if float(ts_hartree_dict_list[i]['Freq 1']) < 0:
+            ts_count += 1
+        else:
+            lm_count += 1
+
+    assert(lm_count / ts_count == 2)
+
+    new_ts_path_list = []
+
+    for key in ts_path_dict:
+        new_ts_path = {}
+
+        for i in range(len(ts_path_dict[key])):
+            # if the dict is the TS pt
+            if float(ts_path_dict[key][i]['Freq 1']) < 0:
+                new_ts_path['phi'] = ts_path_dict[key][i]['phi']
+                new_ts_path['theta'] = ts_path_dict[key][i]['theta']
+                new_ts_path['energy (A.U.)'] = ts_path_dict[key][i]['Energy (A.U.)']
+                new_ts_path['G298 (Hartrees)'] = ts_path_dict[key][i]['G298 (Hartrees)']
+                new_ts_path['Pucker'] = ts_path_dict[key][i]['Pucker']
+            # else if it is a the forward lm
+            elif 'ircf' in ts_path_dict[key][i]['File Name']:
+                new_ts_path['phi_lm1'] = ts_path_dict[key][i]['phi']
+                new_ts_path['theta_lm1'] = ts_path_dict[key][i]['theta']
+            # else it is the reverse lm
+            else:
+                new_ts_path['phi_lm2'] = ts_path_dict[key][i]['phi']
+                new_ts_path['theta_lm2'] = ts_path_dict[key][i]['theta']
+
+        new_ts_path_list.append(new_ts_path)
+
+    ts_paths_dict = {}
+
+    for i in range(len(new_ts_path_list)):
+        for key in new_ts_path_list[i]:
+            if key not in ts_paths_dict:
+                ts_paths_dict[key] = []
+
+            ts_paths_dict[key].append(new_ts_path_list[i][key])
+
+    full_filename = os.path.join(dir, filename)
+
+    with open(full_filename, 'w', newline='') as file:
+        w = csv.writer(file)
+        w.writerow(ts_paths_dict.keys())
+        w.writerows(zip(*ts_paths_dict.values()))
+
+    return
+#endregion
+
+# # # Main # # #
+#region
+def main():
+    # # # save init # # #
+    #region
+    save = True
+    overwrite = False # will overwrite
+
+    write_lm = False
+    write_ts = True
+
+    do_molecule = [True, True, True, True]
+
+    debug = False # has those CSV files
+    #endregion
+
+    # # # init stuff # # #
+    #region
+    sv_all_mol_dir = os.path.join(SV_DIR, 'molecules')
+    mol_list_dir = os.listdir(sv_all_mol_dir)
+
+    num_clusters = [15, 13, 9, 8]
+    #endregion
+
+    # for each molecule, perform the comparisons
+    for i in range(len(mol_list_dir)):
+        if do_molecule[i]:
+            # # # calcs # # #
+            #region
+            # # # directory init # # #
+            #region
+            molecule = mol_list_dir[i]
+
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(MET_COMP_DIR, mol_list_dir[i])):
+                os.makedirs(os.path.join(MET_COMP_DIR, mol_list_dir[i]))
+
+            comp_mol_dir = os.path.join(MET_COMP_DIR, mol_list_dir[i])
+
+            sv_mol_dir = os.path.join(sv_all_mol_dir, mol_list_dir[i])
+            #endregion
+
+            # # # local minimum directory init # # #
+            #region
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(comp_mol_dir, 'local_minimum')):
+                os.makedirs(os.path.join(comp_mol_dir, 'local_minimum'))
+
+            comp_lm_dir = os.path.join(comp_mol_dir, 'local_minimum')
+
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
+                os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
+
+            lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
+            #endregion
+
+            # # # transition states directory init # # #
+            #region
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(comp_mol_dir, 'transitions_state')):
+                os.makedirs(os.path.join(comp_mol_dir, 'transitions_state'))
+
+            comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state')
+
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-TS')):
+                os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-TS'))
+
+            ts_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
+
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(sv_mol_dir, 'TS-unformatted')):
+                os.makedirs(os.path.join(sv_mol_dir, 'TS-unformatted'))
+
+            ts_unformatted_dir = os.path.join(sv_mol_dir, 'TS-unformatted')
+            #endregion
+
+            # # # comparison data initialization # # #
+            #region
+            lm_comp_data_list = []
+            ts_comp_data_list = []
+
+            # initialization info for local minimum clustering for specific molecule
+            number_clusters = num_clusters[i]
+            dict_cano = read_csv_canonical_designations('CP_params.csv', SV_DIR)
+            data_points, phi_raw, theta_raw, energy = read_csv_data('z_' + mol_list_dir[i] + '_lm-b3lyp_howsugarspucker.csv',
+                                                                    sv_mol_dir)
+            lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
+
+            ts_data_dict = read_csv_data_TS('z_' + mol_list_dir[i] + '_TS-b3lyp_howsugarspucker.csv',
+                                                                    sv_mol_dir)[3]
+            ts_class = Transition_States(ts_data_dict, lm_class)
+            #endregion
+
+            # # # local minimum comparison data initialization # # #
+            #region
+            # for every local min data file in the directory perform the comparison calculations
+            for filename in os.listdir(lm_data_dir):
+                if filename.endswith(".csv"):
+                    method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
+                    method = (filename.split('-', 3)[3]).split('.')[0]
+                    lm_comp_class = Local_Minima_Compare(molecule, method, method_hartree, lm_class, comp_lm_dir)
+
+                    lm_comp_data_list.append(lm_comp_class)
+            #endregion
+
+            # # # transition state comparison data initialization # # #
+            #region
+            # for every ts data file in the directory reformat
+            for filename in os.listdir(ts_unformatted_dir):
+                if filename.endswith(".csv"):
+                    ts_hartree = read_csv_to_dict(os.path.join(ts_unformatted_dir, filename), mode='r')
+                    method = (filename.split('-', 3)[3]).split('.')[0]
+                    rewrite_ts_hartree(ts_hartree, method, molecule, ts_data_dir)
+
+            # for every ts data file in the directory perform the comparison calculations
+            for filename in os.listdir(ts_data_dir):
+                if filename.endswith(".csv"):
+                    ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
+                    method = (filename.split('-', 3)[3]).split('.')[0]
+                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir)
+
+                    ts_comp_data_list.append(ts_comp_class)
+            #endregion
+
+            comp_all_met = Compare_All_Methods(lm_comp_data_list, ts_comp_data_list, comp_lm_dir, comp_ts_dir)
+
+            order_in = ['reference', 'b3lyp', 'dftb', 'am1', 'pm6', 'pm3mm', 'pm3']
+            #endregion
+
+            if debug:
+                comp_all_met.write_debug_lm_to_csv()
+                comp_all_met.write_debug_ts_to_csv()
+
+            if save:
+                # save the comparison data
+                comp_all_met.write_lm_to_csv()
+                comp_all_met.write_ts_to_csv()
+                comp_all_met.write_uncompared_to_csv()
+
+                if write_lm:
+                    # save all lm plots
+                    for j in range(len(lm_comp_data_list)):
+                        lm_comp_data_list[j].save_all_figures(overwrite)
+                        lm_comp_data_list[j].save_all_figures_raw(overwrite)
+
+                if write_ts:
+                    # save all ts plots
+                    for j in range(len(ts_comp_data_list)):
+                        ts_comp_data_list[j].save_all_figures_raw(overwrite)
+                        ts_comp_data_list[j].save_all_figures_single(overwrite)
+                        ts_comp_data_list[j].save_all_groupings(overwrite)
+
+                        ts_comp_data_list[j].save_WRMSD_heatmap(overwrite)
+                        ts_comp_data_list[j].save_RMSD_heatmap(overwrite)
+
+    return
+
+if __name__ == '__main__':
+    status = main()
+    sys.exit(status)
+#endregion

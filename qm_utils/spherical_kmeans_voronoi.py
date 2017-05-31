@@ -906,7 +906,7 @@ class Transition_States():
                         uniq_ts['uniq_lm2_vert_pol'] = np.asarray([curr_lm_group['lm_vals_phi'][j][1],
                                                                    curr_lm_group['lm_vals_theta'][j][1]])
 
-                    temp_ts_group[i]['ts_group'][j] = uniq_ts
+                        temp_ts_group[i]['ts_group'][j] = uniq_ts
 
                 wt_gibbs = 0
                 total_boltz = 0
@@ -1114,17 +1114,11 @@ class Plots():
             self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
             self.ax_circ_south = self.fig.add_subplot(gs[0, 1], projection='polar')
 
-            # initializing settins for the 2d plot
+            self.ax_rect.set_xlim([-5, 365])
+            self.ax_rect.set_ylim([140, 50])
+
+            # initializing settings for the 2d plot
             self.twoD_init()
-
-            # Create custom artists
-            ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='blue', marker='s', edgecolor='face')
-            lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60, c='green', marker='o', edgecolor='face')
-            path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
-
-            self.ax_rect.legend([lm_Artist, ts_Artist, path_Artist], ['Local Minimum', 'Transition State', 'Pathway'],
-                                loc=1, frameon=False).set_zorder(100)
-
 
         if threeD_arg:
             self.ax_spher = self.fig.gca(projection='3d')
@@ -1134,6 +1128,9 @@ class Plots():
 
         if merc_arg:
             self.fig, self.ax_rect = plt.subplots(facecolor='white')
+
+            self.ax_rect.set_xlim([-5, 365])
+            self.ax_rect.set_ylim([185, -5])
 
             self.ax_rect_init()
 
@@ -1153,8 +1150,6 @@ class Plots():
         self.ax_rect.set_yticks(major_ticksy)
         self.ax_rect.set_yticks(minor_ticksy, minor=True)
 
-        self.ax_rect.set_xlim([-5, 365])
-        self.ax_rect.set_ylim([185, -5])
         self.ax_rect.set_xlabel('Phi (degrees)')
         self.ax_rect.set_ylabel('Theta (degrees)')
 
@@ -1206,7 +1201,6 @@ class Plots():
         filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
         self.fig.set_size_inches(9, 5)
         self.fig.savefig(filename1, facecolor=self.fig.get_facecolor(), transparent=True, dpi=300, bbox_inches='tight')
-
 # endregion
 
 # # # Local Minima Functions # # #
