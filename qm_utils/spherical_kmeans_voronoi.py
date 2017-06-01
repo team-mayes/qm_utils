@@ -367,6 +367,8 @@ class Local_Minima():
 
         self.populate_sv_kmeans_dict(number_clusters_in, data_points_in, phi_raw_in, theta_raw_in, energy)
         self.populate_groups_dict()
+        self.calc_arc_lengths()
+
         self.organize_regions()
 
         self.assign_closest_puckers()
@@ -478,6 +480,21 @@ class Local_Minima():
         self.groups_dict = correcting_group_order(groups)
 
         return
+
+    def calc_arc_lengths(self):
+        for group_key in self.groups_dict:
+            arc_lengths = []
+
+            group_phi = float(self.groups_dict[group_key]['mean_phi'])
+            group_theta = float(self.groups_dict[group_key]['mean_theta'])
+
+            for i in range(len(self.groups_dict[group_key]['phi'])):
+                raw_phi = self.groups_dict[group_key]['phi'][i]
+                raw_theta = self.groups_dict[group_key]['theta'][i]
+
+                arc_lengths.append(arc_length_calculator(group_phi, group_theta, raw_phi, raw_theta))
+
+            self.groups_dict[group_key]['arc_lengths'] = arc_lengths
 
     def assign_closest_puckers(self):
         for group_key in self.groups_dict:

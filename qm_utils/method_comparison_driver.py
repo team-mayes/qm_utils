@@ -18,7 +18,8 @@ matplotlib.use('TkAgg')
 from qm_utils.qm_common import read_csv_to_dict
 from qm_utils.spherical_kmeans_voronoi import Local_Minima, Transition_States,\
                                               read_csv_canonical_designations, read_csv_data, read_csv_data_TS
-from qm_utils.method_comparison import Local_Minima_Compare, Transition_State_Compare, Compare_All_Methods
+from qm_utils.method_comparison import Local_Minima_Compare, Local_Minima_Ref,\
+                                        Transition_State_Compare, Transition_State_Ref, Compare_All_Methods
 
 # # # Directories # # #
 #region
@@ -115,7 +116,7 @@ def main():
     save = True
     overwrite = False # will overwrite
 
-    write_lm = False
+    write_lm = True
     write_ts = True
 
     do_molecule = [True, True, True, True]
@@ -209,7 +210,12 @@ def main():
                 if filename.endswith(".csv"):
                     method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
                     method = (filename.split('-', 3)[3]).split('.')[0]
-                    lm_comp_class = Local_Minima_Compare(molecule, method, method_hartree, lm_class, comp_lm_dir)
+
+                    ref_lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
+
+                    lm_ref = Local_Minima_Ref(ref_lm_hartree, lm_class)
+
+                    lm_comp_class = Local_Minima_Compare(molecule, method, method_hartree, lm_class, comp_lm_dir, lm_ref)
 
                     lm_comp_data_list.append(lm_comp_class)
             #endregion
@@ -228,7 +234,11 @@ def main():
                 if filename.endswith(".csv"):
                     ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
                     method = (filename.split('-', 3)[3]).split('.')[0]
-                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir)
+
+                    ref_ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
+                    ref_ts = Transition_State_Ref(ref_ts_hartree, lm_class, ts_class)
+
+                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir, ref_ts)
 
                     ts_comp_data_list.append(ts_comp_class)
             #endregion
@@ -247,12 +257,19 @@ def main():
                 comp_all_met.write_lm_to_csv()
                 comp_all_met.write_ts_to_csv()
                 comp_all_met.write_uncompared_to_csv()
+                comp_all_met.write_num_comp_paths_to_csv()
+                comp_all_met.write_num_comp_lm_to_csv()
 
                 if write_lm:
                     # save all lm plots
                     for j in range(len(lm_comp_data_list)):
                         lm_comp_data_list[j].save_all_figures(overwrite)
                         lm_comp_data_list[j].save_all_figures_raw(overwrite)
+
+                        lm_comp_data_list[j].save_WRMSD_heatmap(overwrite)
+                        lm_comp_data_list[j].save_RMSD_heatmap(overwrite)
+
+                        lm_comp_data_list[j].save_WRMSD_comp(overwrite)
 
                 if write_ts:
                     # save all ts plots
@@ -261,6 +278,7 @@ def main():
                         ts_comp_data_list[j].save_all_figures_single(overwrite)
                         ts_comp_data_list[j].save_all_groupings(overwrite)
 
+                        ts_comp_data_list[j].save_WRMSD_comp(overwrite)
                         ts_comp_data_list[j].save_WRMSD_heatmap(overwrite)
                         ts_comp_data_list[j].save_RMSD_heatmap(overwrite)
 
