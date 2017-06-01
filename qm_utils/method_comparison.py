@@ -2322,13 +2322,13 @@ class Compare_All_Methods:
 
         debug_lm_dict = {}
 
-        debug_lm_dict['group'] = []
-        debug_lm_dict['arclength'] = []
-        debug_lm_dict['gibbs'] = []
-        debug_lm_dict['weighting'] = []
-
         for k in range(len(self.methods_lm_data)):
             method = self.methods_lm_data[k].method
+
+            debug_lm_dict['group'] = []
+            debug_lm_dict['arclength'] = []
+            debug_lm_dict['gibbs'] = []
+            debug_lm_dict['weighting'] = []
 
             # filling the dict
             for i in range(len(self.methods_lm_data[k].group_data)):
