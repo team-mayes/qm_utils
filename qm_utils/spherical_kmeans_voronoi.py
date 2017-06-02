@@ -10,24 +10,17 @@ for HSP. The output will serve as the foundation for making all comparisons acro
 from __future__ import print_function
 
 import os
-import sys
 
 import csv
 import numpy as np
 from qm_utils.qm_common import read_csv_to_dict, create_out_fname, arc_length_calculator
 from spherecluster import SphericalKMeans
 from scipy.spatial import SphericalVoronoi
-import statistics as st
 import math
 from collections import OrderedDict
 from operator import itemgetter
 
-from mpl_toolkits.mplot3d import Axes3D
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib import colors
-import matplotlib.pyplot as plt
 import matplotlib as mpl
-import matplotlib.lines as mlines
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 
@@ -76,7 +69,6 @@ def pol2cart(vert):
 
     return [x, y, z]
 
-
 # converts a vertex from cartesian to polar
 def cart2pol(vert):
     def get_pol_coord(x, y, z):
@@ -91,7 +83,6 @@ def cart2pol(vert):
         return [phi, theta]
 
     return get_pol_coord(vert[0], vert[1], vert[2])
-
 
 # gets the phi and theta values between two vertices
 def get_pol_coords(vert_1, vert_2):
@@ -170,7 +161,6 @@ def get_pol_coords(vert_1, vert_2):
 
     return arc_coords
 
-
 # plots a line on a rectangular plot (2D)
 # vert_n: [vert in polar, color, size]
 # vert_1 always ts, vert_2 always lm
@@ -190,7 +180,6 @@ def plot_line(ax, vert_1, vert_2, line_color, line_style='-', edge_color='face')
 
     return
 
-
 # plots a line on a rectangular plot (2D)
 def plot_vor_line(ax, vert_1, vert_2, line_color):
     line = get_pol_coords(vert_1, vert_2)
@@ -207,7 +196,6 @@ def plot_vor_line(ax, vert_1, vert_2, line_color):
                zorder=10)
 
     return
-
 
 # plots a line on a spherical plot (3D)
 def plot_arc(ax_3d, vert_1, vert_2, color_in):
@@ -272,7 +260,6 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
 
     return raw_coords
 
-
 # plots a line on a circular plot (2D)
 # vert_n: [vert in polar, color, size]
 # vert_1 always ts, vert_2 always lm
@@ -298,12 +285,10 @@ def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', line_style='-', 
 
     return
 
-
 # creates a file for given plot & figure
 def make_file_from_plot(filename, fig, dir_):
     filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
     fig.savefig(filename1, facecolor=fig.get_facecolor(), transparent=True)
-
 
 # checks if the edge crosses from 0 to 360
 def is_end(edge):
@@ -323,7 +308,6 @@ def is_end(edge):
             has_360 = True
 
     return has_0 and has_360
-
 
 # splits an edge that crosses from 0 to 360 in half
 def split_in_two(edge):
@@ -351,8 +335,6 @@ def split_in_two(edge):
     two_edges = [edge_one, edge_two]
 
     return two_edges
-
-
 # endregion
 
 # # # Classes # # #
@@ -544,13 +526,6 @@ class Local_Minima():
 
     # # # Plotting Functions # # #
     #region
-    def plot_local_min(self, directory=None, save_status=False):
-        plotting_local_minima(self.groups_dict, self.sv_kmeans_dict, self.cano_points, directory=directory,
-                              save_status=save_status)
-
-    def plot_group_labels(self, directory=None, save_status=False):
-        plotting_group_labels(self.groups_dict, self.sv_kmeans_dict, directory=directory, save_status=save_status)
-
     def plot_group_names(self):
         for key, value in self.groups_dict.items():
             if float(value['mean_theta']) < 30 or float(value['mean_phi']) < 25:
@@ -561,31 +536,6 @@ class Local_Minima():
                 self.plot.ax_rect.annotate(value['name'], xy=(float(value['mean_phi']), float(value['mean_theta'])),
                             xytext=(float(value['mean_phi']) - 10, float(value['mean_theta']) - 15),
                             arrowprops=dict(arrowstyle="->", connectionstyle="arc3"), )
-
-    def plot_local_min_sizes(self, directory=None, save_status=False):
-        # Generating the marker size based on energy
-        max_energy = float(max(self.sv_kmeans_dict['energy']))
-        size = []
-
-        for row in self.sv_kmeans_dict['energy']:
-            size.append(80 * (1 - (float(row) / max_energy)))
-
-        self.plot.ax_rect.scatter(self.cano_points['phi_cano'], self.cano_points['theta_cano'], s=60, c='black',
-                                  marker='+',
-                                  edgecolor='face')
-        for i, txt in enumerate(self.cano_points['pucker']):
-            if float(self.cano_points['theta_cano'][i]) < 120 and float(
-                self.cano_points['theta_cano'][i]) > 60 and float(
-                self.cano_points['phi_cano'][i]) < 355:
-                self.plot.ax_rect.annotate(txt, xy=(self.cano_points['phi_cano'][i], self.cano_points['theta_cano'][i]),
-                                           xytext=(float(self.cano_points['phi_cano'][i]) - 7,
-                                                   float(self.cano_points['theta_cano'][i]) + 12))
-
-        for key in self.groups_dict:
-            self.plot.ax_rect.scatter(self.groups_dict[key]['mean_phi'], self.groups_dict[key]['mean_theta'], s=80,
-                                      c='red', marker='h', edgecolor='face')
-            self.plot.ax_rect.scatter(self.groups_dict[key]['phi'], self.groups_dict[key]['theta'], s=size, c='blue',
-                                      marker='o', edgecolor='face')
 
     def plot_cano(self):
         self.plot.ax_rect.scatter(self.cano_points['phi_cano'], self.cano_points['theta_cano'], s=60, c='black',
@@ -1695,6 +1645,4 @@ def return_lowest_value(value1, value2):
         highest_val = value2
 
     return lowest_val, highest_val
-
-
 # endregion

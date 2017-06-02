@@ -6,12 +6,11 @@ The purpose of this script is to make comparisons for a particular QM method to 
 # # # import # # #
 from __future__ import print_function
 
-import argparse
 import os
-import statistics as st
 import sys
 
 import csv
+
 import matplotlib
 matplotlib.use('TkAgg')
 
@@ -20,6 +19,7 @@ from qm_utils.spherical_kmeans_voronoi import Local_Minima, Transition_States,\
                                               read_csv_canonical_designations, read_csv_data, read_csv_data_TS
 from qm_utils.method_comparison import Local_Minima_Compare, Local_Minima_Ref,\
                                         Transition_State_Compare, Transition_State_Ref, Compare_All_Methods
+
 
 # # # Directories # # #
 #region
@@ -32,9 +32,6 @@ TEST_DIR = os.path.join(QM_0_DIR, 'tests')
 TEST_DATA_DIR = os.path.join(TEST_DIR, 'test_data')
 
 MET_COMP_DIR = os.path.join(TEST_DATA_DIR, 'method_comparison')
-MOL_DIR = os.path.join(MET_COMP_DIR, 'bxyl')
-LM_DIR = os.path.join(MOL_DIR, 'local_minimum')
-
 SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
 #endregion
 
@@ -257,8 +254,12 @@ def main():
                 comp_all_met.write_lm_to_csv()
                 comp_all_met.write_ts_to_csv()
                 comp_all_met.write_uncompared_to_csv()
+
                 comp_all_met.write_num_comp_paths_to_csv()
                 comp_all_met.write_num_comp_lm_to_csv()
+
+                comp_all_met.write_gibbs_num_comp_paths_to_csv()
+                comp_all_met.write_gibbs_num_comp_lm_to_csv()
 
                 if write_lm:
                     # save all lm plots
@@ -268,8 +269,11 @@ def main():
 
                         lm_comp_data_list[j].save_WRMSD_heatmap(overwrite)
                         lm_comp_data_list[j].save_RMSD_heatmap(overwrite)
-
                         lm_comp_data_list[j].save_WRMSD_comp(overwrite)
+
+                        lm_comp_data_list[j].save_gibbs_WRMSD_heatmap(overwrite)
+                        lm_comp_data_list[j].save_gibbs_RMSD_heatmap(overwrite)
+                        lm_comp_data_list[j].save_gibbs_WRMSD_comp(overwrite)
 
                 if write_ts:
                     # save all ts plots
@@ -281,6 +285,10 @@ def main():
                         ts_comp_data_list[j].save_WRMSD_comp(overwrite)
                         ts_comp_data_list[j].save_WRMSD_heatmap(overwrite)
                         ts_comp_data_list[j].save_RMSD_heatmap(overwrite)
+
+                        ts_comp_data_list[j].save_gibbs_WRMSD_comp(overwrite)
+                        ts_comp_data_list[j].save_gibbs_WRMSD_heatmap(overwrite)
+                        ts_comp_data_list[j].save_gibbs_RMSD_heatmap(overwrite)
 
     return
 

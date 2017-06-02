@@ -7,16 +7,10 @@ The purpose of this script is to make comparisons for a particular QM method to 
 
 # # # import # # #
 from __future__ import print_function
-
-import argparse
 import os
-import statistics as st
-import sys
 
 import csv
-import pandas as pd
 import math
-import numpy as np
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -101,16 +95,20 @@ class Local_Minima_Ref():
     class for organizing the local minima information
     """
     def __init__(self, lm_dataset_in, lm_class_in):
-        self.hartree_data = []
         self.lm_class = lm_class_in
+
+        self.hartree_data = []
         self.group_data = []
+
         self.overall_data = {}
-        self.group_rows = []
+
         self.lm_dataset = lm_dataset_in
 
         self.fix_hartrees()
+
         self.populate_hartree_data()
         self.populate_groupings()
+
         self.do_calcs()
 
     # # # __init__ functions # # #
@@ -191,10 +189,20 @@ class Local_Minima_Ref():
             self.calc_group_RMSD(i)
             self.calc_group_WRMSD(i)
 
+            self.calc_gibbs_WSS(i)
+            self.calc_gibbs_WWSS(i)
+            self.calc_gibbs_group_RMSD(i)
+            self.calc_gibbs_group_WRMSD(i)
+
         self.calc_SSE()
         self.calc_WSSE()
         self.calc_RMSD()
         self.calc_WRMSD()
+
+        self.calc_gibbs_SSE()
+        self.calc_gibbs_WSSE()
+        self.calc_gibbs_RMSD()
+        self.calc_gibbs_WRMSD()
 
     # finds Boltzmann weighted Gibb's free energy
     def calc_weighting(self, group):
@@ -217,14 +225,18 @@ class Local_Minima_Ref():
 
         self.group_data[group]['weighted_gibbs'] = round(wt_gibbs, 3)
 
+    # # # by arclength # # #
+    # region
     def calc_WSS(self, group):
         WSS = 0
 
         for key in self.group_data[group]['points']:
             arc_length = self.group_data[group]['points'][key]['arc_lengths'][0][1]
-            WSS += arc_length**2
+            WSS += arc_length ** 2
 
         self.group_data[group]['WSS'] = round(WSS, 5)
+
+        return
 
     def calc_WWSS(self, group):
         WWSS = 0
@@ -238,7 +250,7 @@ class Local_Minima_Ref():
 
     def calc_group_RMSD(self, group):
         size = len(self.group_data[group]['points'])
-        if(size == 0):
+        if (size == 0):
             RMSD = 'n/a'
             self.group_data[group]['group_RMSD'] = RMSD
         else:
@@ -278,6 +290,80 @@ class Local_Minima_Ref():
     def calc_WRMSD(self):
         WRMSD = (self.overall_data['WSSE'] / len(self.group_data)) ** 0.5
         self.overall_data['WRMSD'] = round(WRMSD, 5)
+    # endregion
+
+    # # # by gibbs # # #
+    # region
+    def calc_gibbs_WSS(self, group):
+        WSS = 0
+
+        for key in self.group_data[group]['points']:
+            ref_gibbs = self.group_data[group]['weighted_gibbs']
+            curr_gibbs = self.group_data[group]['points'][key]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+            WSS += gibbs_diff ** 2
+
+        self.group_data[group]['gibbs_WSS'] = round(WSS, 5)
+
+    def calc_gibbs_WWSS(self, group):
+        WWSS = 0
+
+        for key in self.group_data[group]['points']:
+            ref_gibbs = self.group_data[group]['weighted_gibbs']
+            curr_gibbs = self.group_data[group]['points'][key]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+
+            weighting = self.group_data[group]['points'][key]['weighting']
+            WWSS += (gibbs_diff ** 2) * weighting
+
+        self.group_data[group]['gibbs_WWSS'] = round(WWSS, 5)
+
+    def calc_gibbs_group_RMSD(self, group):
+        size = len(self.group_data[group]['points'])
+
+        if (size == 0):
+            RMSD = 'n/a'
+            self.group_data[group]['gibbs_group_RMSD'] = RMSD
+        else:
+            RMSD = (self.group_data[group]['gibbs_WSS'] / size) ** 0.5
+            self.group_data[group]['gibbs_group_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_group_WRMSD(self, group):
+        size = len(self.group_data[group]['points'])
+
+        if (size == 0):
+            WRMSD = 'n/a'
+            self.group_data[group]['gibbs_group_WRMSD'] = WRMSD
+        else:
+            WRMSD = (self.group_data[group]['gibbs_WWSS'] / size) ** 0.5
+            self.group_data[group]['gibbs_group_WRMSD'] = round(WRMSD, 5)
+
+    def calc_gibbs_SSE(self):
+        SSE = 0
+
+        for i in range(len(self.group_data)):
+            SSE += self.group_data[i]['gibbs_WSS']
+
+        self.overall_data['gibbs_SSE'] = round(SSE, 5)
+
+    def calc_gibbs_WSSE(self):
+        WSSE = 0
+
+        for i in range(len(self.group_data)):
+            WSSE += self.group_data[i]['gibbs_WWSS']
+
+        self.overall_data['gibbs_WSSE'] = round(WSSE, 5)
+
+    def calc_gibbs_RMSD(self):
+        RMSD = (self.overall_data['gibbs_SSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['gibbs_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_WRMSD(self):
+        WRMSD = (self.overall_data['gibbs_WSSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['gibbs_WRMSD'] = round(WRMSD, 5)
+    #endregion
     #endregion
 
     def arb(self):
@@ -288,6 +374,8 @@ class Local_Minima_Compare():
     class for organizing the local minima information
     """
     def __init__(self, molecule_in, method_in, lm_dataset_in, lm_class_in, lm_dir_in, lm_ref_in):
+        # tolerance for comparisons between method and reference
+        # used in self.calc_num_comp_lm()
         self.comp_tolerance = 0.1
         self.comp_cutoff = 0.1
 
@@ -299,19 +387,21 @@ class Local_Minima_Compare():
 
         self.hartree_data = []
         self.group_data = []
+
         self.overall_data = {}
-        self.overall_data['method'] = method_in
-        self.group_rows = []
+
         self.lm_dir = lm_dir_in
         self.lm_dataset = lm_dataset_in
 
         self.fix_hartrees()
+
         self.populate_hartree_data()
         self.populate_groupings()
+
         self.do_calcs()
         self.dir_init()
 
-        self.calc_num_comp_lm()
+        self.calc_num_comp_lm(self.comp_cutoff, self.comp_tolerance)
 
     # # # __init__ functions # # #
     #region
@@ -367,7 +457,7 @@ class Local_Minima_Compare():
     def populate_groupings(self):
         for i in range(len(self.lm_class.sv_kmeans_dict['regions_sv_labels'])):
             self.group_data.append({})
-            self.group_data[i]['method'] = self.overall_data['method']
+            self.group_data[i]['method'] = self.method
             self.group_data[i]['points'] = {}
 
             self.group_data[i]['phi'] = self.lm_class.groups_dict[i]['mean_phi']
@@ -378,6 +468,56 @@ class Local_Minima_Compare():
             for j in range(len(self.hartree_data)):
                 if self.hartree_data[j]['arc_lengths'][0][0] == i:
                     self.group_data[i]['points'][j] = self.hartree_data[j]
+
+        return
+
+    def dir_init(self):
+        if not os.path.exists(os.path.join(self.lm_dir, self.method)):
+            os.makedirs(os.path.join(self.lm_dir, self.method))
+
+        self.met_data_dir = os.path.join(self.lm_dir, self.method)
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(self.met_data_dir, 'overall')):
+            os.makedirs(os.path.join(self.met_data_dir, 'overall'))
+
+        self.overall_dir = os.path.join(self.met_data_dir, 'overall')
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(self.met_data_dir, 'groups')):
+            os.makedirs(os.path.join(self.met_data_dir, 'groups'))
+
+        self.groups_dir = os.path.join(self.met_data_dir, 'groups')
+
+        if not os.path.exists(os.path.join(self.met_data_dir, 'heatmaps')):
+            os.makedirs(os.path.join(self.met_data_dir, 'heatmaps'))
+
+        self.heatmap_data_dir = os.path.join(self.met_data_dir, 'heatmaps')
+
+        if not os.path.exists(os.path.join(self.heatmap_data_dir, 'by_arclength')):
+            os.makedirs(os.path.join(self.heatmap_data_dir, 'by_arclength'))
+
+        self.arc_data_dir = os.path.join(self.heatmap_data_dir, 'by_arclength')
+
+        if not os.path.exists(os.path.join(self.heatmap_data_dir, 'by_gibbs')):
+            os.makedirs(os.path.join(self.heatmap_data_dir, 'by_gibbs'))
+
+        self.gibbs_data_dir = os.path.join(self.heatmap_data_dir, 'by_gibbs')
+
+        if not os.path.exists(os.path.join(self.lm_dir, 'final_comp')):
+            os.makedirs(os.path.join(self.lm_dir, 'final_comp'))
+
+        self.final_comp_dir = os.path.join(self.lm_dir, 'final_comp')
+
+        if not os.path.exists(os.path.join(self.final_comp_dir, 'by_arclength')):
+            os.makedirs(os.path.join(self.final_comp_dir, 'by_arclength'))
+
+        self.arc_comp_dir = os.path.join(self.final_comp_dir, 'by_arclength')
+
+        if not os.path.exists(os.path.join(self.final_comp_dir, 'by_gibbs')):
+            os.makedirs(os.path.join(self.final_comp_dir, 'by_gibbs'))
+
+        self.gibbs_comp_dir = os.path.join(self.final_comp_dir, 'by_gibbs')
 
         return
     #endregion
@@ -392,10 +532,20 @@ class Local_Minima_Compare():
             self.calc_group_RMSD(i)
             self.calc_group_WRMSD(i)
 
+            self.calc_gibbs_WSS(i)
+            self.calc_gibbs_WWSS(i)
+            self.calc_gibbs_group_RMSD(i)
+            self.calc_gibbs_group_WRMSD(i)
+
         self.calc_SSE()
         self.calc_WSSE()
         self.calc_RMSD()
         self.calc_WRMSD()
+
+        self.calc_gibbs_SSE()
+        self.calc_gibbs_WSSE()
+        self.calc_gibbs_RMSD()
+        self.calc_gibbs_WRMSD()
 
     # finds Boltzmann weighted Gibb's free energy
     def calc_weighting(self, group):
@@ -418,12 +568,14 @@ class Local_Minima_Compare():
 
         self.group_data[group]['weighted_gibbs'] = round(wt_gibbs, 3)
 
+    # # # by arclength # # #
+    #region
     def calc_WSS(self, group):
         WSS = 0
 
         for key in self.group_data[group]['points']:
             arc_length = self.group_data[group]['points'][key]['arc_lengths'][0][1]
-            WSS += arc_length**2
+            WSS += arc_length ** 2
 
         self.group_data[group]['WSS'] = round(WSS, 5)
 
@@ -480,17 +632,7 @@ class Local_Minima_Compare():
         WRMSD = (self.overall_data['WSSE'] / len(self.group_data)) ** 0.5
         self.overall_data['WRMSD'] = round(WRMSD, 5)
 
-    def calc_num_comp_lm(self):
-        self.comparable_paths = 0
-
-        for i in range(len(self.group_data)):
-            group_WRMSD = self.group_data[i]['group_WRMSD']
-            ref_group_WRMSD = self.lm_ref.group_data[i]['group_WRMSD']
-
-            if group_WRMSD != 'n/a' and (group_WRMSD < self.comp_cutoff or ref_group_WRMSD / group_WRMSD >= self.comp_tolerance):
-                self.comparable_paths += 1
-
-    def calc_num_comp_lm_input(self, comp_cutoff, comp_tolerance):
+    def calc_num_comp_lm(self, comp_cutoff, comp_tolerance):
         comparable_paths = 0
 
         for i in range(len(self.group_data)):
@@ -501,6 +643,94 @@ class Local_Minima_Compare():
                 comparable_paths += 1
 
         return comparable_paths
+    #endregion
+
+    # # # by gibbs # # #
+    #region
+    def calc_gibbs_WSS(self, group):
+        WSS = 0
+
+        for key in self.group_data[group]['points']:
+            ref_gibbs = self.group_data[group]['weighted_gibbs']
+            curr_gibbs = self.group_data[group]['points'][key]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+            WSS += gibbs_diff ** 2
+
+        self.group_data[group]['gibbs_WSS'] = round(WSS, 5)
+
+    def calc_gibbs_WWSS(self, group):
+        WWSS = 0
+
+        for key in self.group_data[group]['points']:
+            ref_gibbs = self.group_data[group]['weighted_gibbs']
+            curr_gibbs = self.group_data[group]['points'][key]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+
+            weighting = self.group_data[group]['points'][key]['weighting']
+            WWSS += (gibbs_diff ** 2) * weighting
+
+        self.group_data[group]['gibbs_WWSS'] = round(WWSS, 5)
+
+    def calc_gibbs_group_RMSD(self, group):
+        size = len(self.group_data[group]['points'])
+
+        if(size == 0):
+            RMSD = 'n/a'
+            self.group_data[group]['gibbs_group_RMSD'] = RMSD
+        else:
+            RMSD = (self.group_data[group]['gibbs_WSS'] / size) ** 0.5
+            self.group_data[group]['gibbs_group_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_group_WRMSD(self, group):
+        size = len(self.group_data[group]['points'])
+
+        if (size == 0):
+            WRMSD = 'n/a'
+            self.group_data[group]['gibbs_group_WRMSD'] = WRMSD
+        else:
+            WRMSD = (self.group_data[group]['gibbs_WWSS'] / size) ** 0.5
+            self.group_data[group]['gibbs_group_WRMSD'] = round(WRMSD, 5)
+
+    def calc_gibbs_SSE(self):
+        SSE = 0
+
+        for i in range(len(self.group_data)):
+            SSE += self.group_data[i]['gibbs_WSS']
+
+        self.overall_data['gibbs_SSE'] = round(SSE, 5)
+
+    def calc_gibbs_WSSE(self):
+        WSSE = 0
+
+        for i in range(len(self.group_data)):
+            WSSE += self.group_data[i]['gibbs_WWSS']
+
+        self.overall_data['gibbs_WSSE'] = round(WSSE, 5)
+
+    def calc_gibbs_RMSD(self):
+        RMSD = (self.overall_data['gibbs_SSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['gibbs_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_WRMSD(self):
+        WRMSD = (self.overall_data['gibbs_WSSE'] / len(self.group_data)) ** 0.5
+        self.overall_data['gibbs_WRMSD'] = round(WRMSD, 5)
+
+    def calc_gibbs_num_comp_lm(self, comp_cutoff, comp_tolerance):
+        comparable_paths = 0
+
+        for i in range(len(self.group_data)):
+            group_WRMSD = self.group_data[i]['gibbs_group_WRMSD']
+            ref_group_WRMSD = self.lm_ref.group_data[i]['gibbs_group_WRMSD']
+
+            if group_WRMSD != 'n/a' and (group_WRMSD < comp_cutoff or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
+                comparable_paths += 1
+
+        return comparable_paths
+    #endregion
+
+
     #endregion
 
     # # # plotting functions # # #
@@ -680,6 +910,79 @@ class Local_Minima_Compare():
                                                    marker='o', edgecolor='face',
                                                    zorder=10)
 
+    def plot_gibbs_WRMSD_comp(self):
+        # plotting heatmap
+        for i in range(len(self.group_data)):
+            # if no data matches to current ts group
+            if self.group_data[i]['gibbs_group_WRMSD'] == 'n/a':
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30, c='white',
+                                                   marker='o', edgecolor='black',
+                                                   zorder=10)
+            # if the data is within the tolerance
+            elif self.group_data[i]['gibbs_group_WRMSD'] >= self.comp_cutoff\
+                and self.lm_ref.group_data[i]['gibbs_group_WRMSD'] / self.group_data[i]['gibbs_group_WRMSD'] < self.comp_tolerance:
+
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30, c='black',
+                                                   marker='o', edgecolor='face',
+                                                   zorder=10)
+            else:
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30, c='red',
+                                                   marker='o', edgecolor='face',
+                                                   zorder=10)
+
+    def plot_gibbs_WRMSD_heatmap(self):
+        # plotting heatmap
+        for i in range(len(self.group_data)):
+            # if no data matches to current ts group
+            if self.group_data[i]['gibbs_group_WRMSD'] == 'n/a':
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30, c='white',
+                                                   marker='o', edgecolor='black',
+                                                   zorder=10)
+            else:
+                if self.group_data[i]['gibbs_group_WRMSD'] == 0:
+                    lm_size = 1
+                else:
+                    lm_size = self.lm_ref.group_data[i]['gibbs_group_WRMSD'] / self.group_data[i]['gibbs_group_WRMSD']
+
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30, c='black',
+                                                   marker='o', edgecolor='black',
+                                                   zorder=10)
+
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30 * lm_size, c='red',
+                                                   marker='o', edgecolor='face',
+                                                   zorder=10)
+
+    def plot_gibbs_RMSD_heatmap(self):
+        # plotting heatmap
+        for i in range(len(self.group_data)):
+            # if no data matches to current ts group
+            if self.group_data[i]['gibbs_group_RMSD'] == 'n/a':
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30, c='white',
+                                                   marker='o', edgecolor='black',
+                                                   zorder=10)
+            else:
+                if self.group_data[i]['gibbs_group_RMSD'] == 0:
+                    lm_size = 1
+                else:
+                    lm_size = self.lm_ref.group_data[i]['gibbs_group_RMSD'] / self.group_data[i]['gibbs_group_RMSD']
+
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30, c='black',
+                                                   marker='o', edgecolor='black',
+                                                   zorder=10)
+
+                self.lm_class.plot.ax_rect.scatter(self.group_data[i]['phi'], self.group_data[i]['theta'],
+                                                   s=30 * lm_size, c='red',
+                                                   marker='o', edgecolor='face',
+                                                   zorder=10)
+
     def set_title_and_legend(self, artist_list, label_list):
         self.lm_class.plot.ax_rect.legend(artist_list,
                                           label_list,
@@ -694,36 +997,6 @@ class Local_Minima_Compare():
 
     # # # saving functions # # #
     #region
-    def dir_init(self):
-        if not os.path.exists(os.path.join(self.lm_dir, self.method)):
-            os.makedirs(os.path.join(self.lm_dir, self.method))
-
-        self.met_data_dir = os.path.join(self.lm_dir, self.method)
-
-        # checks if directory exists, and creates it if not
-        if not os.path.exists(os.path.join(self.met_data_dir, 'overall')):
-            os.makedirs(os.path.join(self.met_data_dir, 'overall'))
-
-        self.overall_dir = os.path.join(self.met_data_dir, 'overall')
-
-        # checks if directory exists, and creates it if not
-        if not os.path.exists(os.path.join(self.met_data_dir, 'groups')):
-            os.makedirs(os.path.join(self.met_data_dir, 'groups'))
-
-        self.groups_dir = os.path.join(self.met_data_dir, 'groups')
-
-        if not os.path.exists(os.path.join(self.met_data_dir, 'heatmaps')):
-            os.makedirs(os.path.join(self.met_data_dir, 'heatmaps'))
-
-        self.heatmap_data_dir = os.path.join(self.met_data_dir, 'heatmaps')
-
-        if not os.path.exists(os.path.join(self.lm_dir, 'final_comp')):
-            os.makedirs(os.path.join(self.lm_dir, 'final_comp'))
-
-        self.final_comp_dir = os.path.join(self.lm_dir, 'final_comp')
-
-        return
-
     def save_all_figures(self, overwrite):
         # Create custom artist
         size_scaling = 1
@@ -735,8 +1008,9 @@ class Local_Minima_Compare():
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
         label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-" + self.molecule + "-LM-" + self.overall_data['method']
+        base_name = "z_dataset-" + self.molecule + "-LM-" + self.method
 
+        # if file either doesn't exist or needs to be overwritten
         if not os.path.exists(os.path.join(self.overall_dir, base_name + '-all_groupings' + '.png')) or overwrite:
             # saves a plot of all groupings
             self.plot_all_groupings()
@@ -767,9 +1041,9 @@ class Local_Minima_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [raw_ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
-        label_list = ['Raw Reference LM', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
+        label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-" + self.molecule + "-LM-" + self.overall_data['method']
+        base_name = "z_dataset-" + self.molecule + "-LM-" + self.method
 
         if not os.path.exists(os.path.join(self.overall_dir, base_name + '-all_method_raw_data' + '.png')) or overwrite:
             # saves plot of all groupings with the raw group data
@@ -795,19 +1069,19 @@ class Local_Minima_Compare():
                                     edgecolor='black')
 
         artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'reference LM', self.method + ' LM',
+        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-heatmap-" + self.method
 
-        if not os.path.exists(os.path.join(self.heatmap_data_dir, base_name + '.png')) or overwrite:
+        if not os.path.exists(os.path.join(self.arc_data_dir, base_name + '.png')) or overwrite:
             self.plot_WRMSD_heatmap()
             self.lm_class.plot_cano()
             self.lm_class.plot_all_vor_sec()
 
             self.set_title_and_legend(artist_list, label_list)
 
-            self.lm_class.plot.save(base_name, self.heatmap_data_dir)
+            self.lm_class.plot.save(base_name, self.arc_data_dir)
             self.lm_class.wipe_plot()
 
     def save_RMSD_heatmap(self, overwrite):
@@ -824,19 +1098,19 @@ class Local_Minima_Compare():
                                     edgecolor='black')
 
         artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'reference LM', self.method + ' LM',
+        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-RMSD-heatmap-" + self.method
 
-        if not os.path.exists(os.path.join(self.heatmap_data_dir, base_name + '.png')) or overwrite:
+        if not os.path.exists(os.path.join(self.arc_data_dir, base_name + '.png')) or overwrite:
             self.plot_RMSD_heatmap()
             self.lm_class.plot_cano()
             self.lm_class.plot_all_vor_sec()
 
             self.set_title_and_legend(artist_list, label_list)
 
-            self.lm_class.plot.save(base_name, self.heatmap_data_dir)
+            self.lm_class.plot.save(base_name, self.arc_data_dir)
             self.lm_class.wipe_plot()
 
     def save_WRMSD_comp(self, overwrite):
@@ -858,14 +1132,101 @@ class Local_Minima_Compare():
 
         base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-comp-" + self.method
 
-        if not os.path.exists(os.path.join(self.final_comp_dir, base_name + '.png')) or overwrite:
+        if not os.path.exists(os.path.join(self.arc_comp_dir, base_name + '.png')) or overwrite:
             self.plot_WRMSD_comp()
             self.lm_class.plot_cano()
             self.lm_class.plot_all_vor_sec()
 
             self.set_title_and_legend(artist_list, label_list)
 
-            self.lm_class.plot.save(base_name, self.final_comp_dir)
+            self.lm_class.plot.save(base_name, self.arc_comp_dir)
+            self.lm_class.wipe_plot()
+
+    def save_gibbs_WRMSD_heatmap(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='red', marker='o',
+                                    edgecolor='face')
+        full_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='o',
+                                     edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
+        ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='o',
+                                    edgecolor='black')
+
+        artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
+        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
+                      'Voronoi Tessellation']
+
+        base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-heatmap-" + self.method
+
+        if not os.path.exists(os.path.join(self.gibbs_data_dir, base_name + '.png')) or overwrite:
+            self.plot_gibbs_WRMSD_heatmap()
+            self.lm_class.plot_cano()
+            self.lm_class.plot_all_vor_sec()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.lm_class.plot.save(base_name, self.gibbs_data_dir)
+            self.lm_class.wipe_plot()
+
+    def save_gibbs_RMSD_heatmap(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='red', marker='o',
+                                    edgecolor='face')
+        full_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='o',
+                                     edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
+        ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='o',
+                                    edgecolor='black')
+
+        artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
+        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
+                      'Voronoi Tessellation']
+
+        base_name = "z_dataset-" + self.molecule + "-lm-RMSD-heatmap-" + self.method
+
+        if not os.path.exists(os.path.join(self.gibbs_data_dir, base_name + '.png')) or overwrite:
+            self.plot_gibbs_RMSD_heatmap()
+            self.lm_class.plot_cano()
+            self.lm_class.plot_all_vor_sec()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.lm_class.plot.save(base_name, self.gibbs_data_dir)
+            self.lm_class.wipe_plot()
+
+    def save_gibbs_WRMSD_comp(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        comp_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='red', marker='o',
+                                     edgecolor='face')
+        uncomp_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='o',
+                                       edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
+        no_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='o',
+                                   edgecolor='black')
+
+        artist_list = [no_lm_Artist, cano_lm_Artist, uncomp_lm_Artist, comp_lm_Artist, path_Artist]
+        label_list = ['No LM found', 'Canonical Designation', 'uncomparable LM', 'comparable LM',
+                      'Voronoi Tessellation']
+
+        base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-comp-" + self.method
+
+        if not os.path.exists(os.path.join(self.gibbs_comp_dir, base_name + '.png')) or overwrite:
+            self.plot_gibbs_WRMSD_comp()
+            self.lm_class.plot_cano()
+            self.lm_class.plot_all_vor_sec()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.lm_class.plot.save(base_name, self.gibbs_comp_dir)
             self.lm_class.wipe_plot()
     #endregion
 
@@ -1062,10 +1423,20 @@ class Transition_State_Ref():
                 self.calc_group_RMSD(key, i)
                 self.calc_group_WRMSD(key, i)
 
+                self.calc_gibbs_WSS(key, i)
+                self.calc_gibbs_WWSS(key, i)
+                self.calc_gibbs_group_RMSD(key, i)
+                self.calc_gibbs_group_WRMSD(key, i)
+
         self.calc_SSE()
         self.calc_WSSE()
         self.calc_RMSD()
         self.calc_WRMSD()
+
+        self.calc_gibbs_SSE()
+        self.calc_gibbs_WSSE()
+        self.calc_gibbs_RMSD()
+        self.calc_gibbs_WRMSD()
 
     def calc_weighting(self, lm_group, ts_group):
         total_boltz = 0
@@ -1089,12 +1460,14 @@ class Transition_State_Ref():
 
         self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)'] = round(wt_gibbs, 3)
 
+    # # # by arclength # # #
+    # region
     def calc_WSS(self, lm_group, ts_group):
         WSS = 0
 
         for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
             arc_length = self.ref_path_group_data[lm_group][ts_group]['points'][i]['arc_lengths'][0][1]
-            WSS += arc_length**2
+            WSS += arc_length ** 2
 
             self.ref_path_group_data[lm_group][ts_group]['WSS'] = round(WSS, 5)
 
@@ -1109,12 +1482,12 @@ class Transition_State_Ref():
         self.ref_path_group_data[lm_group][ts_group]['WWSS'] = round(WWSS, 5)
 
     def calc_group_RMSD(self, lm_group, ts_group):
-        size = len( self.ref_path_group_data[lm_group][ts_group]['points'])
+        size = len(self.ref_path_group_data[lm_group][ts_group]['points'])
         if (size == 0):
             RMSD = 'n/a'
             self.ref_path_group_data[lm_group][ts_group]['group_RMSD'] = RMSD
         else:
-            RMSD = ( self.ref_path_group_data[lm_group][ts_group]['WSS'] / size) ** 0.5
+            RMSD = (self.ref_path_group_data[lm_group][ts_group]['WSS'] / size) ** 0.5
             self.ref_path_group_data[lm_group][ts_group]['group_RMSD'] = round(RMSD, 5)
 
     def calc_group_WRMSD(self, lm_group, ts_group):
@@ -1132,7 +1505,7 @@ class Transition_State_Ref():
 
         for key in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[key])):
-                SSE +=  self.ref_path_group_data[key][i]['WSS']
+                SSE += self.ref_path_group_data[key][i]['WSS']
 
         self.overall_data['SSE'] = round(SSE, 5)
 
@@ -1164,6 +1537,95 @@ class Transition_State_Ref():
 
         WRMSD = (self.overall_data['WSSE'] / size) ** 0.5
         self.overall_data['WRMSD'] = round(WRMSD, 5)
+
+    # endregion
+
+    # # # by gibbs # # #
+    # region
+    def calc_gibbs_WSS(self, lm_group, ts_group):
+        WSS = 0
+
+        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
+            ref_gibbs = self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)']
+            curr_gibbs = self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+
+            WSS += gibbs_diff ** 2
+
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_WSS'] = round(WSS, 5)
+
+    def calc_gibbs_WWSS(self, lm_group, ts_group):
+        WWSS = 0
+
+        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
+            ref_gibbs = self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)']
+            curr_gibbs = self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+
+            weighting = self.ref_path_group_data[lm_group][ts_group]['points'][i]['weighting']
+            WWSS += (gibbs_diff ** 2) * weighting
+
+        self.ref_path_group_data[lm_group][ts_group]['gibbs_WWSS'] = round(WWSS, 5)
+
+    def calc_gibbs_group_RMSD(self, lm_group, ts_group):
+        size = len(self.ref_path_group_data[lm_group][ts_group]['points'])
+        if (size == 0):
+            RMSD = 'n/a'
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_RMSD'] = RMSD
+        else:
+            RMSD = (self.ref_path_group_data[lm_group][ts_group]['gibbs_WSS'] / size) ** 0.5
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_group_WRMSD(self, lm_group, ts_group):
+        size = len(self.ref_path_group_data[lm_group][ts_group]['points'])
+
+        if (size == 0):
+            WRMSD = 'n/a'
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_WRMSD'] = WRMSD
+        else:
+            WRMSD = (self.ref_path_group_data[lm_group][ts_group]['gibbs_WWSS'] / size) ** 0.5
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_WRMSD'] = round(WRMSD, 5)
+
+    def calc_gibbs_SSE(self):
+        SSE = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                SSE += self.ref_path_group_data[key][i]['gibbs_WSS']
+
+        self.overall_data['gibbs_SSE'] = round(SSE, 5)
+
+    def calc_gibbs_WSSE(self):
+        WSSE = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                WSSE += self.ref_path_group_data[key][i]['gibbs_WWSS']
+
+        self.overall_data['gibbs_WSSE'] = round(WSSE, 5)
+
+    def calc_gibbs_RMSD(self):
+        size = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                size += 1
+
+        RMSD = (self.overall_data['gibbs_SSE'] / size) ** 0.5
+        self.overall_data['gibbs_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_WRMSD(self):
+        size = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                size += 1
+
+        WRMSD = (self.overall_data['gibbs_WSSE'] / size) ** 0.5
+        self.overall_data['gibbs_WRMSD'] = round(WRMSD, 5)
+    # endregion
     # endregion
 
     def arb(self):
@@ -1440,6 +1902,65 @@ class Transition_State_Compare():
                 self.ref_north_groups.append(key)
             elif int(key.split("_")[1]) == last_group:
                 self.ref_south_groups.append(key)
+
+    # create all the necessary directories
+    def dir_init(self):
+        if not os.path.exists(os.path.join(self.ts_dir, 'circ_and_rect_plots')):
+            os.makedirs(os.path.join(self.ts_dir, 'circ_and_rect_plots'))
+
+        self.plot_save_dir = os.path.join(self.ts_dir, 'circ_and_rect_plots')
+
+        if not os.path.exists(os.path.join(self.plot_save_dir, self.method)):
+            os.makedirs(os.path.join(self.plot_save_dir, self.method))
+
+        self.met_data_dir = os.path.join(self.plot_save_dir, self.method)
+
+        if not os.path.exists(os.path.join(self.met_data_dir, 'raw_LMs')):
+            os.makedirs(os.path.join(self.met_data_dir, 'raw_LMs'))
+
+        self.raw_data_dir = os.path.join(self.met_data_dir, 'raw_LMs')
+
+        if not os.path.exists(os.path.join(self.met_data_dir, 'single_LMs')):
+            os.makedirs(os.path.join(self.met_data_dir, 'single_LMs'))
+
+        self.single_data_dir = os.path.join(self.met_data_dir, 'single_LMs')
+
+        if not os.path.exists(os.path.join(self.plot_save_dir, 'all_groupings')):
+            os.makedirs(os.path.join(self.plot_save_dir, 'all_groupings'))
+
+        self.all_groupings_dir = os.path.join(self.plot_save_dir, 'all_groupings')
+
+        if not os.path.exists(os.path.join(self.met_data_dir, 'heatmaps')):
+            os.makedirs(os.path.join(self.met_data_dir, 'heatmaps'))
+
+        self.heatmap_data_dir = os.path.join(self.met_data_dir, 'heatmaps')
+
+        if not os.path.exists(os.path.join(self.heatmap_data_dir, 'by_arclength')):
+            os.makedirs(os.path.join(self.heatmap_data_dir, 'by_arclength'))
+
+        self.arc_data_dir = os.path.join(self.heatmap_data_dir, 'by_arclength')
+
+        if not os.path.exists(os.path.join(self.heatmap_data_dir, 'by_gibbs')):
+            os.makedirs(os.path.join(self.heatmap_data_dir, 'by_gibbs'))
+
+        self.gibbs_data_dir = os.path.join(self.heatmap_data_dir, 'by_gibbs')
+
+        if not os.path.exists(os.path.join(self.plot_save_dir, 'final_comp')):
+            os.makedirs(os.path.join(self.plot_save_dir, 'final_comp'))
+
+        self.final_comp_dir = os.path.join(self.plot_save_dir, 'final_comp')
+
+        if not os.path.exists(os.path.join(self.final_comp_dir, 'by_arclength')):
+            os.makedirs(os.path.join(self.final_comp_dir, 'by_arclength'))
+
+        self.arc_comp_dir = os.path.join(self.final_comp_dir, 'by_arclength')
+
+        if not os.path.exists(os.path.join(self.final_comp_dir, 'by_gibbs')):
+            os.makedirs(os.path.join(self.final_comp_dir, 'by_gibbs'))
+
+        self.gibbs_comp_dir = os.path.join(self.final_comp_dir, 'by_gibbs')
+
+        return
     # endregion
 
     # # # do_calc functions # # #
@@ -1454,11 +1975,20 @@ class Transition_State_Compare():
                 self.calc_group_RMSD(key, i)
                 self.calc_group_WRMSD(key, i)
 
+                self.calc_gibbs_WSS(key, i)
+                self.calc_gibbs_WWSS(key, i)
+                self.calc_gibbs_group_RMSD(key, i)
+                self.calc_gibbs_group_WRMSD(key, i)
+
         self.calc_SSE()
         self.calc_WSSE()
         self.calc_RMSD()
         self.calc_WRMSD()
-        self.calc_num_comp_paths()
+
+        self.calc_gibbs_SSE()
+        self.calc_gibbs_WSSE()
+        self.calc_gibbs_RMSD()
+        self.calc_gibbs_WRMSD()
 
     def calc_weighting(self, lm_group, ts_group):
         total_boltz = 0
@@ -1482,6 +2012,8 @@ class Transition_State_Compare():
 
         self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)'] = round(wt_gibbs, 3)
 
+    # # # by arclength # # #
+    #region
     def calc_WSS(self, lm_group, ts_group):
         WSS = 0
 
@@ -1489,7 +2021,7 @@ class Transition_State_Compare():
             arc_length = self.ref_path_group_data[lm_group][ts_group]['points'][i]['arc_lengths'][0][1]
             WSS += arc_length**2
 
-            self.ref_path_group_data[lm_group][ts_group]['WSS'] = round(WSS, 5)
+        self.ref_path_group_data[lm_group][ts_group]['WSS'] = round(WSS, 5)
 
     def calc_WWSS(self, lm_group, ts_group):
         WWSS = 0
@@ -1503,6 +2035,7 @@ class Transition_State_Compare():
 
     def calc_group_RMSD(self, lm_group, ts_group):
         size = len( self.ref_path_group_data[lm_group][ts_group]['points'])
+
         if (size == 0):
             RMSD = 'n/a'
             self.ref_path_group_data[lm_group][ts_group]['group_RMSD'] = RMSD
@@ -1558,18 +2091,7 @@ class Transition_State_Compare():
         WRMSD = (self.overall_data['WSSE'] / size) ** 0.5
         self.overall_data['WRMSD'] = round(WRMSD, 5)
 
-    def calc_num_comp_paths(self):
-        self.comparable_paths = 0
-
-        for path_group in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[path_group])):
-                group_WRMSD = self.ref_path_group_data[path_group][i]['group_WRMSD']
-                ref_group_WRMSD = self.ts_ref.ref_path_group_data[path_group][i]['group_WRMSD']
-
-                if group_WRMSD != 'n/a' and (group_WRMSD < self.comp_cutoff or ref_group_WRMSD / group_WRMSD >= self.comp_tolerance):
-                    self.comparable_paths += 1
-
-    def calc_num_comp_paths_input(self, comp_cutoff, comp_tolerance):
+    def calc_num_comp_paths(self, comp_cutoff, comp_tolerance):
         comparable_paths = 0
 
         for path_group in self.ref_path_group_data:
@@ -1582,6 +2104,110 @@ class Transition_State_Compare():
                     comparable_paths += 1
 
         return comparable_paths
+    #endregion
+
+    # # # by gibbs # # #
+    #region
+    def calc_gibbs_WSS(self, lm_group, ts_group):
+        WSS = 0
+
+        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
+            ref_gibbs = self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)']
+            curr_gibbs = self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+
+            WSS += gibbs_diff**2
+
+        self.ref_path_group_data[lm_group][ts_group]['gibbs_WSS'] = round(WSS, 5)
+
+    def calc_gibbs_WWSS(self, lm_group, ts_group):
+        WWSS = 0
+
+        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
+            ref_gibbs = self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)']
+            curr_gibbs = self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
+
+            gibbs_diff = ref_gibbs - curr_gibbs
+
+            weighting = self.ref_path_group_data[lm_group][ts_group]['points'][i]['weighting']
+            WWSS += (gibbs_diff ** 2) * weighting
+
+        self.ref_path_group_data[lm_group][ts_group]['gibbs_WWSS'] = round(WWSS, 5)
+
+    def calc_gibbs_group_RMSD(self, lm_group, ts_group):
+        size = len( self.ref_path_group_data[lm_group][ts_group]['points'])
+
+        if (size == 0):
+            RMSD = 'n/a'
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_RMSD'] = RMSD
+        else:
+            RMSD = ( self.ref_path_group_data[lm_group][ts_group]['gibbs_WSS'] / size) ** 0.5
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_group_WRMSD(self, lm_group, ts_group):
+        size = len(self.ref_path_group_data[lm_group][ts_group]['points'])
+
+        if (size == 0):
+            WRMSD = 'n/a'
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_WRMSD'] = WRMSD
+        else:
+            WRMSD = (self.ref_path_group_data[lm_group][ts_group]['gibbs_WWSS'] / size) ** 0.5
+            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_WRMSD'] = round(WRMSD, 5)
+
+    def calc_gibbs_SSE(self):
+        SSE = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                SSE +=  self.ref_path_group_data[key][i]['gibbs_WSS']
+
+        self.overall_data['gibbs_SSE'] = round(SSE, 5)
+
+    def calc_gibbs_WSSE(self):
+        WSSE = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                WSSE += self.ref_path_group_data[key][i]['gibbs_WWSS']
+
+        self.overall_data['gibbs_WSSE'] = round(WSSE, 5)
+
+    def calc_gibbs_RMSD(self):
+        size = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                size += 1
+
+        RMSD = (self.overall_data['gibbs_SSE'] / size) ** 0.5
+        self.overall_data['gibbs_RMSD'] = round(RMSD, 5)
+
+    def calc_gibbs_WRMSD(self):
+        size = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                size += 1
+
+        WRMSD = (self.overall_data['gibbs_WSSE'] / size) ** 0.5
+        self.overall_data['gibbs_WRMSD'] = round(WRMSD, 5)
+
+    def calc_gibbs_num_comp_paths(self, comp_cutoff, comp_tolerance):
+        comparable_paths = 0
+
+        for path_group in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[path_group])):
+                group_WRMSD = self.ref_path_group_data[path_group][i]['gibbs_group_WRMSD']
+                ref_group_WRMSD = self.ts_ref.ref_path_group_data[path_group][i]['gibbs_group_WRMSD']
+
+                if group_WRMSD != 'n/a' and (
+                        group_WRMSD < comp_cutoff or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
+                    comparable_paths += 1
+
+        return comparable_paths
+
+    # endregion
     # endregion
 
     # # # plotting functions # # #
@@ -1901,6 +2527,228 @@ class Transition_State_Compare():
                                        [ts_vert, ts_color, 30 * ts_size], [lm2_vert, 'green', 60],
                                        'red', '-')
 
+    def plot_gibbs_WRMSD_comp(self):
+        # plotting heatmap
+        for path_group in self.ref_path_group_data:
+            lm1_key = int(path_group.split('_')[0])
+            lm2_key = int(path_group.split('_')[1])
+
+            lm1_data = self.lm_class.groups_dict[lm1_key]
+            lm2_data = self.lm_class.groups_dict[lm2_key]
+
+            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+            for i in range(len(self.ref_path_group_data[path_group])):
+                point = self.ref_path_group_data[path_group][i]
+                ref_point = self.ts_ref.ref_path_group_data[path_group][i]
+
+                # if no data matches to current ts group
+                if point['gibbs_group_WRMSD'] == 'n/a':
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
+                                        self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+
+                    if self.ref_north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+                    if self.ref_south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+                elif point['gibbs_group_WRMSD'] > self.comp_cutoff and ref_point['gibbs_group_WRMSD'] / point['gibbs_group_WRMSD'] < self.comp_tolerance:
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
+                                        self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30], [lm1_vert, 'green', 60], 'black', '-.')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30], [lm2_vert, 'green', 60], 'black', '-.')
+
+                    if self.north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
+                                       [lm1_vert, 'green', 60], 'black', '-.')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
+                                       [lm2_vert, 'green', 60], 'black', '-.')
+                    if self.south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
+                                       [lm1_vert, 'green', 60], 'black', '-.')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
+                                       [lm2_vert, 'green', 60], 'black', '-.')
+                else:
+                    ts_color = 'blue'
+
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30], [lm1_vert, 'green', 60], 'red', '-')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30], [lm2_vert, 'green', 60], 'red', '-')
+
+                    if self.north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30],
+                                       [lm1_vert, 'green', 60], 'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30],
+                                       [lm2_vert, 'green', 60], 'red', '-')
+                    if self.south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30],
+                                       [lm1_vert, 'green', 60], 'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30],
+                                       [lm2_vert, 'green', 60], 'red', '-')
+
+    def plot_gibbs_WRMSD_heatmap(self):
+        # plotting heatmap
+        for path_group in self.ref_path_group_data:
+            lm1_key = int(path_group.split('_')[0])
+            lm2_key = int(path_group.split('_')[1])
+
+            lm1_data = self.lm_class.groups_dict[lm1_key]
+            lm2_data = self.lm_class.groups_dict[lm2_key]
+
+            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+            for i in range(len(self.ref_path_group_data[path_group])):
+                point = self.ref_path_group_data[path_group][i]
+                ref_point = self.ts_ref.ref_path_group_data[path_group][i]
+
+                # if no data matches to current ts group
+                if point['gibbs_group_WRMSD'] == 'n/a':
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
+                                        self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+
+                    if self.ref_north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+                    if self.ref_south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+                else:
+                    ts_color = 'blue'
+
+                    if point['gibbs_group_WRMSD'] == 0:
+                        ts_size = 1
+                    else:
+                        ts_size = ref_point['gibbs_group_WRMSD'] / point['gibbs_group_WRMSD']
+
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30 ], [lm1_vert, 'green', 60], 'red', '-')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30], [lm2_vert, 'green', 60], 'red', '-')
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size], [lm1_vert, 'green', 60], 'red', '-')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size], [lm2_vert, 'green', 60], 'red', '-')
+
+                    if self.north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
+                                       [lm1_vert, 'green', 60], 'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
+                                       [lm2_vert, 'green', 60], 'red', '-')
+
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30 * ts_size],
+                                       [lm1_vert, 'green', 60], 'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30 * ts_size],
+                                       [lm2_vert, 'green', 60], 'red', '-')
+                    if self.south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
+                                       [lm1_vert, 'green', 60], 'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
+                                       [lm2_vert, 'green', 60], 'red', '-')
+
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30 * ts_size],
+                                       [lm1_vert, 'green', 60], 'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30 * ts_size],
+                                       [lm2_vert, 'green', 60], 'red', '-')
+
+    def plot_gibbs_RMSD_heatmap(self):
+        # plotting heatmap
+        for path_group in self.ref_path_group_data:
+            lm1_key = int(path_group.split('_')[0])
+            lm2_key = int(path_group.split('_')[1])
+
+            lm1_data = self.lm_class.groups_dict[lm1_key]
+            lm2_data = self.lm_class.groups_dict[lm2_key]
+
+            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+            for i in range(len(self.ref_path_group_data[path_group])):
+                point = self.ref_path_group_data[path_group][i]
+                ref_point = self.ts_ref.ref_path_group_data[path_group][i]
+
+                # if no data matches to current ts group
+                if point['gibbs_group_RMSD'] == 'n/a':
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
+                                        self.ref_path_group_data[path_group][i]['theta']])
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30],
+                              [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30],
+                              [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+
+                    if self.ref_north_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30],
+                                   [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30],
+                                       [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+                    if self.ref_south_groups.count(path_group) == 1:
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30],
+                                       [lm1_vert, 'green', 60], 'gray', '-.', 'black')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30],
+                                       [lm2_vert, 'green', 60], 'gray', '-.', 'black')
+                else:
+                    ts_color = 'blue'
+
+                    if point['gibbs_group_RMSD'] == 0:
+                        ts_size = 1
+                    else:
+                        ts_size = ref_point['gibbs_group_RMSD'] / point['gibbs_group_RMSD']
+
+                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
+                                        self.ref_path_group_data[path_group][i]['theta']])
+
+                    # ref pt
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30],
+                              [lm1_vert, 'green', 60], 'red', '-')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30],
+                              [lm2_vert, 'green', 60], 'red', '-')
+
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size],
+                              [lm1_vert, 'green', 60], 'red', '-')
+                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size],
+                              [lm2_vert, 'green', 60], 'red', '-')
+
+                    if self.north_groups.count(path_group) == 1:
+                        # ref pt
+                        plot_on_circle(self.ts_class.plot.ax_circ_north,
+                                       [ts_vert, 'black', 30], [lm1_vert, 'green', 60],
+                                       'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north,
+                                       [ts_vert, 'black', 30], [lm2_vert, 'green', 60],
+                                       'red', '-')
+
+                        plot_on_circle(self.ts_class.plot.ax_circ_north,
+                                       [ts_vert, ts_color, 30 * ts_size], [lm1_vert, 'green', 60],
+                                       'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_north,
+                                       [ts_vert, ts_color, 30 * ts_size], [lm2_vert, 'green', 60],
+                                       'red', '-')
+                    if self.south_groups.count(path_group) == 1:
+                        # ref pt
+                        plot_on_circle(self.ts_class.plot.ax_circ_south,
+                                       [ts_vert, 'black', 30], [lm1_vert, 'green', 60],
+                                       'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south,
+                                       [ts_vert, 'black', 30], [lm2_vert, 'green', 60],
+                                       'red', '-')
+
+                        plot_on_circle(self.ts_class.plot.ax_circ_south,
+                                       [ts_vert, ts_color, 30 * ts_size], [lm1_vert, 'green', 60],
+                                       'red', '-')
+                        plot_on_circle(self.ts_class.plot.ax_circ_south,
+                                       [ts_vert, ts_color, 30 * ts_size], [lm2_vert, 'green', 60],
+                                       'red', '-')
+
     def set_title_and_legend(self, artist_list, label_list):
         self.ts_class.plot.ax_rect.legend(artist_list,
                                           label_list,
@@ -1923,45 +2771,6 @@ class Transition_State_Compare():
 
     # # # saving functions # # #
     #region
-    # create all the necessary directories
-    def dir_init(self):
-        if not os.path.exists(os.path.join(self.ts_dir, 'circ_and_rect_plots')):
-            os.makedirs(os.path.join(self.ts_dir, 'circ_and_rect_plots'))
-
-        self.plot_save_dir = os.path.join(self.ts_dir, 'circ_and_rect_plots')
-
-        if not os.path.exists(os.path.join(self.plot_save_dir, self.method)):
-            os.makedirs(os.path.join(self.plot_save_dir, self.method))
-
-        self.met_data_dir = os.path.join(self.plot_save_dir, self.method)
-
-        if not os.path.exists(os.path.join(self.met_data_dir, 'raw_LMs')):
-            os.makedirs(os.path.join(self.met_data_dir, 'raw_LMs'))
-
-        self.raw_data_dir = os.path.join(self.met_data_dir, 'raw_LMs')
-
-        if not os.path.exists(os.path.join(self.met_data_dir, 'single_LMs')):
-            os.makedirs(os.path.join(self.met_data_dir, 'single_LMs'))
-
-        self.single_data_dir = os.path.join(self.met_data_dir, 'single_LMs')
-
-        if not os.path.exists(os.path.join(self.plot_save_dir, 'all_groupings')):
-            os.makedirs(os.path.join(self.plot_save_dir, 'all_groupings'))
-
-        self.all_groupings_dir = os.path.join(self.plot_save_dir, 'all_groupings')
-
-        if not os.path.exists(os.path.join(self.met_data_dir, 'heatmaps')):
-            os.makedirs(os.path.join(self.met_data_dir, 'heatmaps'))
-
-        self.heatmap_data_dir = os.path.join(self.met_data_dir, 'heatmaps')
-
-        if not os.path.exists(os.path.join(self.plot_save_dir, 'final_comp')):
-            os.makedirs(os.path.join(self.plot_save_dir, 'final_comp'))
-
-        self.final_comp_dir = os.path.join(self.plot_save_dir, 'final_comp')
-
-        return
-
     def save_all_figures_raw(self, overwrite):
         # Create custom artist
         size_scaling = 1
@@ -2002,7 +2811,7 @@ class Transition_State_Compare():
         ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
 
         artist_list = [ref_path_Artist, cano_lm_Artist, met_lm_Artist, met_ts_Artist, path_Artist]
-        label_list = ['Reference pathway', 'Canonical Designation', self.method + ' LM', self.method + ' TS', 'Pathway']
+        label_list = ['Reference pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
@@ -2032,7 +2841,7 @@ class Transition_State_Compare():
         ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
 
         artist_list = [ref_path_Artist, cano_lm_Artist, met_lm_Artist, met_ts_Artist, path_Artist]
-        label_list = ['Reference pathway', 'Canonical Designation', self.method + ' LM', self.method + ' TS', 'Pathway']
+        label_list = ['Reference pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
@@ -2067,11 +2876,11 @@ class Transition_State_Compare():
                                     edgecolor='black')
 
         artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist, (uncomp_ts_Artist, uncomp_path_Artist), (path_Artist, met_ts_Artist)]
-        label_list = ['no pathway', 'Canonical Designation', 'reference LM', 'uncomparable pathway', 'comparable pathway']
+        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'uncomparable pathway', 'comparable pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-comp-" + self.method
 
-        if not os.path.exists(os.path.join(self.final_comp_dir, base_name + '.png')) or overwrite:
+        if not os.path.exists(os.path.join(self.arc_comp_dir, base_name + '.png')) or overwrite:
             self.ts_class.plot.ax_rect.set_ylim([140, 50])
 
             self.plot_WRMSD_comp()
@@ -2079,7 +2888,7 @@ class Transition_State_Compare():
 
             self.set_title_and_legend(artist_list, label_list)
 
-            self.ts_class.plot.save(base_name, self.final_comp_dir)
+            self.ts_class.plot.save(base_name, self.arc_comp_dir)
             self.ts_class.wipe_plot()
 
     def save_WRMSD_heatmap(self, overwrite):
@@ -2099,11 +2908,11 @@ class Transition_State_Compare():
                                     edgecolor='black')
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist, met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', self.method + ' LM', 'reference TS', self.method + ' TS', 'Pathway']
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
 
-        if not os.path.exists(os.path.join(self.heatmap_data_dir, base_name + '.png')) or overwrite:
+        if not os.path.exists(os.path.join(self.arc_data_dir, base_name + '.png')) or overwrite:
             self.ts_class.plot.ax_rect.set_ylim([140, 50])
 
             self.plot_WRMSD_heatmap()
@@ -2132,12 +2941,12 @@ class Transition_State_Compare():
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
                        met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', self.method + ' LM', 'reference TS',
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS',
                       self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
 
-        if not os.path.exists(os.path.join(self.heatmap_data_dir, base_name + '.png')) or overwrite:
+        if not os.path.exists(os.path.join(self.arc_data_dir, base_name + '.png')) or overwrite:
             self.ts_class.plot.ax_rect.set_ylim([140, 50])
 
             self.plot_RMSD_heatmap()
@@ -2145,7 +2954,110 @@ class Transition_State_Compare():
 
             self.set_title_and_legend(artist_list, label_list)
 
-            self.ts_class.plot.save(base_name, self.heatmap_data_dir)
+            self.ts_class.plot.save(base_name, self.arc_data_dir)
+            self.ts_class.wipe_plot()
+
+    def save_gibbs_WRMSD_comp(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        uncomp_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='s',
+                                       edgecolor='face')
+        met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='blue', marker='s',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+        no_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', linestyle='--')
+        uncomp_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='black', linestyle='--')
+        no_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='s',
+                                   edgecolor='black')
+
+        artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist,
+                       (uncomp_ts_Artist, uncomp_path_Artist), (path_Artist, met_ts_Artist)]
+        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'uncomparable pathway',
+                      'comparable pathway']
+
+        base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-comp-" + self.method
+
+        if not os.path.exists(os.path.join(self.gibbs_comp_dir, base_name + '.png')) or overwrite:
+            self.ts_class.plot.ax_rect.set_ylim([140, 50])
+
+            self.plot_gibbs_WRMSD_comp()
+            self.ts_class.plot_cano()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.ts_class.plot.save(base_name, self.gibbs_comp_dir)
+            self.ts_class.wipe_plot()
+
+    def save_gibbs_WRMSD_heatmap(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        ref_met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='s',
+                                        edgecolor='face')
+        met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='blue', marker='s',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', linestyle='-.')
+        ref_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='s',
+                                    edgecolor='black')
+
+        artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
+                       met_ts_Artist, path_Artist]
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS',
+                      self.method + ' TS', 'Pathway']
+
+        base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
+
+        if not os.path.exists(os.path.join(self.gibbs_data_dir, base_name + '.png')) or overwrite:
+            self.ts_class.plot.ax_rect.set_ylim([140, 50])
+
+            self.plot_gibbs_WRMSD_heatmap()
+            self.ts_class.plot_cano()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.ts_class.plot.save(base_name, self.gibbs_data_dir)
+            self.ts_class.wipe_plot()
+
+    def save_gibbs_RMSD_heatmap(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        ref_met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='s',
+                                        edgecolor='face')
+        met_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='blue', marker='s',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
+        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', linestyle='-.')
+        ref_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='s',
+                                    edgecolor='black')
+
+        artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
+                       met_ts_Artist, path_Artist]
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS',
+                      self.method + ' TS', 'Pathway']
+
+        base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
+
+        if not os.path.exists(os.path.join(self.gibbs_data_dir, base_name + '.png')) or overwrite:
+            self.ts_class.plot.ax_rect.set_ylim([140, 50])
+
+            self.plot_gibbs_RMSD_heatmap()
+            self.ts_class.plot_cano()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.ts_class.plot.save(base_name, self.gibbs_data_dir)
             self.ts_class.wipe_plot()
     # endregion
 
@@ -2196,7 +3108,7 @@ class Compare_All_Methods:
 
         # filling method data for each dict
         for i in range(len(self.methods_lm_data)):
-            method = self.methods_lm_data[i].overall_data['method']
+            method = self.methods_lm_data[i].method
 
             group_RMSD_dict[method] = []
             group_WRMSD_dict[method] = []
@@ -2317,6 +3229,7 @@ class Compare_All_Methods:
 
         return
 
+
     def write_debug_lm_to_csv(self):
         molecule = self.methods_lm_data[0].molecule
 
@@ -2388,6 +3301,7 @@ class Compare_All_Methods:
 
         return
 
+
     def write_uncompared_to_csv(self):
         molecule = self.methods_ts_data[0].molecule
 
@@ -2415,6 +3329,8 @@ class Compare_All_Methods:
 
         return
 
+
+
     def write_num_comp_lm_to_csv(self):
         molecule = self.methods_lm_data[0].molecule
 
@@ -2431,8 +3347,8 @@ class Compare_All_Methods:
             increment = 0.02
 
             while tolerance <= 1:
-                num_comp_paths = self.methods_lm_data[i].calc_num_comp_lm_input(0.1, tolerance)
-                ref_nump_comp_paths = self.methods_lm_data[-1].calc_num_comp_lm_input(0.1, tolerance)
+                num_comp_paths = self.methods_lm_data[i].calc_num_comp_lm(0.1, tolerance)
+                ref_nump_comp_paths = self.methods_lm_data[-1].calc_num_comp_lm(0.1, tolerance)
 
                 num_comp_dict['tolerance'].append(tolerance)
                 num_comp_dict['num_comp_lm'].append(num_comp_paths)
@@ -2465,8 +3381,8 @@ class Compare_All_Methods:
             increment = 0.02
 
             while tolerance <= 1:
-                num_comp_paths = self.methods_ts_data[i].calc_num_comp_paths_input(0.1, tolerance)
-                ref_nump_comp_paths = self.methods_ts_data[-1].calc_num_comp_paths_input(0.1, tolerance)
+                num_comp_paths = self.methods_ts_data[i].calc_num_comp_paths(0.1, tolerance)
+                ref_nump_comp_paths = self.methods_ts_data[-1].calc_num_comp_paths(0.1, tolerance)
 
                 num_comp_dict['tolerance'].append(tolerance)
                 num_comp_dict['num_comp_paths'].append(num_comp_paths)
@@ -2482,6 +3398,76 @@ class Compare_All_Methods:
                 w.writerows(zip(*num_comp_dict.values()))
 
         return
+
+
+    def write_gibbs_num_comp_lm_to_csv(self):
+        molecule = self.methods_lm_data[0].molecule
+
+        for i in range(len(self.methods_lm_data)):
+            method = self.methods_lm_data[i].method
+
+            num_comp_dict = {}
+
+            num_comp_dict['tolerance'] = []
+            num_comp_dict['num_comp_lm'] = []
+            num_comp_dict['accuracy'] = []
+
+            tolerance = 0
+            increment = 0.02
+
+            while tolerance <= 1:
+                num_comp_paths = self.methods_lm_data[i].calc_gibbs_num_comp_lm(0.1, tolerance)
+                ref_nump_comp_paths = self.methods_lm_data[-1].calc_gibbs_num_comp_lm(0.1, tolerance)
+
+                num_comp_dict['tolerance'].append(tolerance)
+                num_comp_dict['num_comp_lm'].append(num_comp_paths)
+                num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
+
+                tolerance += increment
+
+            num_comp_csv = os.path.join(self.methods_lm_data[i].met_data_dir, molecule + '-' + method + '-gibbs_num_comp_lm.csv')
+
+            with open(num_comp_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(num_comp_dict.keys())
+                w.writerows(zip(*num_comp_dict.values()))
+
+        return
+
+    def write_gibbs_num_comp_paths_to_csv(self):
+        molecule = self.methods_ts_data[0].molecule
+
+        for i in range(len(self.methods_ts_data)):
+            method = self.methods_ts_data[i].method
+
+            num_comp_dict = {}
+
+            num_comp_dict['tolerance'] = []
+            num_comp_dict['num_comp_paths'] = []
+            num_comp_dict['accuracy'] = []
+
+            tolerance = 0
+            increment = 0.02
+
+            while tolerance <= 1:
+                num_comp_paths = self.methods_ts_data[i].calc_gibbs_num_comp_paths(0.1, tolerance)
+                ref_nump_comp_paths = self.methods_ts_data[-1].calc_gibbs_num_comp_paths(0.1, tolerance)
+
+                num_comp_dict['tolerance'].append(tolerance)
+                num_comp_dict['num_comp_paths'].append(num_comp_paths)
+                num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
+
+                tolerance += increment
+
+            num_comp_csv = os.path.join(self.methods_ts_data[i].met_data_dir, molecule + '-' + method + '-gibbs_num_comp_paths.csv')
+
+            with open(num_comp_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(num_comp_dict.keys())
+                w.writerows(zip(*num_comp_dict.values()))
+
+        return
+
 
     def organize_data_for_plotting(self, order_in):
 
@@ -2501,26 +3487,4 @@ class Compare_All_Methods:
                                 self.group_WRMSD_vals[str(j)].append(float(0))
 
         return
-
-    def plotting_all_method_information(self, order_in):
-
-        pass
-        #
-        #
-        # # self.fig, self.ax_rect = plt.subplots(facecolor='white')
-        # for j in range(len(self.methods_data[0].group_data)):
-        #     plt.figure(j, facecolor='white')
-        #     objects = order_in
-        #
-        #     y_pos = np.arange(len(objects))
-        #     performance = group_RMSD_vals[str(j)]
-        #
-        #     plt.bar(y_pos, performance, align='center', alpha=0.5)
-        #     plt.xticks(y_pos, objects)
-        #
-        #     plt.ylim([0, 0.5])
-        #     plt.ylabel('RMSD')
-        #     plt.title('Group ' + str(j))
-        #
-        #     plt.show()
 #endregion
