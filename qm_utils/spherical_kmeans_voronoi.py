@@ -33,7 +33,7 @@ except ImportError:
     # noinspection PyCompatibility
     from configparser import ConfigParser
 
-__author__ = 'SPVicchio'
+__author__ = 'jhuber/SPVicchio'
 
 # # Default Parameters # #
 TOL_ARC_LENGTH = 0.1
@@ -46,8 +46,6 @@ PLM1 = 'phi_lm1'
 TLM1 = 'theta_lm1'
 PLM2 = 'phi_lm2'
 TLM2 = 'theta_lm2'
-
-
 # endregion
 
 # # # Helper Functions # # #
@@ -164,7 +162,9 @@ def get_pol_coords(vert_1, vert_2):
 # plots a line on a rectangular plot (2D)
 # vert_n: [vert in polar, color, size]
 # vert_1 always ts, vert_2 always lm
-def plot_line(ax, vert_1, vert_2, line_color, line_style='-', edge_color='face'):
+def plot_line(ax, vert_1, vert_2, line_color, line_style='-', edge_color='face', zorder=10):
+    ax.set_ylim(105, 75)
+
     line = get_pol_coords(vert_1[0], vert_2[0])
 
     if (is_end(line)):
@@ -175,8 +175,8 @@ def plot_line(ax, vert_1, vert_2, line_color, line_style='-', edge_color='face')
     else:
         ax.plot(line[0], line[1], color=line_color, linestyle=line_style)
 
-    ax.scatter(line[0][0], line[1][0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor=edge_color, zorder=10)
-    ax.scatter(line[0][-1], line[1][-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=10)
+    ax.scatter(line[0][0], line[1][0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor=edge_color, zorder=zorder)
+    ax.scatter(line[0][-1], line[1][-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=zorder)
 
     return
 
@@ -263,7 +263,7 @@ def plot_arc(ax_3d, vert_1, vert_2, color_in):
 # plots a line on a circular plot (2D)
 # vert_n: [vert in polar, color, size]
 # vert_1 always ts, vert_2 always lm
-def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', line_style='-', edge_color='face'):
+def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', line_style='-', edge_color='face', zorder=10):
     pol_coords = get_pol_coords(vert_1[0], vert_2[0])
 
     # theta
@@ -280,8 +280,8 @@ def plot_on_circle(ax_circ, vert_1, vert_2, line_color='black', line_style='-', 
 
     ax_circ.plot(theta, r, color=line_color, linestyle=line_style, zorder=1)
 
-    ax_circ.scatter(theta[0], r[0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor=edge_color, zorder=10)
-    ax_circ.scatter(theta[-1], r[-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=10)
+    ax_circ.scatter(theta[0], r[0], s=vert_1[2], c=vert_1[1], marker='s', edgecolor=edge_color, zorder=zorder)
+    ax_circ.scatter(theta[-1], r[-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=zorder)
 
     return
 
@@ -678,119 +678,6 @@ class Local_Minima():
 
         return
 
-class Local_Minima_Cano():
-    def __init__(self, cano_points_in):
-        self.sv_kmeans_dict = {}
-        self.groups_dict = {}
-        self.cano_points = cano_points_in
-        self.plot = Plots(False, False, True)
-
-        self.populate_sv_kmeans_dict()
-
-    def populate_sv_kmeans_dict(self):
-        self.sv_kmeans_dict['phi_skm_centers'] = self.cano_points['phi_cano']
-        self.sv_kmeans_dict['theta_skm_centers'] = self.cano_points['theta_cano']
-        self.sv_kmeans_dict['number_clusters'] = len(self.cano_points['phi_cano'])
-
-        cano_centers = []
-
-        # converts strings to ints
-        for i in range(len(self.cano_points['phi_cano'])):
-            self.cano_points['phi_cano'][i] = float(self.cano_points['phi_cano'][i])
-            self.cano_points['theta_cano'][i] = float(self.cano_points['theta_cano'][i])
-
-        # creating cartesian cano_centers
-        for i in range(len(self.cano_points['phi_cano'])):
-            cano_vert = pol2cart([self.cano_points['phi_cano'][i], self.cano_points['theta_cano'][i], 1])
-            cano_vert = np.asarray(cano_vert)
-
-            cano_centers.append(cano_vert)
-
-        # Default parameters for spherical voronoi
-        radius = 1
-        center = np.array([0, 0, 0])
-
-        cano_centers = np.asarray(cano_centers)
-
-        # Spherical Voronoi for the centers
-        sv = SphericalVoronoi(cano_centers, radius, center)
-        sv.sort_vertices_of_regions()
-
-        # Generating the important base datasets for spherical voronoi
-        r_vertices = []
-        phi_vertices = []
-        theta_vertices = []
-
-        # Computing the Spherical Voronoi vertices to spherical coordinates
-        for value in sv.vertices:
-            r = np.sqrt(value[0] ** 2 + value[1] ** 2 + value[2] ** 2)
-            theta_new = np.rad2deg(np.arctan2(np.sqrt(value[0] ** 2 + value[1] ** 2), value[2]))
-            phi_new = np.rad2deg(np.arctan2(value[1], value[0]))
-            if phi_new < 0:
-                phi_new += 360
-
-            r_vertices.append(round(r, 1))
-            phi_vertices.append(round(phi_new, 1))
-            theta_vertices.append(round(theta_new, 1))
-
-        self.sv_kmeans_dict['phi_sv_vertices'] = phi_vertices
-        self.sv_kmeans_dict['theta_sv_vertices'] = theta_vertices
-        self.sv_kmeans_dict['vertices_sv_xyz'] = sv.vertices
-        self.sv_kmeans_dict['regions_sv_labels'] = sv.regions
-
-        return
-
-    def show(self):
-        self.plot.show()
-
-    def plot_cano_points(self):
-        self.plot.ax_rect.scatter(self.cano_points['phi_cano'], self.cano_points['theta_cano'], s=60, c='black',
-                                  marker='+',
-                                  edgecolor='face')
-
-        return
-
-    def plot_vor_sec(self, lm_group):
-        """
-        helper function for plotting a single voronoi section (input is the vertices of the section)
-        :param ax: plot being added to
-        :param verts: all vertices of the voronoi section
-        :return: nothing
-        """
-
-        verts = []
-
-        for j in range(len(self.sv_kmeans_dict['regions_sv_labels'][int(lm_group)])):
-            verts.append(
-                self.sv_kmeans_dict['vertices_sv_xyz'][self.sv_kmeans_dict['regions_sv_labels'][int(lm_group)][j]])
-
-        pairs = []
-
-        for i in range(len(verts)):
-            # first vertex gets paired to last vertex
-            if i == len(verts) - 1:
-                curr_pair = [verts[i], verts[0]]
-            else:
-                curr_pair = [verts[i], verts[i + 1]]
-
-            pairs.append(curr_pair)
-
-        for i in range(len(pairs)):
-            # plot_arc(ax_3d, pairs[i][0], pairs[i][1])
-
-            plot_vor_line(self.plot.ax_rect, pairs[i][0], pairs[i][1], 'green')
-
-        return
-
-    def plot_all_vor_sec(self):
-        for i in range(len(self.sv_kmeans_dict['regions_sv_labels'])):
-            self.plot_vor_sec(i)
-
-        return
-
-    def wipe_plot(self):
-        self.plot = Plots(False, False, True)
-
 # class for transition states and their pathways
 class Transition_States():
     def __init__(self, ts_data_in, lm_class_obj):
@@ -806,7 +693,6 @@ class Transition_States():
         self.circ_groups_init()
 
         self.plot = Plots(True, False, False)
-
     # # # init functions # # #
     #region
     # reorganizes the data structure
@@ -1066,8 +952,7 @@ class Transition_States():
         self.plot = Plots(True, False, False)
     #endregion
 
-    def arb(self):
-        return
+    pass
 
 # class for initializing plots
 class Plots():
@@ -1082,7 +967,7 @@ class Plots():
             self.ax_circ_south = self.fig.add_subplot(gs[0, 1], projection='polar')
 
             self.ax_rect.set_xlim([-5, 365])
-            self.ax_rect.set_ylim([140, 50])
+            self.ax_rect.set_ylim([105, 75])
 
             # initializing settings for the 2d plot
             self.twoD_init()
@@ -1235,80 +1120,6 @@ def read_csv_canonical_designations(filename, dir_):
 
     return dict
 
-
-def spherical_kmeans_voronoi(number_clusters, data_points, phi_raw, theta_raw, energy=None):
-    """
-    Performs the spherical kmeans and voronoi for the data set
-    :param number_clusters: number of clusters that are necessary here
-    :param data_points: the set of xyz coordinates that represent the data set
-    :return: all of the phi and theta coordinates for vertices and centers
-    """
-    # Generating the important lists
-    ind_dict = {}
-    phi_centers = []
-    theta_centers = []
-
-    ind_dict['phi_raw'] = phi_raw
-    ind_dict['theta_raw'] = theta_raw
-    if energy is not None:
-        ind_dict['energy'] = energy
-
-    # Uses packages to calculate the k-means spherical centers
-    skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
-    skm.fit(data_points)
-    skm_centers = skm.cluster_centers_
-    ind_dict['number_clusters'] = number_clusters
-
-    ind_dict['skm_centers_xyz'] = skm_centers
-
-    # Converting the skm centers to phi and theta coordinates
-    for center_coord in skm_centers:
-        r = np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2 + center_coord[2] ** 2)
-        theta_new = np.rad2deg(np.arctan2(np.sqrt(center_coord[0] ** 2 + center_coord[1] ** 2), center_coord[2]))
-        phi_new = np.rad2deg(np.arctan2(center_coord[1], center_coord[0]))
-        if phi_new < 0:
-            phi_new += 360
-
-        phi_centers.append(round(phi_new, 1))
-        theta_centers.append(round(theta_new, 1))
-
-    ind_dict['phi_skm_centers'] = phi_centers
-    ind_dict['theta_skm_centers'] = theta_centers
-    ind_dict['labels_skm_centers'] = skm.labels_
-
-    # Default parameters for spherical voronoi
-    radius = 1
-    center = np.array([0, 0, 0])
-
-    # Spherical Voronoi for the centers
-    sv = SphericalVoronoi(skm_centers, radius, center)
-    sv.sort_vertices_of_regions()
-
-    # Generating the important base datasets for spherical voronoi
-    r_vertices = []
-    phi_vertices = []
-    theta_vertices = []
-
-    # Computing the Spherical Voronoi vertices to spherical coordinates
-    for value in sv.vertices:
-        r = np.sqrt(value[0] ** 2 + value[1] ** 2 + value[2] ** 2)
-        theta_new = np.rad2deg(np.arctan2(np.sqrt(value[0] ** 2 + value[1] ** 2), value[2]))
-        phi_new = np.rad2deg(np.arctan2(value[1], value[0]))
-        if phi_new < 0:
-            phi_new += 360
-
-        r_vertices.append(round(r, 1))
-        phi_vertices.append(round(phi_new, 1))
-        theta_vertices.append(round(theta_new, 1))
-
-    ind_dict['phi_sv_vertices'] = phi_vertices
-    ind_dict['theta_sv_vertices'] = theta_vertices
-    ind_dict['vertices_sv_xyz'] = sv.vertices
-    ind_dict['regions_sv_labels'] = sv.regions
-
-    return ind_dict
-
-
 def organizing_information_from_spherical_kmeans(data_dict):
     """
     This script is designed to organize all of the raw data information into the correct group
@@ -1443,8 +1254,6 @@ def boltzmann_weighting_mini(energies):
         weighted_gibbs_free_energy += (ind_boltz[i] / total_botlz) * energies[i]
 
     return round(weighted_gibbs_free_energy, 3)
-
-
 # endregion
 
 # # # Transition State Functions # # #

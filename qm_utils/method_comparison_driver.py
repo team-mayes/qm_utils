@@ -4,6 +4,7 @@ The purpose of this script is to make comparisons for a particular QM method to 
 """
 
 # # # import # # #
+#region
 from __future__ import print_function
 
 import os
@@ -17,9 +18,8 @@ matplotlib.use('TkAgg')
 from qm_utils.qm_common import read_csv_to_dict
 from qm_utils.spherical_kmeans_voronoi import Local_Minima, Transition_States,\
                                               read_csv_canonical_designations, read_csv_data, read_csv_data_TS
-from qm_utils.method_comparison import Local_Minima_Compare, Local_Minima_Ref,\
-                                        Transition_State_Compare, Transition_State_Ref, Compare_All_Methods
-
+from qm_utils.method_comparison import Local_Minima_Compare, Transition_State_Compare, Compare_All_Methods
+#endregion
 
 # # # Directories # # #
 #region
@@ -103,6 +103,30 @@ def rewrite_ts_hartree(ts_hartree_dict_list, method, molecule, dir):
         w.writerows(zip(*ts_paths_dict.values()))
 
     return
+
+def check_lm_running(comp_lm_dir, lm_data_dir, molecule):
+    count = 0
+
+    for d in os.listdir(comp_lm_dir):
+        if os.path.isdir(os.path.join(comp_lm_dir, d)):
+            count += 1
+
+    if (count - 1 != len(os.listdir(lm_data_dir))):
+        print('Warning: not all methods may have run for ' + molecule + '! (lm)')
+        print(comp_lm_dir + ' should contain the following directories:')
+        for l in range(len(os.listdir(lm_data_dir))):
+            print(os.listdir(lm_data_dir)[l].split('-')[3].split('.')[0])
+        print('final_comp')
+
+def check_ts_running(ts_working_dir, ts_data_dir, molecule):
+    if (len(os.listdir(ts_working_dir)) - 3 != len(os.listdir(ts_data_dir))):
+        print('Warning: not all methods may have run for ' + molecule + '! (ts)')
+        print(ts_working_dir + ' should contain the following directories:')
+        for l in range(len(os.listdir(ts_data_dir))):
+            print(os.listdir(ts_data_dir)[l].split('-')[3].split('.')[0])
+        print('final_comp')
+        print('all_groupings')
+        print('heatmaps')
 #endregion
 
 # # # Main # # #
@@ -205,14 +229,25 @@ def main():
             # for every local min data file in the directory perform the comparison calculations
             for filename in os.listdir(lm_data_dir):
                 if filename.endswith(".csv"):
-                    method_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
+                    lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
                     method = (filename.split('-', 3)[3]).split('.')[0]
 
                     ref_lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
 
-                    lm_ref = Local_Minima_Ref(ref_lm_hartree, lm_class)
+                    ref_lm_comp_class = Local_Minima_Compare(molecule, method, ref_lm_hartree, lm_class, comp_lm_dir)
+                    lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir, ref_lm_comp_class)
 
-                    lm_comp_class = Local_Minima_Compare(molecule, method, method_hartree, lm_class, comp_lm_dir, lm_ref)
+                    if save and write_lm:
+                        lm_comp_class.save_all_figures(overwrite)
+                        lm_comp_class.save_all_figures_raw(overwrite)
+
+                        lm_comp_class.save_WRMSD_heatmap(overwrite)
+                        lm_comp_class.save_RMSD_heatmap(overwrite)
+                        lm_comp_class.save_WRMSD_comp(overwrite)
+
+                        lm_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
+                        lm_comp_class.save_gibbs_RMSD_heatmap(overwrite)
+                        lm_comp_class.save_gibbs_WRMSD_comp(overwrite)
 
                     lm_comp_data_list.append(lm_comp_class)
             #endregion
@@ -233,16 +268,32 @@ def main():
                     method = (filename.split('-', 3)[3]).split('.')[0]
 
                     ref_ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
-                    ref_ts = Transition_State_Ref(ref_ts_hartree, lm_class, ts_class)
 
-                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class, ts_class, comp_ts_dir, ref_ts)
+                    ref_ts_comp_class = Transition_State_Compare(molecule, method, ref_ts_hartree, lm_class,
+                                                                 ts_class, comp_ts_dir)
+                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
+                                                             ts_class, comp_ts_dir, ref_ts_comp_class)
+
+                    if save and write_ts:
+                        ts_comp_class.save_group_comp(overwrite)
+                        ts_comp_class.save_all_groups_comp(overwrite)
+
+                        ts_comp_class.save_all_figures_raw(overwrite)
+                        ts_comp_class.save_all_figures_single(overwrite)
+                        ts_comp_class.save_all_groupings(overwrite)
+
+                        ts_comp_class.save_WRMSD_comp(overwrite)
+                        ts_comp_class.save_WRMSD_heatmap(overwrite)
+                        ts_comp_class.save_RMSD_heatmap(overwrite)
+
+                        ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
+                        ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
+                        ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
 
                     ts_comp_data_list.append(ts_comp_class)
             #endregion
 
             comp_all_met = Compare_All_Methods(lm_comp_data_list, ts_comp_data_list, comp_lm_dir, comp_ts_dir)
-
-            order_in = ['reference', 'b3lyp', 'dftb', 'am1', 'pm6', 'pm3mm', 'pm3']
             #endregion
 
             if debug:
@@ -261,36 +312,16 @@ def main():
                 comp_all_met.write_gibbs_num_comp_paths_to_csv()
                 comp_all_met.write_gibbs_num_comp_lm_to_csv()
 
-                if write_lm:
-                    # save all lm plots
-                    for j in range(len(lm_comp_data_list)):
-                        lm_comp_data_list[j].save_all_figures(overwrite)
-                        lm_comp_data_list[j].save_all_figures_raw(overwrite)
+            check_lm_running(comp_lm_dir, lm_data_dir, molecule)
+            check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
 
-                        lm_comp_data_list[j].save_WRMSD_heatmap(overwrite)
-                        lm_comp_data_list[j].save_RMSD_heatmap(overwrite)
-                        lm_comp_data_list[j].save_WRMSD_comp(overwrite)
+    if (len(os.listdir(MET_COMP_DIR)) != len(mol_list_dir)):
+        print('Warning: not all molecules have run!')
+        print('The following molecules should have run:')
+        for i in range(len(mol_list_dir)):
+            print(i)
 
-                        lm_comp_data_list[j].save_gibbs_WRMSD_heatmap(overwrite)
-                        lm_comp_data_list[j].save_gibbs_RMSD_heatmap(overwrite)
-                        lm_comp_data_list[j].save_gibbs_WRMSD_comp(overwrite)
-
-                if write_ts:
-                    # save all ts plots
-                    for j in range(len(ts_comp_data_list)):
-                        ts_comp_data_list[j].save_all_figures_raw(overwrite)
-                        ts_comp_data_list[j].save_all_figures_single(overwrite)
-                        ts_comp_data_list[j].save_all_groupings(overwrite)
-
-                        ts_comp_data_list[j].save_WRMSD_comp(overwrite)
-                        ts_comp_data_list[j].save_WRMSD_heatmap(overwrite)
-                        ts_comp_data_list[j].save_RMSD_heatmap(overwrite)
-
-                        ts_comp_data_list[j].save_gibbs_WRMSD_comp(overwrite)
-                        ts_comp_data_list[j].save_gibbs_WRMSD_heatmap(overwrite)
-                        ts_comp_data_list[j].save_gibbs_RMSD_heatmap(overwrite)
-
-    return
+    return 0
 
 if __name__ == '__main__':
     status = main()
