@@ -122,6 +122,7 @@ class Local_Minima_Compare():
         self.populate_groupings()
 
         self.do_calcs()
+
         self.dir_init()
 
     # # # __init__ functions # # #
@@ -983,6 +984,9 @@ class Transition_State_Compare():
         self.populate_path_group_data()
         self.populate_ts_groups()
 
+        self.calc_min_ref_dist()
+        self.calc_added_kmeans_dict()
+
         self.do_calcs()
         self.assign_closest_puckers()
         self.assign_group_name()
@@ -1138,11 +1142,59 @@ class Transition_State_Compare():
                         ordered_list.append([arc_key, val])
 
                     self.path_group_data[key][i]['arc_lengths'] = ordered_list
+                    self.path_group_data[key][i]['arc'] = self.path_group_data[key][i]['arc_lengths'][0][1]
 
                 for i in range(len(self.ref_path_group_data[key])):
                     for j in self.path_group_data[key]:
                         if self.path_group_data[key][j]['arc_lengths'][0][0] == i:
                             self.ref_path_group_data[key][i]['points'].append(self.path_group_data[key][j])
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                for j in range(len(self.ref_path_group_data[key][i]['points'])):
+                    point = self.ref_path_group_data[key][i]['points'][j]
+
+                    point['gibbs'] = point['G298 (Hartrees)'] - self.ref_path_group_data[key][i]['G298 (Hartrees)']
+
+        return
+
+    def calc_min_ref_dist(self):
+        # to assure the first distance will be less
+        min_dist = 100
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                for key2 in self.ref_path_group_data:
+                    for j in range(len(self.ref_path_group_data[key2])):
+                        point1 = self.ref_path_group_data[key][i]
+                        point2 = self.ref_path_group_data[key2][j]
+
+                        theta1 = point1['theta']
+                        theta2 = point2['theta']
+
+                        phi1 = point1['phi']
+                        phi2 = point2['phi']
+
+                        curr_dist = arc_length_calculator(phi1, theta1, phi2, theta2)
+
+                        if curr_dist < min_dist:
+                            min_dist = curr_dist
+
+        self.min_ref_dist = min_dist
+
+    def calc_added_kmeans_dict(self):
+        for key in self.ref_path_group_data:
+            added_points = []
+
+            for i in range(len(self.ref_path_group_data[key])):
+                points = self.ref_path_group_data[key][i]['points']
+
+                for j in range(len(points)):
+                    if points[j]['arc'] > self.min_ref_dist:
+                        added_points.append(points[j])
+
+
+
 
         return
 
@@ -1213,9 +1265,8 @@ class Transition_State_Compare():
                 for j in range(len(self.ref_path_group_data[path_group][i]['points'])):
                     point = self.ref_path_group_data[path_group][i]['points'][j]
 
-                    if point['comp_by_arc']:
-                        mean_phi += point['weighting'] * point['phi']
-                        mean_theta += point['weighting'] * point['theta']
+                    mean_phi += point['weighting'] * point['phi']
+                    mean_theta += point['weighting'] * point['theta']
 
                 self.ref_path_group_data[path_group][i]['mean_phi'] = mean_phi
                 self.ref_path_group_data[path_group][i]['mean_theta'] = mean_theta
@@ -1319,27 +1370,65 @@ class Transition_State_Compare():
     def do_calcs(self):
         for key in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[key])):
+                self.calc_WSS(key, i, 'arc')
+                self.calc_group_RMSD(key, i, 'arc')
+                self.calc_WSS(key, i, 'gibbs')
+                self.calc_group_RMSD(key, i, 'gibbs')
+
                 self.calc_weighting(key, i)
+                self.calc_WWSS(key, i, 'arc')
+                self.calc_WWSS(key, i, 'gibbs')
+                self.calc_group_WRMSD(key, i, 'arc')
+                self.calc_group_WRMSD(key, i, 'gibbs')
 
-                self.calc_WSS(key, i)
-                self.calc_WWSS(key, i)
-                self.calc_group_RMSD(key, i)
-                self.calc_group_WRMSD(key, i)
+        self.calc_SSE('arc')
+        self.calc_RMSD('arc')
+        self.calc_SSE('gibbs')
+        self.calc_RMSD('gibbs')
 
-                self.calc_gibbs_WSS(key, i)
-                self.calc_gibbs_WWSS(key, i)
-                self.calc_gibbs_group_RMSD(key, i)
-                self.calc_gibbs_group_WRMSD(key, i)
+        self.calc_WSSE('arc')
+        self.calc_WRMSD('arc')
+        self.calc_WSSE('gibbs')
+        self.calc_WRMSD('gibbs')
 
-        self.calc_SSE()
-        self.calc_WSSE()
-        self.calc_RMSD()
-        self.calc_WRMSD()
+    def calc_WSS(self, lm_group, ts_group, comp_key):
+        WSS = 0
 
-        self.calc_gibbs_SSE()
-        self.calc_gibbs_WSSE()
-        self.calc_gibbs_RMSD()
-        self.calc_gibbs_WRMSD()
+        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
+            comp_val = self.ref_path_group_data[lm_group][ts_group]['points'][i][comp_key]
+            WSS += comp_val**2
+
+        self.ref_path_group_data[lm_group][ts_group][comp_key + '_WSS'] = round(WSS, 5)
+
+    def calc_group_RMSD(self, lm_group, ts_group, comp_key):
+        size = len( self.ref_path_group_data[lm_group][ts_group]['points'])
+
+        if (size == 0):
+            RMSD = 'n/a'
+            self.ref_path_group_data[lm_group][ts_group][comp_key + '_group_RMSD'] = RMSD
+        else:
+            RMSD = ( self.ref_path_group_data[lm_group][ts_group][comp_key + '_WSS'] / size) ** 0.5
+            self.ref_path_group_data[lm_group][ts_group][comp_key + '_group_RMSD'] = round(RMSD, 5)
+
+    def calc_SSE(self, comp_key):
+        SSE = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                SSE +=  self.ref_path_group_data[key][i][comp_key + '_WSS']
+
+        self.overall_data[comp_key + '_SSE'] = round(SSE, 5)
+
+    def calc_RMSD(self, comp_key):
+        size = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                size += 1
+
+        RMSD = (self.overall_data[comp_key + '_SSE'] / size) ** 0.5
+        self.overall_data[comp_key + '_RMSD'] = round(RMSD, 5)
+
 
     def calc_weighting(self, lm_group, ts_group):
         total_boltz = 0
@@ -1357,272 +1446,70 @@ class Transition_State_Compare():
                 self.ref_path_group_data[lm_group][ts_group]['points'][i]['weighting'] = 0
             else:
                 wt_gibbs += (self.ref_path_group_data[lm_group][ts_group]['points'][i]['ind_boltz'] / total_boltz)\
-                            * self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
+                    * self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
                 self.ref_path_group_data[lm_group][ts_group]['points'][i]['weighting'] = \
                     self.ref_path_group_data[lm_group][ts_group]['points'][i]['ind_boltz'] / total_boltz
 
         self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)'] = round(wt_gibbs, 3)
 
-    # # # by arclength # # #
-    #region
-    def calc_WSS(self, lm_group, ts_group):
-        WSS = 0
-
-        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
-            arc_length = self.ref_path_group_data[lm_group][ts_group]['points'][i]['arc_lengths'][0][1]
-            WSS += arc_length**2
-
-        self.ref_path_group_data[lm_group][ts_group]['WSS'] = round(WSS, 5)
-
-    def calc_WWSS(self, lm_group, ts_group):
+    def calc_WWSS(self, lm_group, ts_group, comp_key):
         WWSS = 0
-        WWSS_sum = 0
-        size = 0
-        arc_tolerance = 1
 
         points = self.ref_path_group_data[lm_group][ts_group]['points']
 
         # calculating each point's contribution
         for i in range(len(points)):
-            arc_length = points[i]['arc_lengths'][0][1]
+            comp_val = points[i][comp_key]
             weighting = points[i]['weighting']
 
-            points[i]['WWSS'] = (arc_length ** 2) * weighting
-            WWSS_sum += (arc_length ** 2) * weighting
-            size += 1
+            WWSS += (comp_val ** 2) * weighting
 
-        if size == 0:
-            self.ref_path_group_data[lm_group][ts_group]['WWSS'] = round(WWSS, 5)
-            self.ref_path_group_data[lm_group][ts_group]['WWSS_no_outliers'] = round(WWSS, 5)
+        self.ref_path_group_data[lm_group][ts_group][comp_key + '_WWSS'] = round(WWSS, 5)
 
-            return
-
-        WWSS_mean = WWSS_sum / size
-
-        std_dev_sum = 0
-
-        for i in range(len(points)):
-            std_dev_sum += (points[i]['WWSS'] - WWSS_mean) ** 2
-
-        std_dev = (std_dev_sum / size) ** 0.5
-
-        # arbitrary threshold to ignore outliers
-        for i in range(len(points)):
-            if np.abs(points[i]['WWSS'] - WWSS_mean) > 1.5 * std_dev:
-                points[i]['comp_by_arc'] = False
-            elif points[i]['arc_lengths'][0][1] > arc_tolerance:
-                points[i]['comp_by_arc'] = False
-            else:
-                points[i]['comp_by_arc'] = True
-
-        WWSS_no_outliers = 0
-
-        for i in range(len(points)):
-            WWSS += points[i]['WWSS']
-
-            if points[i]['comp_by_arc']:
-                WWSS_no_outliers += points[i]['WWSS']
-
-        self.ref_path_group_data[lm_group][ts_group]['WWSS_no_outliers'] = round(WWSS_no_outliers, 5)
-        self.ref_path_group_data[lm_group][ts_group]['WWSS'] = round(WWSS, 5)
-
-    def calc_group_RMSD(self, lm_group, ts_group):
-        size = len( self.ref_path_group_data[lm_group][ts_group]['points'])
-
-        if (size == 0):
-            RMSD = 'n/a'
-            self.ref_path_group_data[lm_group][ts_group]['group_RMSD'] = RMSD
-        else:
-            RMSD = ( self.ref_path_group_data[lm_group][ts_group]['WSS'] / size) ** 0.5
-            self.ref_path_group_data[lm_group][ts_group]['group_RMSD'] = round(RMSD, 5)
-
-    def calc_group_WRMSD(self, lm_group, ts_group):
+    def calc_group_WRMSD(self, lm_group, ts_group, comp_key):
         points = self.ref_path_group_data[lm_group][ts_group]['points']
 
         size = len(points)
 
-        size_no_outliers = 0
-
-        for i in range(len(points)):
-            if points[i]['comp_by_arc']:
-                size_no_outliers += 1
-
         if (size == 0):
             WRMSD = 'n/a'
-            self.ref_path_group_data[lm_group][ts_group]['group_WRMSD'] = WRMSD
+            self.ref_path_group_data[lm_group][ts_group][comp_key + '_group_WRMSD'] = WRMSD
         else:
-            WRMSD = (self.ref_path_group_data[lm_group][ts_group]['WWSS'] / size) ** 0.5
-            self.ref_path_group_data[lm_group][ts_group]['group_WRMSD'] = round(WRMSD, 5)
+            WRMSD = (self.ref_path_group_data[lm_group][ts_group][comp_key + '_WWSS'] / size) ** 0.5
+            self.ref_path_group_data[lm_group][ts_group][comp_key + '_group_WRMSD'] = round(WRMSD, 5)
 
-        if (size_no_outliers == 0):
-            WRMSD = 'n/a'
-            self.ref_path_group_data[lm_group][ts_group]['group_WRMSD_no_outliers'] = WRMSD
-        else:
-            WRMSD = (self.ref_path_group_data[lm_group][ts_group]['WWSS_no_outliers'] / size_no_outliers) ** 0.5
-            self.ref_path_group_data[lm_group][ts_group]['group_WRMSD_no_outliers'] = round(WRMSD, 5)
-
-    def calc_SSE(self):
-        SSE = 0
-
-        for key in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[key])):
-                SSE +=  self.ref_path_group_data[key][i]['WSS']
-
-        self.overall_data['SSE'] = round(SSE, 5)
-
-    def calc_WSSE(self):
+    def calc_WSSE(self, comp_key):
         WSSE = 0
-        WSSE_no_outliers = 0
 
         for key in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[key])):
-                WSSE += self.ref_path_group_data[key][i]['WWSS']
+                WSSE += self.ref_path_group_data[key][i][comp_key + '_WWSS']
 
-                WSSE_no_outliers += self.ref_path_group_data[key][i]['WWSS_no_outliers']
+        self.overall_data[comp_key + '_WSSE'] = round(WSSE, 5)
 
-        self.overall_data['WSSE'] = round(WSSE, 5)
-        self.overall_data['WSSE_no_outliers'] = round(WSSE_no_outliers, 5)
-
-    def calc_RMSD(self):
+    def calc_WRMSD(self, comp_key):
         size = 0
 
         for key in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[key])):
                 size += 1
 
-        RMSD = (self.overall_data['SSE'] / size) ** 0.5
-        self.overall_data['RMSD'] = round(RMSD, 5)
+        WRMSD = (self.overall_data[comp_key + '_WSSE'] / size) ** 0.5
+        self.overall_data[comp_key + '_WRMSD'] = round(WRMSD, 5)
 
-    def calc_WRMSD(self):
-        size = 0
-
-        for key in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[key])):
-                size += 1
-
-        WRMSD = (self.overall_data['WSSE'] / size) ** 0.5
-        self.overall_data['WRMSD'] = round(WRMSD, 5)
-
-        WRMSD_no_outliers = (self.overall_data['WSSE_no_outliers'] / size) ** 0.5
-        self.overall_data['WRMSD_no_outliers'] = round(WRMSD_no_outliers, 5)
-
-    def calc_num_comp_paths(self, comp_cutoff, comp_tolerance):
+    def calc_num_comp_paths(self, comp_cutoff, comp_tolerance, comp_key):
         comparable_paths = 0
 
         for path_group in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[path_group])):
-                group_WRMSD = self.ref_path_group_data[path_group][i]['group_WRMSD']
-                ref_group_WRMSD = self.ts_ref.ref_path_group_data[path_group][i]['group_WRMSD']
+                group_WRMSD = self.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
+                ref_group_WRMSD = self.ts_ref.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
 
                 if group_WRMSD != 'n/a' and (
                         group_WRMSD < comp_cutoff or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
                     comparable_paths += 1
 
         return comparable_paths
-    #endregion
-
-    # # # by gibbs # # #
-    #region
-    def calc_gibbs_WSS(self, lm_group, ts_group):
-        WSS = 0
-
-        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
-            ref_gibbs = self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)']
-            curr_gibbs = self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
-
-            gibbs_diff = ref_gibbs - curr_gibbs
-
-            WSS += gibbs_diff**2
-
-        self.ref_path_group_data[lm_group][ts_group]['gibbs_WSS'] = round(WSS, 5)
-
-    def calc_gibbs_WWSS(self, lm_group, ts_group):
-        WWSS = 0
-
-        for i in range(len(self.ref_path_group_data[lm_group][ts_group]['points'])):
-            ref_gibbs = self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)']
-            curr_gibbs = self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
-
-            gibbs_diff = ref_gibbs - curr_gibbs
-
-            weighting = self.ref_path_group_data[lm_group][ts_group]['points'][i]['weighting']
-            WWSS += (gibbs_diff ** 2) * weighting
-
-        self.ref_path_group_data[lm_group][ts_group]['gibbs_WWSS'] = round(WWSS, 5)
-
-    def calc_gibbs_group_RMSD(self, lm_group, ts_group):
-        size = len( self.ref_path_group_data[lm_group][ts_group]['points'])
-
-        if (size == 0):
-            RMSD = 'n/a'
-            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_RMSD'] = RMSD
-        else:
-            RMSD = ( self.ref_path_group_data[lm_group][ts_group]['gibbs_WSS'] / size) ** 0.5
-            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_RMSD'] = round(RMSD, 5)
-
-    def calc_gibbs_group_WRMSD(self, lm_group, ts_group):
-        size = len(self.ref_path_group_data[lm_group][ts_group]['points'])
-
-        if (size == 0):
-            WRMSD = 'n/a'
-            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_WRMSD'] = WRMSD
-        else:
-            WRMSD = (self.ref_path_group_data[lm_group][ts_group]['gibbs_WWSS'] / size) ** 0.5
-            self.ref_path_group_data[lm_group][ts_group]['gibbs_group_WRMSD'] = round(WRMSD, 5)
-
-    def calc_gibbs_SSE(self):
-        SSE = 0
-
-        for key in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[key])):
-                SSE +=  self.ref_path_group_data[key][i]['gibbs_WSS']
-
-        self.overall_data['gibbs_SSE'] = round(SSE, 5)
-
-    def calc_gibbs_WSSE(self):
-        WSSE = 0
-
-        for key in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[key])):
-                WSSE += self.ref_path_group_data[key][i]['gibbs_WWSS']
-
-        self.overall_data['gibbs_WSSE'] = round(WSSE, 5)
-
-    def calc_gibbs_RMSD(self):
-        size = 0
-
-        for key in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[key])):
-                size += 1
-
-        RMSD = (self.overall_data['gibbs_SSE'] / size) ** 0.5
-        self.overall_data['gibbs_RMSD'] = round(RMSD, 5)
-
-    def calc_gibbs_WRMSD(self):
-        size = 0
-
-        for key in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[key])):
-                size += 1
-
-        WRMSD = (self.overall_data['gibbs_WSSE'] / size) ** 0.5
-        self.overall_data['gibbs_WRMSD'] = round(WRMSD, 5)
-
-    def calc_gibbs_num_comp_paths(self, comp_cutoff, comp_tolerance):
-        comparable_paths = 0
-
-        for path_group in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[path_group])):
-                group_WRMSD = self.ref_path_group_data[path_group][i]['gibbs_group_WRMSD']
-                ref_group_WRMSD = self.ts_ref.ref_path_group_data[path_group][i]['gibbs_group_WRMSD']
-
-                if group_WRMSD != 'n/a' and (
-                        group_WRMSD < comp_cutoff or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
-                    comparable_paths += 1
-
-        return comparable_paths
-
-    # endregion
     # endregion
 
     # # # plotting functions # # #
@@ -1726,8 +1613,8 @@ class Transition_State_Compare():
 
     # # # group comp plotting # # #
     #region
-    def plot_group_comp(self, path_group, color_coord_dict):
-        coord_tolerance = 90
+    def plot_group_comp(self, path_group, color_coord_dict, comp_key):
+        coord_tolerance = 30
 
         lm1_key = int(path_group.split('_')[0])
         lm2_key = int(path_group.split('_')[1])
@@ -1752,6 +1639,8 @@ class Transition_State_Compare():
                 if np.abs(color_phi - comp_phi) < coord_tolerance:
                     list_of_excluded_colors.append(color_coord_dict[comp_phi])
 
+
+            count = 0
             while is_excluded(color, list_of_excluded_colors):
                 seed_num += 0.085
 
@@ -1760,10 +1649,15 @@ class Transition_State_Compare():
 
                 color = cmap(seed_num)
 
+                count += 1
+
+                if count > 10:
+                    break
+
             color_coord_dict[color_phi] = color
 
             # if no data matches to current ts group
-            if point['group_WRMSD_no_outliers'] == 'n/a':
+            if point[comp_key + '_group_WRMSD'] == 'n/a':
                 ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
                                     self.ref_path_group_data[path_group][i]['theta']])
 
@@ -1821,7 +1715,7 @@ class Transition_State_Compare():
 
     # # # comparable plotting # # #
     #region
-    def plot_WRMSD_comp(self):
+    def plot_WRMSD_comp(self, comp_key):
         # plotting heatmap
         for path_group in self.ref_path_group_data:
             lm1_key = int(path_group.split('_')[0])
@@ -1838,7 +1732,7 @@ class Transition_State_Compare():
                 ref_point = self.ts_ref.ref_path_group_data[path_group][i]
 
                 # if no data matches to current ts group
-                if point['group_WRMSD'] == 'n/a':
+                if point[comp_key + '_group_WRMSD'] == 'n/a':
                     ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
                                         self.ref_path_group_data[path_group][i]['theta']])
 
@@ -1851,73 +1745,7 @@ class Transition_State_Compare():
                     if self.ref_south_groups.count(path_group) == 1:
                         plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
                         plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                elif point['group_WRMSD'] > self.comp_cutoff and ref_point['group_WRMSD'] / point['group_WRMSD'] < self.comp_tolerance:
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
-                                        self.ref_path_group_data[path_group][i]['theta']])
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30], [lm1_vert, 'green', 60], 'black', '-.')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30], [lm2_vert, 'green', 60], 'black', '-.')
-
-                    if self.north_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
-                                       [lm1_vert, 'green', 60], 'black', '-.')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
-                                       [lm2_vert, 'green', 60], 'black', '-.')
-                    if self.south_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
-                                       [lm1_vert, 'green', 60], 'black', '-.')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
-                                       [lm2_vert, 'green', 60], 'black', '-.')
-                else:
-                    ts_color = 'blue'
-
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30], [lm1_vert, 'green', 60], 'red', '-')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30], [lm2_vert, 'green', 60], 'red', '-')
-
-                    if self.north_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30],
-                                       [lm1_vert, 'green', 60], 'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30],
-                                       [lm2_vert, 'green', 60], 'red', '-')
-                    if self.south_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30],
-                                       [lm1_vert, 'green', 60], 'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30],
-                                       [lm2_vert, 'green', 60], 'red', '-')
-
-    def plot_gibbs_WRMSD_comp(self):
-        # plotting heatmap
-        for path_group in self.ref_path_group_data:
-            lm1_key = int(path_group.split('_')[0])
-            lm2_key = int(path_group.split('_')[1])
-
-            lm1_data = self.lm_class.groups_dict[lm1_key]
-            lm2_data = self.lm_class.groups_dict[lm2_key]
-
-            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
-            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
-
-            for i in range(len(self.ref_path_group_data[path_group])):
-                point = self.ref_path_group_data[path_group][i]
-                ref_point = self.ts_ref.ref_path_group_data[path_group][i]
-
-                # if no data matches to current ts group
-                if point['gibbs_group_WRMSD'] == 'n/a':
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
-                                        self.ref_path_group_data[path_group][i]['theta']])
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-
-                    if self.ref_north_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                    if self.ref_south_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                elif point['gibbs_group_WRMSD'] > self.comp_cutoff and ref_point['gibbs_group_WRMSD'] / point['gibbs_group_WRMSD'] < self.comp_tolerance:
+                elif point[comp_key + '_group_WRMSD'] > self.comp_cutoff and ref_point[comp_key + '_group_WRMSD'] / point[comp_key + '_group_WRMSD'] < self.comp_tolerance:
                     ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
                                         self.ref_path_group_data[path_group][i]['theta']])
 
@@ -1956,7 +1784,7 @@ class Transition_State_Compare():
 
     # # # heatmap plotting # # #
     #region
-    def plot_WRMSD_heatmap(self):
+    def plot_WRMSD_heatmap(self, comp_key):
         # plotting heatmap
         for path_group in self.ref_path_group_data:
             lm1_key = int(path_group.split('_')[0])
@@ -1973,7 +1801,7 @@ class Transition_State_Compare():
                 ref_point = self.ts_ref.ref_path_group_data[path_group][i]
 
                 # if no data matches to current ts group
-                if point['group_WRMSD'] == 'n/a':
+                if point[comp_key + '_group_WRMSD'] == 'n/a':
                     ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
                                         self.ref_path_group_data[path_group][i]['theta']])
 
@@ -1989,10 +1817,10 @@ class Transition_State_Compare():
                 else:
                     ts_color = 'blue'
 
-                    if point['group_WRMSD'] == 0:
+                    if point[comp_key + '_group_WRMSD'] == 0:
                         ts_size = 1
                     else:
-                        ts_size = ref_point['group_WRMSD'] / point['group_WRMSD']
+                        ts_size = ref_point[comp_key + '_group_WRMSD'] / point[comp_key + '_group_WRMSD']
 
                     ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
 
@@ -2023,7 +1851,7 @@ class Transition_State_Compare():
                         plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30 * ts_size],
                                        [lm2_vert, 'green', 60], 'red', '-')
 
-    def plot_gibbs_WRMSD_heatmap(self):
+    def plot_RMSD_heatmap(self, comp_key):
         # plotting heatmap
         for path_group in self.ref_path_group_data:
             lm1_key = int(path_group.split('_')[0])
@@ -2040,74 +1868,7 @@ class Transition_State_Compare():
                 ref_point = self.ts_ref.ref_path_group_data[path_group][i]
 
                 # if no data matches to current ts group
-                if point['gibbs_group_WRMSD'] == 'n/a':
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
-                                        self.ref_path_group_data[path_group][i]['theta']])
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-
-                    if self.ref_north_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                    if self.ref_south_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                else:
-                    ts_color = 'blue'
-
-                    if point['gibbs_group_WRMSD'] == 0:
-                        ts_size = 1
-                    else:
-                        ts_size = ref_point['gibbs_group_WRMSD'] / point['gibbs_group_WRMSD']
-
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30 ], [lm1_vert, 'green', 60], 'red', '-')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30], [lm2_vert, 'green', 60], 'red', '-')
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size], [lm1_vert, 'green', 60], 'red', '-')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size], [lm2_vert, 'green', 60], 'red', '-')
-
-                    if self.north_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
-                                       [lm1_vert, 'green', 60], 'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'black', 30],
-                                       [lm2_vert, 'green', 60], 'red', '-')
-
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30 * ts_size],
-                                       [lm1_vert, 'green', 60], 'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, ts_color, 30 * ts_size],
-                                       [lm2_vert, 'green', 60], 'red', '-')
-                    if self.south_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
-                                       [lm1_vert, 'green', 60], 'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'black', 30],
-                                       [lm2_vert, 'green', 60], 'red', '-')
-
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30 * ts_size],
-                                       [lm1_vert, 'green', 60], 'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30 * ts_size],
-                                       [lm2_vert, 'green', 60], 'red', '-')
-
-    def plot_RMSD_heatmap(self):
-        # plotting heatmap
-        for path_group in self.ref_path_group_data:
-            lm1_key = int(path_group.split('_')[0])
-            lm2_key = int(path_group.split('_')[1])
-
-            lm1_data = self.lm_class.groups_dict[lm1_key]
-            lm2_data = self.lm_class.groups_dict[lm2_key]
-
-            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
-            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
-
-            for i in range(len(self.ref_path_group_data[path_group])):
-                point = self.ref_path_group_data[path_group][i]
-                ref_point = self.ts_ref.ref_path_group_data[path_group][i]
-
-                # if no data matches to current ts group
-                if point['group_RMSD'] == 'n/a':
+                if point[comp_key + '_group_RMSD'] == 'n/a':
                     ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
                                         self.ref_path_group_data[path_group][i]['theta']])
 
@@ -2129,99 +1890,10 @@ class Transition_State_Compare():
                 else:
                     ts_color = 'blue'
 
-                    if point['group_RMSD'] == 0:
+                    if point[comp_key + '_group_RMSD'] == 0:
                         ts_size = 1
                     else:
-                        ts_size = ref_point['group_RMSD'] / point['group_RMSD']
-
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
-                                        self.ref_path_group_data[path_group][i]['theta']])
-
-                    # ref pt
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30],
-                              [lm1_vert, 'green', 60], 'red', '-')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'black', 30],
-                              [lm2_vert, 'green', 60], 'red', '-')
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size],
-                              [lm1_vert, 'green', 60], 'red', '-')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, ts_color, 30 * ts_size],
-                              [lm2_vert, 'green', 60], 'red', '-')
-
-                    if self.north_groups.count(path_group) == 1:
-                        # ref pt
-                        plot_on_circle(self.ts_class.plot.ax_circ_north,
-                                       [ts_vert, 'black', 30], [lm1_vert, 'green', 60],
-                                       'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north,
-                                       [ts_vert, 'black', 30], [lm2_vert, 'green', 60],
-                                       'red', '-')
-
-                        plot_on_circle(self.ts_class.plot.ax_circ_north,
-                                       [ts_vert, ts_color, 30 * ts_size], [lm1_vert, 'green', 60],
-                                       'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north,
-                                       [ts_vert, ts_color, 30 * ts_size], [lm2_vert, 'green', 60],
-                                       'red', '-')
-                    if self.south_groups.count(path_group) == 1:
-                        # ref pt
-                        plot_on_circle(self.ts_class.plot.ax_circ_south,
-                                       [ts_vert, 'black', 30], [lm1_vert, 'green', 60],
-                                       'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south,
-                                       [ts_vert, 'black', 30], [lm2_vert, 'green', 60],
-                                       'red', '-')
-
-                        plot_on_circle(self.ts_class.plot.ax_circ_south,
-                                       [ts_vert, ts_color, 30 * ts_size], [lm1_vert, 'green', 60],
-                                       'red', '-')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south,
-                                       [ts_vert, ts_color, 30 * ts_size], [lm2_vert, 'green', 60],
-                                       'red', '-')
-
-    def plot_gibbs_RMSD_heatmap(self):
-        # plotting heatmap
-        for path_group in self.ref_path_group_data:
-            lm1_key = int(path_group.split('_')[0])
-            lm2_key = int(path_group.split('_')[1])
-
-            lm1_data = self.lm_class.groups_dict[lm1_key]
-            lm2_data = self.lm_class.groups_dict[lm2_key]
-
-            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
-            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
-
-            for i in range(len(self.ref_path_group_data[path_group])):
-                point = self.ref_path_group_data[path_group][i]
-                ref_point = self.ts_ref.ref_path_group_data[path_group][i]
-
-                # if no data matches to current ts group
-                if point['gibbs_group_RMSD'] == 'n/a':
-                    ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
-                                        self.ref_path_group_data[path_group][i]['theta']])
-
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30],
-                              [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                    plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'white', 30],
-                              [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-
-                    if self.ref_north_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30],
-                                   [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                        plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'white', 30],
-                                       [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                    if self.ref_south_groups.count(path_group) == 1:
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30],
-                                       [lm1_vert, 'green', 60], 'gray', '-.', 'black')
-                        plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30],
-                                       [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                else:
-                    ts_color = 'blue'
-
-                    if point['gibbs_group_RMSD'] == 0:
-                        ts_size = 1
-                    else:
-                        ts_size = ref_point['gibbs_group_RMSD'] / point['gibbs_group_RMSD']
+                        ts_size = ref_point[comp_key + '_group_RMSD'] / point[comp_key + '_group_RMSD']
 
                     ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
                                         self.ref_path_group_data[path_group][i]['theta']])
@@ -2407,7 +2079,7 @@ class Transition_State_Compare():
             color_coord_dict = {}
 
             if not os.path.exists(os.path.join(self.group_comp_dir, base_name + '.png')) or overwrite:
-                self.plot_group_comp(path_group, color_coord_dict)
+                self.plot_group_comp(path_group, color_coord_dict, 'arc')
                 self.ts_class.plot_cano()
 
                 self.set_title_and_legend(artist_list, label_list)
@@ -2442,9 +2114,8 @@ class Transition_State_Compare():
 
         if not os.path.exists(os.path.join(self.all_groups_comp_dir, base_name + '.png')) or overwrite:
             color_coord_dict = {}
-
             for path_group in self.ref_path_group_data:
-                self.plot_group_comp(path_group, color_coord_dict)
+                self.plot_group_comp(path_group, color_coord_dict, 'arc')
 
             self.ts_class.plot_cano()
 
@@ -2476,7 +2147,7 @@ class Transition_State_Compare():
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-comp-" + self.method
 
         if not os.path.exists(os.path.join(self.arc_comp_dir, base_name + '.png')) or overwrite:
-            self.plot_WRMSD_comp()
+            self.plot_WRMSD_comp('arc')
             self.ts_class.plot_cano()
 
             self.set_title_and_legend(artist_list, label_list)
@@ -2506,7 +2177,7 @@ class Transition_State_Compare():
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
 
         if not os.path.exists(os.path.join(self.arc_data_dir, base_name + '.png')) or overwrite:
-            self.plot_WRMSD_heatmap()
+            self.plot_WRMSD_heatmap('arc')
             self.ts_class.plot_cano()
 
             self.set_title_and_legend(artist_list, label_list)
@@ -2538,7 +2209,7 @@ class Transition_State_Compare():
         base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
 
         if not os.path.exists(os.path.join(self.arc_data_dir, base_name + '.png')) or overwrite:
-            self.plot_RMSD_heatmap()
+            self.plot_RMSD_heatmap('arc')
             self.ts_class.plot_cano()
 
             self.set_title_and_legend(artist_list, label_list)
@@ -2571,7 +2242,7 @@ class Transition_State_Compare():
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-comp-" + self.method
 
         if not os.path.exists(os.path.join(self.gibbs_comp_dir, base_name + '.png')) or overwrite:
-            self.plot_gibbs_WRMSD_comp()
+            self.plot_WRMSD_comp('gibbs')
             self.ts_class.plot_cano()
 
             self.set_title_and_legend(artist_list, label_list)
@@ -2603,7 +2274,7 @@ class Transition_State_Compare():
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
 
         if not os.path.exists(os.path.join(self.gibbs_data_dir, base_name + '.png')) or overwrite:
-            self.plot_gibbs_WRMSD_heatmap()
+            self.plot_WRMSD_heatmap('gibbs')
             self.ts_class.plot_cano()
 
             self.set_title_and_legend(artist_list, label_list)
@@ -2635,13 +2306,19 @@ class Transition_State_Compare():
         base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
 
         if not os.path.exists(os.path.join(self.gibbs_data_dir, base_name + '.png')) or overwrite:
-            self.plot_gibbs_RMSD_heatmap()
+            self.plot_RMSD_heatmap('gibbs')
             self.ts_class.plot_cano()
 
             self.set_title_and_legend(artist_list, label_list)
 
             self.ts_class.plot.save(base_name, self.gibbs_data_dir)
             self.ts_class.wipe_plot()
+
+
+    def add_to_csv(self, filename):
+        # add dict of kmeans points to the .csv file
+
+        return
     # endregion
 
     pass
@@ -2732,26 +2409,23 @@ class Compare_All_Methods:
 
         return
 
-    def write_ts_to_csv(self):
+    def write_ts_to_csv(self, comp_key):
         molecule = self.methods_ts_data[0].molecule
 
         group_RMSD_dict = {}
         group_WRMSD_dict = {}
         WSS_dict = {}
         WWSS_dict = {}
-        group_WRMSD_no_outliers_dict = {}
 
         group_RMSD_dict['group'] = []
         group_WRMSD_dict['group'] = []
         WSS_dict['group'] = []
         WWSS_dict['group'] = []
-        group_WRMSD_no_outliers_dict['group'] = []
 
         group_RMSD_dict['pucker'] = []
         group_WRMSD_dict['pucker'] = []
         WSS_dict['pucker'] = []
         WWSS_dict['pucker'] = []
-        group_WRMSD_no_outliers_dict['pucker'] = []
 
         # listing under the hood names
         for key in self.methods_ts_data[0].ref_path_group_data:
@@ -2760,7 +2434,6 @@ class Compare_All_Methods:
                 group_WRMSD_dict['group'].append(key + '-' + str(i))
                 WSS_dict['group'].append(key + '-' + str(i))
                 WWSS_dict['group'].append(key + '-' + str(i))
-                group_WRMSD_no_outliers_dict['group'].append(key + '-' + str(i))
 
         # listing group pucker
         for key in self.methods_ts_data[0].ref_path_group_data:
@@ -2769,7 +2442,6 @@ class Compare_All_Methods:
                 group_WRMSD_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
                 WSS_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
                 WWSS_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
-                group_WRMSD_no_outliers_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
 
         # filling method data for each dict
         for i in range(len(self.methods_ts_data)):
@@ -2779,27 +2451,23 @@ class Compare_All_Methods:
             group_WRMSD_dict[method] = []
             WSS_dict[method] = []
             WWSS_dict[method] = []
-            group_WRMSD_no_outliers_dict[method] = []
 
             for key in self.methods_ts_data[i].ref_path_group_data:
                 for j in range(len(self.methods_ts_data[i].ref_path_group_data[key])):
-                    group_RMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j]['group_RMSD']
-                    group_WRMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j]['group_WRMSD']
-                    WSS_val = self.methods_ts_data[i].ref_path_group_data[key][j]['WSS']
-                    WWSS_val = self.methods_ts_data[i].ref_path_group_data[key][j]['WWSS']
-                    group_WRMSD_no_outliers_val = self.methods_ts_data[i].ref_path_group_data[key][j]['group_WRMSD_no_outliers']
+                    group_RMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_group_RMSD']
+                    group_WRMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_group_WRMSD']
+                    WSS_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_WSS']
+                    WWSS_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_WWSS']
 
                     group_RMSD_dict[method].append(group_RMSD_val)
                     group_WRMSD_dict[method].append(group_WRMSD_val)
                     WSS_dict[method].append(WSS_val)
                     WWSS_dict[method].append(WWSS_val)
-                    group_WRMSD_no_outliers_dict[method].append(group_WRMSD_no_outliers_val)
 
-        group_RMSD_csv = os.path.join(self.ts_dir, molecule + '-ts-group_RMSD.csv')
-        group_WRMSD_csv = os.path.join(self.ts_dir, molecule + '-ts-group_WRMSD.csv')
-        WSS_csv = os.path.join(self.ts_dir, molecule + '-ts-WSS.csv')
-        WWSS_csv = os.path.join(self.ts_dir, molecule + '-ts-WWSS.csv')
-        group_WRMSD_no_outliers_csv = os.path.join(self.ts_dir, molecule + '-ts-group_WRMSD_no_outliers.csv')
+        group_RMSD_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-group_RMSD.csv')
+        group_WRMSD_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-group_WRMSD.csv')
+        WSS_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-WSS.csv')
+        WWSS_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-WWSS.csv')
 
         with open(group_RMSD_csv, 'w', newline='') as file:
             w = csv.writer(file)
@@ -2817,10 +2485,6 @@ class Compare_All_Methods:
             w = csv.writer(file)
             w.writerow(WWSS_dict.keys())
             w.writerows(zip(*WWSS_dict.values()))
-        with open(group_WRMSD_no_outliers_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(group_WRMSD_no_outliers_dict.keys())
-            w.writerows(zip(*group_WRMSD_no_outliers_dict.values()))
 
         return
 
@@ -2959,41 +2623,6 @@ class Compare_All_Methods:
 
         return
 
-    def write_num_comp_paths_to_csv(self):
-        molecule = self.methods_ts_data[0].molecule
-
-        for i in range(len(self.methods_ts_data)):
-            method = self.methods_ts_data[i].method
-
-            num_comp_dict = {}
-
-            num_comp_dict['tolerance'] = []
-            num_comp_dict['num_comp_paths'] = []
-            num_comp_dict['accuracy'] = []
-
-            tolerance = 0
-            increment = 0.02
-
-            while tolerance <= 1:
-                num_comp_paths = self.methods_ts_data[i].calc_num_comp_paths(0.1, tolerance)
-                ref_nump_comp_paths = self.methods_ts_data[-1].calc_num_comp_paths(0.1, tolerance)
-
-                num_comp_dict['tolerance'].append(tolerance)
-                num_comp_dict['num_comp_paths'].append(num_comp_paths)
-                num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
-
-                tolerance += increment
-
-            num_comp_csv = os.path.join(self.methods_ts_data[i].met_data_dir, molecule + '-' + method + '-num_comp_paths.csv')
-
-            with open(num_comp_csv, 'w', newline='') as file:
-                w = csv.writer(file)
-                w.writerow(num_comp_dict.keys())
-                w.writerows(zip(*num_comp_dict.values()))
-
-        return
-
-
     def write_gibbs_num_comp_lm_to_csv(self):
         molecule = self.methods_lm_data[0].molecule
 
@@ -3028,7 +2657,7 @@ class Compare_All_Methods:
 
         return
 
-    def write_gibbs_num_comp_paths_to_csv(self):
+    def write_num_comp_paths_to_csv(self, comp_key):
         molecule = self.methods_ts_data[0].molecule
 
         for i in range(len(self.methods_ts_data)):
@@ -3044,8 +2673,8 @@ class Compare_All_Methods:
             increment = 0.02
 
             while tolerance <= 1:
-                num_comp_paths = self.methods_ts_data[i].calc_gibbs_num_comp_paths(0.1, tolerance)
-                ref_nump_comp_paths = self.methods_ts_data[-1].calc_gibbs_num_comp_paths(0.1, tolerance)
+                num_comp_paths = self.methods_ts_data[i].calc_num_comp_paths(0.1, tolerance, comp_key)
+                ref_nump_comp_paths = self.methods_ts_data[-1].calc_num_comp_paths(0.1, tolerance, comp_key)
 
                 num_comp_dict['tolerance'].append(tolerance)
                 num_comp_dict['num_comp_paths'].append(num_comp_paths)
@@ -3053,7 +2682,8 @@ class Compare_All_Methods:
 
                 tolerance += increment
 
-            num_comp_csv = os.path.join(self.methods_ts_data[i].met_data_dir, molecule + '-' + method + '-gibbs_num_comp_paths.csv')
+            num_comp_csv = os.path.join(self.methods_ts_data[i].met_data_dir,
+                                        molecule + '-' + method + '-' + comp_key + '-num_comp_paths.csv')
 
             with open(num_comp_csv, 'w', newline='') as file:
                 w = csv.writer(file)

@@ -15,6 +15,8 @@ import csv
 import matplotlib
 matplotlib.use('TkAgg')
 
+from shutil import copyfile
+
 from qm_utils.qm_common import read_csv_to_dict
 from qm_utils.spherical_kmeans_voronoi import Local_Minima, Transition_States,\
                                               read_csv_canonical_designations, read_csv_data, read_csv_data_TS
@@ -135,12 +137,20 @@ def main():
     # # # save init # # #
     #region
     save = True
-    overwrite = False # will overwrite
+    # overwrite existing plots, True is resource intensive
+    overwrite = False
 
+    # write the info for lm and/or ts
     write_lm = True
     write_ts = True
 
-    do_molecule = [True, True, True, True]
+    # run calcs for specific molecule
+    do_aglc = True
+    do_bglc = True
+    do_bxyl = True
+    do_oxane = True
+
+    do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
 
     debug = False # has those CSV files
     #endregion
@@ -221,6 +231,10 @@ def main():
 
             ts_data_dict = read_csv_data_TS('z_' + mol_list_dir[i] + '_TS-b3lyp_howsugarspucker.csv',
                                                                     sv_mol_dir)[3]
+
+            hsp_file = os.path.join(sv_mol_dir, 'z_' + mol_list_dir[i] + '_TS-b3lyp_howsugarspucker.csv')
+            hsp_added_kmeans_file = os.path.join(sv_mol_dir, 'z_' + mol_list_dir[i] + '_TS-b3lyp_hsp_added_kmeans.csv')
+
             ts_class = Transition_States(ts_data_dict, lm_class)
             #endregion
 
@@ -254,6 +268,8 @@ def main():
 
             # # # transition state comparison data initialization # # #
             #region
+            copyfile(hsp_file, hsp_added_kmeans_file)
+
             # for every ts data file in the directory reformat
             for filename in os.listdir(ts_unformatted_dir):
                 if filename.endswith(".csv"):
@@ -302,17 +318,107 @@ def main():
 
             if save:
                 # save the comparison data
-                comp_all_met.write_lm_to_csv()
-                comp_all_met.write_ts_to_csv()
-                comp_all_met.write_uncompared_to_csv()
+                if write_lm:
+                    comp_all_met.write_lm_to_csv()
 
-                comp_all_met.write_num_comp_paths_to_csv()
-                comp_all_met.write_num_comp_lm_to_csv()
+                    comp_all_met.write_num_comp_lm_to_csv()
+                    comp_all_met.write_gibbs_num_comp_lm_to_csv()
 
-                comp_all_met.write_gibbs_num_comp_paths_to_csv()
-                comp_all_met.write_gibbs_num_comp_lm_to_csv()
+                if write_ts:
+                    comp_all_met.write_ts_to_csv('arc')
+                    comp_all_met.write_ts_to_csv('gibbs')
+
+                    comp_all_met.write_num_comp_paths_to_csv('arc')
+                    comp_all_met.write_num_comp_paths_to_csv('gibbs')
 
             check_lm_running(comp_lm_dir, lm_data_dir, molecule)
+            check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
+
+    if (len(os.listdir(MET_COMP_DIR)) != len(mol_list_dir)):
+        print('Warning: not all molecules have run!')
+        print('The following molecules should have run:')
+        for i in range(len(mol_list_dir)):
+            print(i)
+
+    # for each molecule, perform the comparisons
+    for i in range(len(mol_list_dir)):
+        if do_molecule[i]:
+            molecule = mol_list_dir[i]
+            comp_mol_dir = os.path.join(MET_COMP_DIR, mol_list_dir[i])
+            sv_mol_dir = os.path.join(sv_all_mol_dir, mol_list_dir[i])
+            comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state')
+            ts_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
+
+            # # # calcs # # #
+            # region
+            # # # comparison data initialization # # #
+            # region
+            ts_comp_data_list = []
+
+            # initialization info for local minimum clustering for specific molecule
+            number_clusters = num_clusters[i]
+            dict_cano = read_csv_canonical_designations('CP_params.csv', SV_DIR)
+            data_points, phi_raw, theta_raw, energy = read_csv_data('z_' + mol_list_dir[i] + '_lm-b3lyp_howsugarspucker.csv',
+                                                                    sv_mol_dir)
+            lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
+
+            ts_data_dict = read_csv_data_TS('z_' + mol_list_dir[i] + '_TS-b3lyp_hsp_added_kmeans.csv',
+                                            sv_mol_dir)[3]
+            ts_class = Transition_States(ts_data_dict, lm_class)
+            # endregion
+
+            # # # transition state comparison data initialization # # #
+            # region
+            # for every ts data file in the directory perform the comparison calculations
+            for filename in os.listdir(ts_data_dir):
+                if filename.endswith(".csv"):
+                    ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
+                    method = (filename.split('-', 3)[3]).split('.')[0]
+
+                    ref_ts_hartree = read_csv_to_dict(
+                        os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
+
+                    ref_ts_comp_class = Transition_State_Compare(molecule, method, ref_ts_hartree, lm_class,
+                                                                 ts_class, comp_ts_dir)
+                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
+                                                             ts_class, comp_ts_dir, ref_ts_comp_class)
+
+                    ts_comp_class.add_to_csv(hsp_added_kmeans_file)
+
+                    if save and write_ts:
+                        ts_comp_class.save_group_comp(overwrite)
+                        ts_comp_class.save_all_groups_comp(overwrite)
+
+                        ts_comp_class.save_all_figures_raw(overwrite)
+                        ts_comp_class.save_all_figures_single(overwrite)
+                        ts_comp_class.save_all_groupings(overwrite)
+
+                        ts_comp_class.save_WRMSD_comp(overwrite)
+                        ts_comp_class.save_WRMSD_heatmap(overwrite)
+                        ts_comp_class.save_RMSD_heatmap(overwrite)
+
+                        ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
+                        ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
+                        ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
+
+                    ts_comp_data_list.append(ts_comp_class)
+            # endregion
+
+            comp_all_met = Compare_All_Methods(lm_comp_data_list, ts_comp_data_list, comp_lm_dir, comp_ts_dir)
+            # endregion
+
+            if debug:
+                comp_all_met.write_debug_ts_to_csv()
+
+            if save:
+                # save the comparison data
+                if write_ts:
+                    comp_all_met.write_ts_to_csv('arc')
+                    comp_all_met.write_ts_to_csv('gibbs')
+
+                    comp_all_met.write_num_comp_paths_to_csv('arc')
+                    comp_all_met.write_num_comp_paths_to_csv('gibbs')
+
             check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
 
     if (len(os.listdir(MET_COMP_DIR)) != len(mol_list_dir)):
