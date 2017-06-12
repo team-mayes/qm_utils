@@ -21,9 +21,10 @@ from operator import itemgetter
 
 import matplotlib.pyplot as plt
 import numpy as np
+from spherecluster import SphericalKMeans
 
 from qm_utils.qm_common import arc_length_calculator
-from qm_utils.spherical_kmeans_voronoi import pol2cart, plot_on_circle, plot_line
+from qm_utils.spherical_kmeans_voronoi import pol2cart, plot_on_circle, plot_line, cart2pol
 #endregion
 
 # # # Header Stuff # # #
@@ -82,12 +83,23 @@ SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
 
 # # # Helper Functions # # #
 #region
+# bool for if the current color chosen isn't a color surrounding it
 def is_excluded(color, list_of_excluded_colors):
     for i in range(len(list_of_excluded_colors)):
         if color == list_of_excluded_colors[i]:
             return True
 
     return False
+
+# calculates WSS for the current number of clusters for added_kmeans for transition_state_compare
+def calc_error(added_points):
+    WSS = 0
+
+    for i in range(len(added_points)):
+        comp_val = added_points[i]['arc_to_added_skm']
+        WSS += comp_val ** 2
+
+    return round(WSS, 5)
 #endregion
 
 # # # Classes # # #
@@ -958,13 +970,16 @@ class Transition_State_Compare():
     """
     class for organizing the transition state information
     """
-    def  __init__(self, molecule_in, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in, ts_ref_in=None):
+    def  __init__(self, molecule_in, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in, ts_ref_in=None, ts_ref_added_in=None):
         self.comp_tolerance = 0.1
         self.comp_cutoff = 0.1
 
         self.lm_class = lm_class_in
         self.ts_class = ts_class_in
+
         self.ts_ref = ts_ref_in
+        self.ts_ref_added = ts_ref_added_in
+
         self.ts_dataset = ts_dataset_in
 
         self.molecule = molecule_in
@@ -984,12 +999,12 @@ class Transition_State_Compare():
         self.populate_path_group_data()
         self.populate_ts_groups()
 
-        self.calc_min_ref_dist()
-        self.calc_added_kmeans_dict()
-
         self.do_calcs()
         self.assign_closest_puckers()
         self.assign_group_name()
+
+        self.calc_min_ref_dist()
+        self.calc_added_kmeans_dict()
 
         self.populate_avg_ts()
 
@@ -1004,14 +1019,16 @@ class Transition_State_Compare():
         for i in range(len(self.ts_dataset)):
             self.ts_dataset[i]['G298 (Hartrees)'] = 627.509 * float(self.ts_dataset[i]['G298 (Hartrees)'])
 
-        min_G298 = self.ts_dataset[0]['G298 (Hartrees)']
+        self.min_G298 = self.ts_dataset[0]['G298 (Hartrees)']
 
         for i in range(len(self.ts_dataset)):
-            if self.ts_dataset[i]['G298 (Hartrees)'] < min_G298:
-                min_G298 = self.ts_dataset[i]['G298 (Hartrees)']
+            if self.ts_dataset[i]['G298 (Hartrees)'] < self.min_G298:
+                self.min_G298 = self.ts_dataset[i]['G298 (Hartrees)']
 
         for i in range(len(self.ts_dataset)):
-            self.ts_dataset[i]['G298 (Hartrees)'] -= min_G298
+            self.ts_dataset[i]['G298 (Hartrees)'] -= self.min_G298
+
+        self.min_G298 = self.min_G298 / 627.509
 
     def populate_hartree_data(self):
         for i in range(len(self.ts_dataset)):
@@ -1183,20 +1200,17 @@ class Transition_State_Compare():
         self.min_ref_dist = min_dist
 
     def calc_added_kmeans_dict(self):
+        self.added_points = {}
+
         for key in self.ref_path_group_data:
-            added_points = []
+            self.added_points[key] = []
 
             for i in range(len(self.ref_path_group_data[key])):
                 points = self.ref_path_group_data[key][i]['points']
 
                 for j in range(len(points)):
                     if points[j]['arc'] > self.min_ref_dist:
-                        added_points.append(points[j])
-
-
-
-
-        return
+                        self.added_points[key].append(points[j])
 
     def assign_closest_puckers(self):
         for group_key in self.path_group_data:
@@ -1505,8 +1519,9 @@ class Transition_State_Compare():
                 group_WRMSD = self.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
                 ref_group_WRMSD = self.ts_ref.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
 
-                if group_WRMSD != 'n/a' and (
+                if group_WRMSD != 'n/a' and ref_group_WRMSD != 'n/a' and (
                         group_WRMSD < comp_cutoff or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
+
                     comparable_paths += 1
 
         return comparable_paths
@@ -1745,7 +1760,7 @@ class Transition_State_Compare():
                     if self.ref_south_groups.count(path_group) == 1:
                         plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm1_vert, 'green', 60], 'gray', '-.', 'black')
                         plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'white', 30], [lm2_vert, 'green', 60], 'gray', '-.', 'black')
-                elif point[comp_key + '_group_WRMSD'] > self.comp_cutoff and ref_point[comp_key + '_group_WRMSD'] / point[comp_key + '_group_WRMSD'] < self.comp_tolerance:
+                elif point[comp_key + '_group_WRMSD'] > self.comp_cutoff and float(ref_point[comp_key + '_group_WRMSD']) / point[comp_key + '_group_WRMSD'] < self.comp_tolerance:
                     ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'],
                                         self.ref_path_group_data[path_group][i]['theta']])
 
@@ -1799,6 +1814,8 @@ class Transition_State_Compare():
             for i in range(len(self.ref_path_group_data[path_group])):
                 point = self.ref_path_group_data[path_group][i]
                 ref_point = self.ts_ref.ref_path_group_data[path_group][i]
+
+                print(self.molecule, self.method, path_group, i)
 
                 # if no data matches to current ts group
                 if point[comp_key + '_group_WRMSD'] == 'n/a':
@@ -1948,7 +1965,7 @@ class Transition_State_Compare():
                                           bbox_to_anchor=(0.5, -0.3), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
 
     def show(self):
-        self.lm_class.show()
+        self.ts_class.show()
     # endregion
 
     # # # organization functions # # #
@@ -2313,12 +2330,6 @@ class Transition_State_Compare():
 
             self.ts_class.plot.save(base_name, self.gibbs_data_dir)
             self.ts_class.wipe_plot()
-
-
-    def add_to_csv(self, filename):
-        # add dict of kmeans points to the .csv file
-
-        return
     # endregion
 
     pass
@@ -2332,6 +2343,144 @@ class Compare_All_Methods:
 
         self.methods_ts_data = methods_ts_data_in
         self.ts_dir = ts_dir_in
+
+        self.calc_added_kmeans_dict()
+
+    def calc_added_kmeans_dict(self):
+        self.added_skm_dict = {}
+        self.added_skm_dict['File Name'] = []
+        self.added_skm_dict['Pucker'] = []
+        self.added_skm_dict['phi'] = []
+        self.added_skm_dict['theta'] = []
+        self.added_skm_dict['q_ts'] = []
+        self.added_skm_dict['energy (A.U.)'] = []
+        self.added_skm_dict['H298 (Hartrees)'] = []
+        self.added_skm_dict['G298 (Hartrees)'] = []
+        self.added_skm_dict['freq1'] = []
+        self.added_skm_dict['phi_lm1'] = []
+        self.added_skm_dict['theta_lm1'] = []
+        self.added_skm_dict['phi_lm2'] = []
+        self.added_skm_dict['theta_lm2'] = []
+
+        self.added_points = {}
+
+        # aggregating each lm_group's added points
+        for key in self.methods_ts_data[0].ref_path_group_data:
+            self.added_points[key] = []
+
+            for i in range(len(self.methods_ts_data)):
+                for j in range(len(self.methods_ts_data[i].added_points[key])):
+                    self.added_points[key].append(self.methods_ts_data[i].added_points[key][j])
+
+        for key in self.methods_ts_data[0].ref_path_group_data:
+            data_points = []
+
+            for i in range(len(self.added_points[key])):
+                phi = self.added_points[key][i]['phi']
+                theta = self.added_points[key][i]['theta']
+
+                data_points.append(pol2cart([phi, theta]))
+
+            number_clusters = 0
+            # initialize so while loop happens at least once
+            error = 1
+            if len(data_points) > 0:
+                # increasing number of clusters until error is low
+                # self.methods_ts_data[0].comp_tolerance
+                while error > 0.15:
+                    number_clusters += 1
+
+                    # Uses packages to calculate the k-means spherical centers
+                    skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
+                    skm.fit(data_points)
+                    skm_centers = skm.cluster_centers_
+                    skm_centers = skm_centers.tolist()
+
+                    coord_list = []
+
+                    for i in range(len(self.added_points[key])):
+                        phi1 = self.added_points[key][i]['phi']
+                        theta1 = self.added_points[key][i]['theta']
+
+                        # initialized to large value so min_dist is at least the first iteration
+                        min_dist = 100
+
+                        # finding closest skm center to current point
+                        for j in range(len(skm_centers)):
+                            skm_center = skm_centers[j]
+                            skm_center = cart2pol(skm_center)
+
+                            phi2 = skm_center[0]
+                            theta2 = skm_center[1]
+
+                            curr_dist = arc_length_calculator(phi1, theta1, phi2, theta2)
+
+                            if curr_dist < min_dist:
+                                min_dist = curr_dist
+                                added_skm = j
+
+                                curr_coord = [phi2, theta2]
+
+                        coord_list.append(curr_coord)
+
+                        self.added_points[key][i]['arc_to_added_skm'] = min_dist
+                        self.added_points[key][i]['added_skm'] = added_skm
+
+                    error = calc_error(self.added_points[key])
+
+                for j in range(len(skm_centers)):
+                    # calculate weightings
+                    total_boltz = 0
+
+                    for i in range(len(self.added_points[key])):
+                        if self.added_points[key][i]['added_skm'] == j:
+                            e_val = self.added_points[key][i]['G298 (Hartrees)']
+                            component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+                            self.added_points[key][i]['ind_boltz_added_skm'] = component
+                            total_boltz += component
+
+                    wt_gibbs = 0
+                    for i in range(len(self.added_points[key])):
+                        if self.added_points[key][i]['added_skm'] == j:
+                            wt_gibbs += (self.added_points[key][i]['ind_boltz_added_skm'] / total_boltz) * \
+                                        self.added_points[key][i]['G298 (Hartrees)']
+
+                    skm_center = skm_centers[j]
+                    skm_center = cart2pol(skm_center)
+
+                    skm_phi = skm_center[0]
+                    skm_theta = skm_center[1]
+
+                    phi_lm1 = self.added_points[key][0]['lm1']['phi']
+                    theta_lm1 = self.added_points[key][0]['lm1']['theta']
+                    phi_lm2 = self.added_points[key][0]['lm2']['phi']
+                    theta_lm2 = self.added_points[key][0]['lm2']['theta']
+
+                    min_G298 = self.methods_ts_data[0].ts_ref.min_G298
+
+                    self.added_skm_dict['File Name'].append('n/a')
+                    self.added_skm_dict['Pucker'].append('n/a')
+                    self.added_skm_dict['phi'].append(skm_phi)
+                    self.added_skm_dict['theta'].append(skm_theta)
+                    self.added_skm_dict['q_ts'].append('n/a')
+                    self.added_skm_dict['energy (A.U.)'].append('n/a')
+                    self.added_skm_dict['H298 (Hartrees)'].append('n/a')
+                    self.added_skm_dict['G298 (Hartrees)'].append(round(wt_gibbs, 5) + min_G298)
+                    self.added_skm_dict['freq1'].append('n/a')
+                    self.added_skm_dict['phi_lm1'].append(phi_lm1)
+                    self.added_skm_dict['theta_lm1'].append(theta_lm1)
+                    self.added_skm_dict['phi_lm2'].append(phi_lm2)
+                    self.added_skm_dict['theta_lm2'].append(theta_lm2)
+
+        return
+
+    def add_to_csv(self, filename):
+        # add dict of kmeans points to the .csv file
+        with open(filename, 'a', newline='') as file:
+            w = csv.writer(file)
+            w.writerows(zip(*self.added_skm_dict.values()))
+
+        return
 
     def write_lm_to_csv(self):
         molecule = self.methods_lm_data[0].molecule
@@ -2657,7 +2806,7 @@ class Compare_All_Methods:
 
         return
 
-    def write_num_comp_paths_to_csv(self, comp_key):
+    def write_num_comp_paths_to_csv(self, comp_key, ref_type):
         molecule = self.methods_ts_data[0].molecule
 
         for i in range(len(self.methods_ts_data)):
@@ -2683,7 +2832,7 @@ class Compare_All_Methods:
                 tolerance += increment
 
             num_comp_csv = os.path.join(self.methods_ts_data[i].met_data_dir,
-                                        molecule + '-' + method + '-' + comp_key + '-num_comp_paths.csv')
+                                        molecule + '-' + method + '-' + comp_key + '-num_comp_paths_' + ref_type + '.csv')
 
             with open(num_comp_csv, 'w', newline='') as file:
                 w = csv.writer(file)

@@ -69,18 +69,15 @@ def pol2cart(vert):
 
 # converts a vertex from cartesian to polar
 def cart2pol(vert):
-    def get_pol_coord(x, y, z):
-        theta = np.rad2deg(np.arctan2(np.sqrt(x ** 2 + y ** 2), z))
-        phi = np.rad2deg(np.arctan2(y, x))
+    theta = np.rad2deg(np.arctan2(np.sqrt(vert[0] ** 2 + vert[1] ** 2), vert[2]))
+    phi = np.rad2deg(np.arctan2(vert[1], vert[0]))
 
-        while theta < 0:
-            theta += 360
-        while phi < 0:
-            phi += 360
+    while theta < 0:
+        theta += 360
+    while phi < 0:
+        phi += 360
 
-        return [phi, theta]
-
-    return get_pol_coord(vert[0], vert[1], vert[2])
+    return [phi, theta]
 
 # gets the phi and theta values between two vertices
 def get_pol_coords(vert_1, vert_2):

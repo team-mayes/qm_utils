@@ -144,11 +144,14 @@ def main():
     write_lm = True
     write_ts = True
 
+    write_individual = False
+
     # run calcs for specific molecule
-    do_aglc = True
-    do_bglc = True
-    do_bxyl = True
-    do_oxane = True
+    do_aglc = 1
+    do_bglc = 1
+    do_bxyl = 1
+    do_bxyl = 1
+    do_oxane = 1
 
     do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
 
@@ -248,7 +251,7 @@ def main():
 
                     ref_lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
 
-                    ref_lm_comp_class = Local_Minima_Compare(molecule, method, ref_lm_hartree, lm_class, comp_lm_dir)
+                    ref_lm_comp_class = Local_Minima_Compare(molecule, 'reference', ref_lm_hartree, lm_class, comp_lm_dir)
                     lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir, ref_lm_comp_class)
 
                     if save and write_lm:
@@ -285,31 +288,35 @@ def main():
 
                     ref_ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
 
-                    ref_ts_comp_class = Transition_State_Compare(molecule, method, ref_ts_hartree, lm_class,
+                    ref_ts_comp_class = Transition_State_Compare(molecule, 'reference', ref_ts_hartree, lm_class,
                                                                  ts_class, comp_ts_dir)
                     ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
                                                              ts_class, comp_ts_dir, ref_ts_comp_class)
 
                     if save and write_ts:
-                        ts_comp_class.save_group_comp(overwrite)
                         ts_comp_class.save_all_groups_comp(overwrite)
 
-                        ts_comp_class.save_all_figures_raw(overwrite)
-                        ts_comp_class.save_all_figures_single(overwrite)
-                        ts_comp_class.save_all_groupings(overwrite)
+                        if write_individual:
+                            ts_comp_class.save_group_comp(overwrite)
 
-                        ts_comp_class.save_WRMSD_comp(overwrite)
-                        ts_comp_class.save_WRMSD_heatmap(overwrite)
-                        ts_comp_class.save_RMSD_heatmap(overwrite)
+                            ts_comp_class.save_all_figures_raw(overwrite)
+                            ts_comp_class.save_all_figures_single(overwrite)
+                            ts_comp_class.save_all_groupings(overwrite)
 
-                        ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
-                        ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
-                        ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
+                            ts_comp_class.save_WRMSD_comp(overwrite)
+                            ts_comp_class.save_WRMSD_heatmap(overwrite)
+                            ts_comp_class.save_RMSD_heatmap(overwrite)
+
+                            ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
+                            ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
+                            ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
 
                     ts_comp_data_list.append(ts_comp_class)
             #endregion
 
             comp_all_met = Compare_All_Methods(lm_comp_data_list, ts_comp_data_list, comp_lm_dir, comp_ts_dir)
+
+            comp_all_met.add_to_csv(hsp_added_kmeans_file)
             #endregion
 
             if debug:
@@ -328,8 +335,8 @@ def main():
                     comp_all_met.write_ts_to_csv('arc')
                     comp_all_met.write_ts_to_csv('gibbs')
 
-                    comp_all_met.write_num_comp_paths_to_csv('arc')
-                    comp_all_met.write_num_comp_paths_to_csv('gibbs')
+                    comp_all_met.write_num_comp_paths_to_csv('arc', 'orig')
+                    comp_all_met.write_num_comp_paths_to_csv('gibbs', 'orig')
 
             check_lm_running(comp_lm_dir, lm_data_dir, molecule)
             check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
@@ -346,8 +353,13 @@ def main():
             molecule = mol_list_dir[i]
             comp_mol_dir = os.path.join(MET_COMP_DIR, mol_list_dir[i])
             sv_mol_dir = os.path.join(sv_all_mol_dir, mol_list_dir[i])
-            comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state')
             ts_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
+
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(comp_mol_dir, 'transitions_state_added')):
+                os.makedirs(os.path.join(comp_mol_dir, 'transitions_state_added'))
+
+            comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state_added')
 
             # # # calcs # # #
             # region
@@ -377,29 +389,34 @@ def main():
 
                     ref_ts_hartree = read_csv_to_dict(
                         os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
-
                     ref_ts_comp_class = Transition_State_Compare(molecule, method, ref_ts_hartree, lm_class,
                                                                  ts_class, comp_ts_dir)
-                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
-                                                             ts_class, comp_ts_dir, ref_ts_comp_class)
 
-                    ts_comp_class.add_to_csv(hsp_added_kmeans_file)
+                    added_ref_ts_hartree = read_csv_to_dict(
+                        os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-addedref.csv'), mode='r')
+                    added_ref_ts_comp_class = Transition_State_Compare(molecule, method, added_ref_ts_hartree, lm_class,
+                                                                 ts_class, comp_ts_dir)
+
+                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
+                                                             ts_class, comp_ts_dir, ref_ts_comp_class, added_ref_ts_comp_class)
 
                     if save and write_ts:
-                        ts_comp_class.save_group_comp(overwrite)
                         ts_comp_class.save_all_groups_comp(overwrite)
 
-                        ts_comp_class.save_all_figures_raw(overwrite)
-                        ts_comp_class.save_all_figures_single(overwrite)
-                        ts_comp_class.save_all_groupings(overwrite)
+                        if write_individual:
+                            ts_comp_class.save_group_comp(overwrite)
 
-                        ts_comp_class.save_WRMSD_comp(overwrite)
-                        ts_comp_class.save_WRMSD_heatmap(overwrite)
-                        ts_comp_class.save_RMSD_heatmap(overwrite)
+                            ts_comp_class.save_all_figures_raw(overwrite)
+                            ts_comp_class.save_all_figures_single(overwrite)
+                            ts_comp_class.save_all_groupings(overwrite)
 
-                        ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
-                        ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
-                        ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
+                            ts_comp_class.save_WRMSD_comp(overwrite)
+                            ts_comp_class.save_WRMSD_heatmap(overwrite)
+                            ts_comp_class.save_RMSD_heatmap(overwrite)
+
+                            ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
+                            ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
+                            ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
 
                     ts_comp_data_list.append(ts_comp_class)
             # endregion
@@ -416,8 +433,8 @@ def main():
                     comp_all_met.write_ts_to_csv('arc')
                     comp_all_met.write_ts_to_csv('gibbs')
 
-                    comp_all_met.write_num_comp_paths_to_csv('arc')
-                    comp_all_met.write_num_comp_paths_to_csv('gibbs')
+                    comp_all_met.write_num_comp_paths_to_csv('arc', 'added')
+                    comp_all_met.write_num_comp_paths_to_csv('gibbs', 'added')
 
             check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
 
