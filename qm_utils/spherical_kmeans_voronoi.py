@@ -954,7 +954,7 @@ class Transition_States():
 # class for initializing plots
 class Plots():
     # arguments are bools for creating the 2d and 3d plots
-    def __init__(self, twoD_arg, threeD_arg, merc_arg, table_arg=False):
+    def __init__(self, twoD_arg=False, threeD_arg=False, merc_arg=False, ts_merc_arg=False, north_pol_arg=False, south_pol_arg=False):
         self.fig = plt.figure()
 
         if twoD_arg:
@@ -983,17 +983,17 @@ class Plots():
 
             self.ax_rect_init()
 
-        if table_arg:
-            gs = gridspec.GridSpec(2, 3)
-            self.ax_rect = self.fig.add_subplot(gs[1:, :], facecolor='white')
-            self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
-            self.ax_circ_south = self.fig.add_subplot(gs[0, 1], projection='polar')
+        if ts_merc_arg:
+            gs = gridspec.GridSpec(1, 1)
+            self.ax_rect = self.fig.add_subplot(gs[0, 0])
 
-            self.ax_rect.set_xlim([-5, 365])
-            self.ax_rect.set_ylim([105, 75])
+            self.ax_rect_init()
 
-            # initializing settings for the 2d plot
-            self.twoD_init()
+        if north_pol_arg:
+            self.ax_circ_north_init()
+
+        if south_pol_arg:
+            self.ax_circ_south_init()
 
     def twoD_init(self):
         self.ax_rect_init()
@@ -1031,6 +1031,9 @@ class Plots():
         self.ax_spher.set_zlim([-1, 1])
 
     def ax_circ_north_init(self):
+        gs = gridspec.GridSpec(1, 1)
+        self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
+
         thetaticks = np.arange(0, 360, 30)
 
         self.ax_circ_north.set_rlim([0, 1])
@@ -1043,6 +1046,9 @@ class Plots():
         self.ax_circ_north.set_theta_direction(-1)
 
     def ax_circ_south_init(self):
+        gs = gridspec.GridSpec(1, 1)
+        self.ax_circ_south = self.fig.add_subplot(gs[0, 0], projection='polar')
+
         thetaticks = np.arange(0, 360, 30)
 
         self.ax_circ_south.set_rlim([0, 1])
