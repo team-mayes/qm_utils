@@ -14,6 +14,7 @@ import csv
 import math
 
 import matplotlib
+import matplotlib.gridspec as gridspec
 matplotlib.use('TkAgg')
 
 from collections import OrderedDict
@@ -24,7 +25,7 @@ import numpy as np
 from spherecluster import SphericalKMeans
 
 from qm_utils.qm_common import arc_length_calculator
-from qm_utils.spherical_kmeans_voronoi import pol2cart, plot_on_circle, plot_line, cart2pol
+from qm_utils.spherical_kmeans_voronoi import pol2cart, plot_on_circle, plot_line, cart2pol, Plots
 #endregion
 
 # # # Header Stuff # # #
@@ -971,28 +972,35 @@ class Transition_State_Compare():
     class for organizing the transition state information
     """
     def  __init__(self, molecule_in, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in, ts_ref_in=None, ts_ref_added_in=None):
+        # tolerances for comparability
         self.comp_tolerance = 0.1
         self.comp_cutoff = 0.1
 
+        # ts and lm classes with reference information
         self.lm_class = lm_class_in
         self.ts_class = ts_class_in
 
+        # reference ts_comp and added reference ts_comp objects
         self.ts_ref = ts_ref_in
         self.ts_ref_added = ts_ref_added_in
 
+        # method data
         self.ts_dataset = ts_dataset_in
 
         self.molecule = molecule_in
         self.method = method_in
 
+        # dir for saving
         self.ts_dir = ts_dir_in
 
+        # init objects
         self.hartree_data = []
         self.path_group_data = {}
         self.ref_path_group_data = {}
         self.overall_data = {}
         self.overall_data['method'] = self.method
 
+        # init functions
         self.fix_hartrees()
         self.populate_hartree_data()
         self.populate_ref_path_group_data()
@@ -1003,11 +1011,21 @@ class Transition_State_Compare():
         self.assign_closest_puckers()
         self.assign_group_name()
 
+        # calculating added kmeans centers
         self.calc_min_ref_dist()
         self.calc_added_kmeans_dict()
 
+        # if added kmeans centers reference is used, assign comparability based of it
+        # otherwise use the original reference if it's input
+        if ts_ref_added_in is not None:
+            self.assign_comp_added(self.comp_cutoff, self.comp_tolerance, 'arc')
+        elif ts_ref_in is not None:
+            self.assign_comp_orig(self.comp_cutoff, self.comp_tolerance, 'arc')
+
+        # calculating the average method data for plotting purposes
         self.populate_avg_ts()
 
+        # initializing the lm groups for the north and south hemisphere plots
         self.circ_groups_init()
 
         self.dir_init()
@@ -1211,6 +1229,32 @@ class Transition_State_Compare():
                 for j in range(len(points)):
                     if points[j]['arc'] > self.min_ref_dist:
                         self.added_points[key].append(points[j])
+
+    def assign_comp_added(self, comp_cutoff, comp_tolerance, comp_key):
+        for path_group in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[path_group])):
+                group_WRMSD = self.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
+                added_ref_group_WRMSD = self.ts_ref_added.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
+
+                if group_WRMSD != 'n/a' and added_ref_group_WRMSD != 'n/a' and (group_WRMSD < comp_cutoff
+                                                    or added_ref_group_WRMSD / group_WRMSD >= comp_tolerance):
+
+                    self.ref_path_group_data[path_group][i]['comparable'] = True
+                else:
+                    self.ref_path_group_data[path_group][i]['comparable'] = False
+
+    def assign_comp_orig(self, comp_cutoff, comp_tolerance, comp_key):
+        for path_group in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[path_group])):
+                group_WRMSD = self.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
+                ref_group_WRMSD = self.ts_ref.ref_path_group_data[path_group][i][comp_key + '_group_WRMSD']
+
+                if group_WRMSD != 'n/a' and ref_group_WRMSD != 'n/a' and (group_WRMSD < comp_cutoff
+                                                    or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
+
+                    self.ref_path_group_data[path_group][i]['comparable'] = True
+                else:
+                    self.ref_path_group_data[path_group][i]['comparable'] = False
 
     def assign_closest_puckers(self):
         for group_key in self.path_group_data:
@@ -1523,6 +1567,8 @@ class Transition_State_Compare():
                         group_WRMSD < comp_cutoff or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
 
                     comparable_paths += 1
+                    self.ref_path_group_data[path_group][i]['comparable'] = True
+
 
         return comparable_paths
     # endregion
@@ -1814,8 +1860,6 @@ class Transition_State_Compare():
             for i in range(len(self.ref_path_group_data[path_group])):
                 point = self.ref_path_group_data[path_group][i]
                 ref_point = self.ts_ref.ref_path_group_data[path_group][i]
-
-                print(self.molecule, self.method, path_group, i)
 
                 # if no data matches to current ts group
                 if point[comp_key + '_group_WRMSD'] == 'n/a':
@@ -2335,7 +2379,7 @@ class Transition_State_Compare():
     pass
 
 class Compare_All_Methods:
-    def __init__(self, methods_lm_data_in, methods_ts_data_in, lm_dir_in, ts_dir_in):
+    def __init__(self, methods_ts_data_in, ts_dir_in, methods_lm_data_in=None, lm_dir_in=None):
         self.methods_lm_data = methods_lm_data_in
         self.lm_dir = lm_dir_in
         self.group_RMSD_vals = {}
@@ -2346,6 +2390,7 @@ class Compare_All_Methods:
 
         self.calc_added_kmeans_dict()
 
+    # writing to csv the extra kmeans centers
     def calc_added_kmeans_dict(self):
         self.added_skm_dict = {}
         self.added_skm_dict['File Name'] = []
@@ -2481,6 +2526,7 @@ class Compare_All_Methods:
             w.writerows(zip(*self.added_skm_dict.values()))
 
         return
+
 
     def write_lm_to_csv(self):
         molecule = self.methods_lm_data[0].molecule
@@ -2637,7 +2683,7 @@ class Compare_All_Methods:
 
         return
 
-
+    # debug information about W/RMSD calcs
     def write_debug_lm_to_csv(self):
         molecule = self.methods_lm_data[0].molecule
 
@@ -2709,7 +2755,7 @@ class Compare_All_Methods:
 
         return
 
-
+    # writing to csv the pathways from each method which are connected but are not connected in the reference
     def write_uncompared_to_csv(self):
         molecule = self.methods_ts_data[0].molecule
 
@@ -2737,7 +2783,7 @@ class Compare_All_Methods:
 
         return
 
-
+    # writing to csv the number of comparable pathways for each method using both arc and gibbs comparisons
     def write_num_comp_lm_to_csv(self):
         molecule = self.methods_lm_data[0].molecule
 
@@ -2840,4 +2886,123 @@ class Compare_All_Methods:
                 w.writerows(zip(*num_comp_dict.values()))
 
         return
+
+    # plotting functions for plots with table included
+    def plot_comp_table(self, path_group, data_key):
+        lm1_key = int(path_group.split('_')[0])
+        lm2_key = int(path_group.split('_')[1])
+
+        lm1_data = self.methods_ts_data[0].lm_class.groups_dict[lm1_key]
+        lm2_data = self.methods_ts_data[0].lm_class.groups_dict[lm2_key]
+
+        lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+        lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+        table_rows = []
+        header = []
+        colors = []
+        column_labels = []
+
+        for i in range(len(self.methods_ts_data)):
+            header.append(self.methods_ts_data[i].method)
+
+        list_of_excluded_colors = []
+
+        for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+            cmap = plt.get_cmap('Paired')
+            seed_num = 0
+            color = cmap(seed_num)
+
+            count = 0
+            while is_excluded(color, list_of_excluded_colors):
+                seed_num += 0.085
+
+                if seed_num == 0.85:
+                    seed_num += 0.085
+
+                color = cmap(seed_num)
+
+                count += 1
+
+                if count > 10:
+                    print('WARNING: more than 10 colors in use, some will be used twice going forward!')
+                    break
+
+            list_of_excluded_colors.append(color)
+
+            group_ts_vert = pol2cart([self.methods_ts_data[0].ref_path_group_data[path_group][i]['mean_phi'],
+                                      self.methods_ts_data[0].ref_path_group_data[path_group][i]['mean_theta']])
+
+            plot_line(self.methods_ts_data[0].ts_class.plot.ax_rect, [group_ts_vert, color, 30], [lm1_vert, 'green', 60],
+                      color, '-', 'face', 30)
+            plot_line(self.methods_ts_data[0].ts_class.plot.ax_rect, [group_ts_vert, color, 30], [lm2_vert, 'green', 60],
+                      color, '-', 'face', 30)
+
+            if self.methods_ts_data[0].north_groups.count(path_group) == 1:
+                plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_north, [group_ts_vert, color, 30],
+                               [lm1_vert, 'green', 60], color, '-', 'face', 30)
+                plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_north, [group_ts_vert, color, 30],
+                               [lm2_vert, 'green', 60], color, '-', 'face', 30)
+
+            if self.methods_ts_data[0].south_groups.count(path_group) == 1:
+                plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_south, [group_ts_vert, color, 30],
+                               [lm1_vert, 'green', 60], color, '-', 'face', 30)
+                plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_south, [group_ts_vert, color, 30],
+                               [lm2_vert, 'green', 60], color, '-', 'face', 30)
+
+            colors.append(color)
+            column_labels.append(path_group + '-' + str(i))
+
+            row = []
+
+            for j in range(len(self.methods_ts_data)):
+                row.append(self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key])
+
+            table_rows.append(row)
+
+            num_paths = len(self.methods_ts_data[0].ref_path_group_data[path_group]) + 1
+
+            # bbox is [left, bottom, width, height]
+            self.methods_ts_data[0].ts_class.plot.ax_rect.table(cellText=table_rows,
+                                                              rowLabels=column_labels,
+                                                              rowColours=colors,
+                                                              colLabels=header,
+                                                              loc='right',
+                                                              bbox=[1.2, 2 - (2/9) * num_paths, 1, (2/9) * num_paths])
+
+    def save_comp_table(self, data_key):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+
+        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='black', linestyle='--')
+        ref_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='s',
+                                    edgecolor='black')
+
+        no_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', linestyle=':')
+        no_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='white', marker='s',
+                                   edgecolor='gray')
+
+        artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist)]
+        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'reference pathway']
+
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, data_key)):
+            os.makedirs(os.path.join(self.methods_ts_data[0].ts_dir, data_key))
+
+        self.comp_data_dir = os.path.join(self.methods_ts_data[0].ts_dir, data_key)
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            base_name = "z_dataset-" + self.methods_ts_data[0].molecule + "-TS-" + path_group + "-" + data_key + "-table"
+
+            if not os.path.exists(os.path.join(self.comp_data_dir, base_name + '.png')):
+                self.plot_comp_table(path_group, data_key)
+                self.methods_ts_data[0].ts_class.plot_cano()
+
+                self.methods_ts_data[0].set_title_and_legend(artist_list, label_list)
+
+                self.methods_ts_data[0].ts_class.plot.save(base_name, self.comp_data_dir)
+                self.methods_ts_data[0].ts_class.wipe_plot()
 #endregion

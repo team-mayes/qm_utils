@@ -129,6 +129,46 @@ def check_ts_running(ts_working_dir, ts_data_dir, molecule):
         print('final_comp')
         print('all_groupings')
         print('heatmaps')
+
+def save_comp_all_met_data(comp_all_met):
+    comp_all_met.write_ts_to_csv('arc')
+    comp_all_met.write_ts_to_csv('gibbs')
+
+    comp_all_met.write_num_comp_paths_to_csv('arc', 'added')
+    comp_all_met.write_num_comp_paths_to_csv('gibbs', 'added')
+
+    comp_all_met.save_comp_table('comparable')
+    comp_all_met.save_comp_table('arc_group_WRMSD')
+
+def save_lm_comp_class_data(lm_comp_class, overwrite):
+    lm_comp_class.save_all_figures(overwrite)
+    lm_comp_class.save_all_figures_raw(overwrite)
+
+    lm_comp_class.save_WRMSD_heatmap(overwrite)
+    lm_comp_class.save_RMSD_heatmap(overwrite)
+    lm_comp_class.save_WRMSD_comp(overwrite)
+
+    lm_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
+    lm_comp_class.save_gibbs_RMSD_heatmap(overwrite)
+    lm_comp_class.save_gibbs_WRMSD_comp(overwrite)
+
+def save_ts_comp_class_data(ts_comp_class, overwrite, write_individual):
+    ts_comp_class.save_all_groups_comp(overwrite)
+
+    if write_individual:
+        ts_comp_class.save_group_comp(overwrite)
+
+        ts_comp_class.save_all_figures_raw(overwrite)
+        ts_comp_class.save_all_figures_single(overwrite)
+        ts_comp_class.save_all_groupings(overwrite)
+
+        ts_comp_class.save_WRMSD_comp(overwrite)
+        ts_comp_class.save_WRMSD_heatmap(overwrite)
+        ts_comp_class.save_RMSD_heatmap(overwrite)
+
+        ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
+        ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
+        ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
 #endregion
 
 # # # Main # # #
@@ -147,11 +187,10 @@ def main():
     write_individual = False
 
     # run calcs for specific molecule
-    do_aglc = 1
-    do_bglc = 1
+    do_aglc = 0
+    do_bglc = 0
     do_bxyl = 1
-    do_bxyl = 1
-    do_oxane = 1
+    do_oxane = 0
 
     do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
 
@@ -171,10 +210,10 @@ def main():
         if do_molecule[i]:
             # # # calcs # # #
             #region
-            # # # directory init # # #
-            #region
             molecule = mol_list_dir[i]
 
+            # # # directory init # # #
+            #region
             # checks if directory exists, and creates it if not
             if not os.path.exists(os.path.join(MET_COMP_DIR, mol_list_dir[i])):
                 os.makedirs(os.path.join(MET_COMP_DIR, mol_list_dir[i]))
@@ -255,16 +294,7 @@ def main():
                     lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir, ref_lm_comp_class)
 
                     if save and write_lm:
-                        lm_comp_class.save_all_figures(overwrite)
-                        lm_comp_class.save_all_figures_raw(overwrite)
-
-                        lm_comp_class.save_WRMSD_heatmap(overwrite)
-                        lm_comp_class.save_RMSD_heatmap(overwrite)
-                        lm_comp_class.save_WRMSD_comp(overwrite)
-
-                        lm_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
-                        lm_comp_class.save_gibbs_RMSD_heatmap(overwrite)
-                        lm_comp_class.save_gibbs_WRMSD_comp(overwrite)
+                        save_lm_comp_class_data(lm_comp_class, overwrite)
 
                     lm_comp_data_list.append(lm_comp_class)
             #endregion
@@ -290,31 +320,17 @@ def main():
 
                     ref_ts_comp_class = Transition_State_Compare(molecule, 'reference', ref_ts_hartree, lm_class,
                                                                  ts_class, comp_ts_dir)
+
                     ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
                                                              ts_class, comp_ts_dir, ref_ts_comp_class)
 
                     if save and write_ts:
-                        ts_comp_class.save_all_groups_comp(overwrite)
-
-                        if write_individual:
-                            ts_comp_class.save_group_comp(overwrite)
-
-                            ts_comp_class.save_all_figures_raw(overwrite)
-                            ts_comp_class.save_all_figures_single(overwrite)
-                            ts_comp_class.save_all_groupings(overwrite)
-
-                            ts_comp_class.save_WRMSD_comp(overwrite)
-                            ts_comp_class.save_WRMSD_heatmap(overwrite)
-                            ts_comp_class.save_RMSD_heatmap(overwrite)
-
-                            ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
-                            ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
-                            ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
+                        save_ts_comp_class_data(ts_comp_class, overwrite, write_individual)
 
                     ts_comp_data_list.append(ts_comp_class)
             #endregion
 
-            comp_all_met = Compare_All_Methods(lm_comp_data_list, ts_comp_data_list, comp_lm_dir, comp_ts_dir)
+            comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir, lm_comp_data_list, comp_lm_dir)
 
             comp_all_met.add_to_csv(hsp_added_kmeans_file)
             #endregion
@@ -332,11 +348,7 @@ def main():
                     comp_all_met.write_gibbs_num_comp_lm_to_csv()
 
                 if write_ts:
-                    comp_all_met.write_ts_to_csv('arc')
-                    comp_all_met.write_ts_to_csv('gibbs')
-
-                    comp_all_met.write_num_comp_paths_to_csv('arc', 'orig')
-                    comp_all_met.write_num_comp_paths_to_csv('gibbs', 'orig')
+                    save_comp_all_met_data(comp_all_met)
 
             check_lm_running(comp_lm_dir, lm_data_dir, molecule)
             check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
@@ -360,7 +372,6 @@ def main():
                 os.makedirs(os.path.join(comp_mol_dir, 'transitions_state_added'))
 
             comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state_added')
-
             # # # calcs # # #
             # region
             # # # comparison data initialization # # #
@@ -401,27 +412,12 @@ def main():
                                                              ts_class, comp_ts_dir, ref_ts_comp_class, added_ref_ts_comp_class)
 
                     if save and write_ts:
-                        ts_comp_class.save_all_groups_comp(overwrite)
-
-                        if write_individual:
-                            ts_comp_class.save_group_comp(overwrite)
-
-                            ts_comp_class.save_all_figures_raw(overwrite)
-                            ts_comp_class.save_all_figures_single(overwrite)
-                            ts_comp_class.save_all_groupings(overwrite)
-
-                            ts_comp_class.save_WRMSD_comp(overwrite)
-                            ts_comp_class.save_WRMSD_heatmap(overwrite)
-                            ts_comp_class.save_RMSD_heatmap(overwrite)
-
-                            ts_comp_class.save_gibbs_WRMSD_comp(overwrite)
-                            ts_comp_class.save_gibbs_WRMSD_heatmap(overwrite)
-                            ts_comp_class.save_gibbs_RMSD_heatmap(overwrite)
+                        save_ts_comp_class_data(ts_comp_class, overwrite, write_individual)
 
                     ts_comp_data_list.append(ts_comp_class)
             # endregion
 
-            comp_all_met = Compare_All_Methods(lm_comp_data_list, ts_comp_data_list, comp_lm_dir, comp_ts_dir)
+            comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir)
             # endregion
 
             if debug:
@@ -430,11 +426,7 @@ def main():
             if save:
                 # save the comparison data
                 if write_ts:
-                    comp_all_met.write_ts_to_csv('arc')
-                    comp_all_met.write_ts_to_csv('gibbs')
-
-                    comp_all_met.write_num_comp_paths_to_csv('arc', 'added')
-                    comp_all_met.write_num_comp_paths_to_csv('gibbs', 'added')
+                    save_comp_all_met_data(comp_all_met)
 
             check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
 
