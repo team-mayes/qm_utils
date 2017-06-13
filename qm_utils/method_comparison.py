@@ -2936,24 +2936,30 @@ class Compare_All_Methods:
 
         colors.append('white')
 
-        row_labels.append(lm1_name + '-' + lm2_name)
-
         row = []
 
+        # storing the row names
+        row_labels.append(lm1_name + '-' + lm2_name)
+
         for i in range(len(self.methods_ts_data)):
-            row.append(self.methods_ts_data[i].method)
+            row_labels.append(self.methods_ts_data[i].method)
+
+        # storing header row
+        for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+            row.append(path_group + '-' + str(i))
 
         table_rows.append(row)
 
-        list_of_excluded_colors = []
+        list_of_colors = []
 
+        # plotting data and storing colors
         for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
             cmap = plt.get_cmap('Paired')
             seed_num = 0
             color = cmap(seed_num)
 
             count = 0
-            while is_excluded(color, list_of_excluded_colors):
+            while is_excluded(color, list_of_colors):
                 seed_num += 0.085
 
                 if seed_num == 0.85:
@@ -2967,8 +2973,9 @@ class Compare_All_Methods:
                     print('WARNING: more than 10 colors in use, some will be used twice going forward!')
                     break
 
-            list_of_excluded_colors.append(color)
+            list_of_colors.append(color)
 
+            # accounting for the potential use of the added kmeans centers
             if len(self.methods_ts_data) == 8:
                 group_ts_vert = pol2cart([self.methods_ts_data[1].ref_path_group_data[path_group][i]['phi'],
                                           self.methods_ts_data[1].ref_path_group_data[path_group][i]['theta']])
@@ -2980,31 +2987,45 @@ class Compare_All_Methods:
                 plot_on_circle(ax, [group_ts_vert, color, 30], [lm1_vert, 'green', 60], color, '-', 'face', 30)
                 plot_on_circle(ax, [group_ts_vert, color, 30], [lm2_vert, 'green', 60], color, '-', 'face', 30)
 
-                left_offset = 1.4
+                left_offset = 1.5
             else:
                 plot_line(ax, [group_ts_vert, color, 30], [lm1_vert, 'green', 60], color, '-', 'face', 30)
                 plot_line(ax, [group_ts_vert, color, 30], [lm2_vert, 'green', 60], color, '-', 'face', 30)
 
-                left_offset = 1.3
+                left_offset = 1.2
 
-            colors.append(color)
-            row_labels.append(path_group + '-' + str(i))
-
+        for j in range(len(self.methods_ts_data)):
             row = []
 
-            for j in range(len(self.methods_ts_data)):
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
                 row.append(self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key])
 
             table_rows.append(row)
 
-            num_paths = len(self.methods_ts_data[0].ref_path_group_data[path_group]) + 1
+        num_row = len(self.methods_ts_data) + 2
+        num_col = len(self.methods_ts_data[0].ref_path_group_data[path_group])
 
-            # bbox is [left, bottom, width, height]
-            ax.table(cellText=table_rows,
-                      rowLabels=row_labels,
-                      rowColours=colors,
-                      loc='right',
-                      bbox=[left_offset, 1 - (1/9) * num_paths, 1, (1/9) * num_paths])
+        col_widths = []
+
+        if self.methods_ts_data[0].north_groups.count(path_group) == 1\
+            or self.methods_ts_data[0].south_groups.count(path_group) == 1:
+
+            width = 0.2
+        else:
+            width = 0.1
+
+        for i in range(num_row):
+            for j in range(num_col):
+                col_widths.append(width)
+
+        # bbox is [left, bottom, width, height]
+        ax.table(cellText=table_rows,
+                 cellLoc='center',
+                 rowLabels=row_labels,
+                 colColours=list_of_colors,
+                 colWidths=col_widths,
+                 loc='right',
+                 bbox=[left_offset, 0, width * num_col, 1])
 
     def save_comp_table(self, data_key):
         # Create custom artist
@@ -3034,22 +3055,16 @@ class Compare_All_Methods:
                     plot = Plots(False, False, False, False, True, False)
                     ax = plot.ax_circ_north
 
-                    plt.title('Comparison plotting by local minimum groupings', fontsize=20, loc='center', y=1.2)
-
                     self.plot_comp_table(path_group, data_key, ax)
                 elif self.methods_ts_data[0].south_groups.count(path_group) == 1:
                     plot = Plots(False, False, False, False, False, True)
                     ax = plot.ax_circ_south
-
-                    plt.title('Comparison plotting by local minimum groupings', fontsize=20, loc='center', y=1.2)
 
                     self.plot_comp_table(path_group, data_key, ax)
                 else:
                     plot = Plots(False, False, False, True, False, False)
 
                     ax = plot.ax_rect
-
-                    plt.title('Comparison plotting by local minimum groupings', fontsize=20, loc='center', y=1)
 
                     ax.scatter(self.methods_ts_data[0].lm_class.cano_points['phi_cano'],
                                 self.methods_ts_data[0].lm_class.cano_points['theta_cano'],
