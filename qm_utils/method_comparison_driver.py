@@ -190,7 +190,7 @@ def main():
     do_aglc = 0
     do_bglc = 0
     do_bxyl = 1
-    do_oxane = 0
+    do_oxane = 1
 
     do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
 
@@ -354,7 +354,9 @@ def main():
             check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
 
     if (len(os.listdir(MET_COMP_DIR)) != len(mol_list_dir)):
-        print('Warning: not all molecules have run!')
+        print('Warning: the seed molecule directory and the populated molecule directory are not the same size!')
+        print('This could be due to stray files/folders in either directory.')
+        print('It could also be due to certain molecules not running.')
         print('The following molecules should have run:')
         for i in range(len(mol_list_dir)):
             print(i)
@@ -431,10 +433,12 @@ def main():
             check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
 
     if (len(os.listdir(MET_COMP_DIR)) != len(mol_list_dir)):
-        print('Warning: not all molecules have run!')
+        print('Warning: the seed molecule directory and the populated molecule directory are not the same size!')
+        print('This could be due to stray files/folders in either directory.')
+        print('It could also be due to certain molecules not running.')
         print('The following molecules should have run:')
         for i in range(len(mol_list_dir)):
-            print(i)
+            print(mol_list_dir(i))
 
     return 0
 

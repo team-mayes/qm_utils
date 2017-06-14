@@ -2399,23 +2399,7 @@ class Compare_All_Methods:
     def reorg_ts_methods(self):
         aux_list = []
 
-        if len(self.methods_ts_data) == 8:
-            aux_list.append(self.methods_ts_data[-1])
-            aux_list.append(self.methods_ts_data[0])
-            aux_list.append(self.methods_ts_data[2])
-            aux_list.append(self.methods_ts_data[3])
-            aux_list.append(self.methods_ts_data[1])
-            aux_list.append(self.methods_ts_data[4])
-            aux_list.append(self.methods_ts_data[5])
-            aux_list.append(self.methods_ts_data[6])
-        else:
-            aux_list.append(self.methods_ts_data[-1])
-            aux_list.append(self.methods_ts_data[1])
-            aux_list.append(self.methods_ts_data[2])
-            aux_list.append(self.methods_ts_data[0])
-            aux_list.append(self.methods_ts_data[3])
-            aux_list.append(self.methods_ts_data[4])
-            aux_list.append(self.methods_ts_data[5])
+        for 
 
         self.methods_ts_data = aux_list
 
@@ -2933,6 +2917,12 @@ class Compare_All_Methods:
         table_rows = []
         colors = []
         row_labels = []
+        header = []
+
+        header.append(data_key)
+
+        for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+            header.append('')
 
         colors.append('white')
 
@@ -3022,6 +3012,7 @@ class Compare_All_Methods:
         ax.table(cellText=table_rows,
                  cellLoc='center',
                  rowLabels=row_labels,
+                 colLabels=header,
                  colColours=list_of_colors,
                  colWidths=col_widths,
                  loc='right',
