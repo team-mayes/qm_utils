@@ -990,9 +990,15 @@ class Plots():
             self.ax_rect_init()
 
         if north_pol_arg:
+            gs = gridspec.GridSpec(1, 1)
+            self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
+
             self.ax_circ_north_init()
 
         if south_pol_arg:
+            gs = gridspec.GridSpec(1, 1)
+            self.ax_circ_south = self.fig.add_subplot(gs[0, 0], projection='polar')
+
             self.ax_circ_south_init()
 
     def twoD_init(self):
@@ -1031,9 +1037,6 @@ class Plots():
         self.ax_spher.set_zlim([-1, 1])
 
     def ax_circ_north_init(self):
-        gs = gridspec.GridSpec(1, 1)
-        self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
-
         thetaticks = np.arange(0, 360, 30)
 
         self.ax_circ_north.set_rlim([0, 1])
@@ -1046,9 +1049,6 @@ class Plots():
         self.ax_circ_north.set_theta_direction(-1)
 
     def ax_circ_south_init(self):
-        gs = gridspec.GridSpec(1, 1)
-        self.ax_circ_south = self.fig.add_subplot(gs[0, 0], projection='polar')
-
         thetaticks = np.arange(0, 360, 30)
 
         self.ax_circ_south.set_rlim([0, 1])

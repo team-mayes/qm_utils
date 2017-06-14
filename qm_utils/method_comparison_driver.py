@@ -140,6 +140,9 @@ def save_comp_all_met_data(comp_all_met):
     comp_all_met.save_comp_table('comparable')
     comp_all_met.save_comp_table('arc_group_WRMSD')
 
+    comp_all_met.save_all_comp_table('comparable')
+    comp_all_met.save_all_comp_table('arc_group_WRMSD')
+
 def save_lm_comp_class_data(lm_comp_class, overwrite):
     lm_comp_class.save_all_figures(overwrite)
     lm_comp_class.save_all_figures_raw(overwrite)
@@ -187,8 +190,8 @@ def main():
     write_individual = False
 
     # run calcs for specific molecule
-    do_aglc = 0
-    do_bglc = 0
+    do_aglc = 1
+    do_bglc = 1
     do_bxyl = 1
     do_oxane = 1
 

@@ -14,7 +14,6 @@ import csv
 import math
 
 import matplotlib
-import matplotlib.gridspec as gridspec
 matplotlib.use('TkAgg')
 
 from collections import OrderedDict
@@ -101,6 +100,56 @@ def calc_error(added_points):
         WSS += comp_val ** 2
 
     return round(WSS, 5)
+
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+    new_cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+        cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
+
+def get_color_matrix(data_matrix, data_key):
+    color_matrix = []
+
+    cmap = plt.get_cmap('RdYlGn')
+    cmap = truncate_colormap(cmap, 0.15, 0.85)
+
+    for i in range(len(data_matrix)):
+        color_matrix.append([])
+
+        for j in range(len(data_matrix[i])):
+            if data_key == 'comparable':
+                if data_matrix[i][j] == False:
+                    color_matrix[i].append(cmap(0))
+                elif data_matrix[i][j] == True:
+                    color_matrix[i].append(cmap(0.99))
+                else:
+                    color_matrix[i].append('white')
+            elif data_key == 'arc_group_WRMSD':
+                if isinstance(data_matrix[1][j], str):
+                    color = 'white'
+                elif data_matrix[i][j] == 0:
+                    comp_ratio = 0.99
+
+                    color = cmap(comp_ratio)
+                elif isinstance(data_matrix[i][j], str):
+                    color = 'white'
+
+                    if data_matrix[i][j] == 'n/a':
+                        comp_ratio = 0
+
+                        color = cmap(comp_ratio)
+                elif data_matrix[1][j] == 0:
+                    comp_ratio = 0.01 / data_matrix[i][j]
+
+                    color = cmap(comp_ratio)
+                else:
+                    comp_ratio = data_matrix[1][j] / data_matrix[i][j]
+
+                    color = cmap(comp_ratio)
+
+                color_matrix[i].append(color)
+
+    return color_matrix
 #endregion
 
 # # # Classes # # #
@@ -2397,12 +2446,36 @@ class Compare_All_Methods:
         self.calc_added_kmeans_dict()
 
     def reorg_ts_methods(self):
+        aux_dict = {}
         aux_list = []
 
-        for 
+        for i in range(len(self.methods_ts_data)):
+            method = self.methods_ts_data[i].method
+
+            if method == 'reference':
+                aux_dict[0] = self.methods_ts_data[i]
+            elif method == 'addedref':
+                aux_dict[1] = self.methods_ts_data[i]
+            elif method == 'b3lyp':
+                aux_dict[2] = self.methods_ts_data[i]
+            elif method == 'dftb':
+                aux_dict[3] = self.methods_ts_data[i]
+            elif method == 'am1':
+                aux_dict[4] = self.methods_ts_data[i]
+            elif method == 'pm3':
+                aux_dict[5] = self.methods_ts_data[i]
+            elif method == 'pm3mm':
+                aux_dict[6] = self.methods_ts_data[i]
+            elif method == 'pm6':
+                aux_dict[7] = self.methods_ts_data[i]
+
+        for i in range(len(self.methods_ts_data)):
+            aux_list.append(aux_dict[i])
 
         self.methods_ts_data = aux_list
 
+    # # # csv writing functions # # #
+    #region
     # writing to csv the extra kmeans centers
     def calc_added_kmeans_dict(self):
         self.added_skm_dict = {}
@@ -2899,7 +2972,10 @@ class Compare_All_Methods:
                 w.writerows(zip(*num_comp_dict.values()))
 
         return
+    #endregion
 
+    # # # plotting functions # # #
+    #region
     # plotting functions for plots with table included
     def plot_comp_table(self, path_group, data_key, ax):
         lm1_key = int(path_group.split('_')[0])
@@ -2917,12 +2993,6 @@ class Compare_All_Methods:
         table_rows = []
         colors = []
         row_labels = []
-        header = []
-
-        header.append(data_key)
-
-        for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-            header.append('')
 
         colors.append('white')
 
@@ -3004,15 +3074,18 @@ class Compare_All_Methods:
         else:
             width = 0.1
 
+        # setting column width
         for i in range(num_row):
             for j in range(num_col):
                 col_widths.append(width)
 
+        color_matrix = get_color_matrix(table_rows, data_key)
+
         # bbox is [left, bottom, width, height]
         ax.table(cellText=table_rows,
                  cellLoc='center',
+                 cellColours=color_matrix,
                  rowLabels=row_labels,
-                 colLabels=header,
                  colColours=list_of_colors,
                  colWidths=col_widths,
                  loc='right',
@@ -3075,4 +3148,210 @@ class Compare_All_Methods:
                            bbox_to_anchor=(0.5, -0.2), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
 
                 plot.save(base_name, self.comp_data_dir)
+
+        self.methods_ts_data[0].ts_class.wipe_plot()
+
+    def is_physical(self, data_key, path_group, i):
+        if (data_key == 'arc_group_WRMSD' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
+            data_key] == 'n/a') \
+            or (data_key == 'comparable' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
+                data_key] == False):
+
+                return False
+        else:
+            return True
+
+    def plot_all_comp_table(self, data_key):
+        table_rows = []
+        row_labels = []
+
+        # storing the row names
+        row_labels.append('Path Names:')
+
+        for i in range(len(self.methods_ts_data)):
+            row_labels.append(self.methods_ts_data[i].method)
+
+        # initializing column names
+        row = []
+
+        row.append('unphysical paths')
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            lm1_key = int(path_group.split('_')[0])
+            lm2_key = int(path_group.split('_')[1])
+
+            lm1_data = self.methods_ts_data[0].lm_class.groups_dict[lm1_key]
+            lm2_data = self.methods_ts_data[0].lm_class.groups_dict[lm2_key]
+
+            lm1_name = lm1_data['name']
+            lm2_name = lm2_data['name']
+
+            path_name = lm1_name + '-' + lm2_name
+
+            # storing header row
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                if self.is_physical(data_key, path_group, i):
+                    row.append(path_name + '_' + str(i))
+
+        table_rows.append(row)
+
+        list_of_colors = []
+        list_of_colors.append('gray')
+
+        cmap = plt.get_cmap('Vega20')
+        # allows for incrementing over 20 colors
+        increment = 0.0524
+        seed_num = 0
+        count = 0
+
+        # plotting pathways
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            lm1_key = int(path_group.split('_')[0])
+            lm2_key = int(path_group.split('_')[1])
+
+            lm1_data = self.methods_ts_data[0].lm_class.groups_dict[lm1_key]
+            lm2_data = self.methods_ts_data[0].lm_class.groups_dict[lm2_key]
+
+            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+            # plotting data and storing colors
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                # accounting for the potential use of the added kmeans centers
+                if len(self.methods_ts_data) == 8:
+                    group_ts_vert = pol2cart([self.methods_ts_data[1].ref_path_group_data[path_group][i]['phi'],
+                                              self.methods_ts_data[1].ref_path_group_data[path_group][i]['theta']])
+                else:
+                    group_ts_vert = pol2cart([self.methods_ts_data[0].ref_path_group_data[path_group][i]['phi'],
+                                              self.methods_ts_data[0].ref_path_group_data[path_group][i]['theta']])
+
+                linestyle = '-'
+
+                # if pathway isn't physical, make it gray and dashed
+                if not self.is_physical(data_key, path_group, i):
+                    color = 'darkgray'
+                    linestyle = '--'
+                else:
+                    if count > 20:
+                        cmap = plt.get_cmap('Vega20b')
+                        seed_num = 0
+                        count = 0
+
+                    color = cmap(seed_num)
+                    seed_num += increment
+                    count += 1
+
+                    list_of_colors.append(color)
+
+                plot_line(self.methods_ts_data[0].ts_class.plot.ax_rect, [group_ts_vert, color, 30],
+                          [lm1_vert, 'green', 60], color, linestyle)
+                plot_line(self.methods_ts_data[0].ts_class.plot.ax_rect, [group_ts_vert, color, 30],
+                          [lm2_vert, 'green', 60], color, linestyle)
+
+                if self.methods_ts_data[0].ref_north_groups.count(path_group) == 1:
+                    plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_north, [group_ts_vert, color, 30],
+                                   [lm1_vert, 'green', 60], color, linestyle)
+                    plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_north, [group_ts_vert, color, 30],
+                                   [lm2_vert, 'green', 60], color, linestyle)
+                if self.methods_ts_data[0].ref_south_groups.count(path_group) == 1:
+                    plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_south, [group_ts_vert, color, 30],
+                                   [lm1_vert, 'green', 60], color, linestyle)
+                    plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_south, [group_ts_vert, color, 30],
+                                   [lm2_vert, 'green', 60], color, linestyle)
+
+        for j in range(len(self.methods_ts_data)):
+            row = []
+
+            not_physical_count = 0
+
+            # getting the number of non physical paths
+            #need to factor non-ref lm groups
+            for path_group in self.methods_ts_data[j].ref_path_group_data:
+                for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                    if not self.is_physical(data_key, path_group, i)\
+                        and ((data_key == 'arc_group_WRMSD' and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] != 'n/a')
+                             or (data_key == 'comparable' and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] is True)):
+
+                        not_physical_count += 1
+
+            # creating each row of the table
+            row.append(not_physical_count)
+
+            for path_group in self.methods_ts_data[j].ref_path_group_data:
+                for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                    if self.is_physical(data_key, path_group, i):
+                        val = self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key]
+
+                        if isinstance(val, float):
+                            val = round(val, 3)
+
+                        row.append(val)
+
+            table_rows.append(row)
+
+        num_row = len(self.methods_ts_data) + 2
+        num_col = 1
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            num_col += len(self.methods_ts_data[0].ref_path_group_data[path_group])
+
+        col_widths = []
+
+        width = 0.1
+
+        # setting column width
+        for i in range(num_row):
+            for j in range(num_col):
+                col_widths.append(width)
+
+        color_matrix = get_color_matrix(table_rows, data_key)
+
+        # setting the first color of each row to white
+        for i in range(num_row - 1):
+            color_matrix[i][0] = 'white'
+
+        # bbox is [left, bottom, width, height]
+        self.methods_ts_data[0].ts_class.plot.ax_rect.table(cellText=table_rows,
+                 cellLoc='center',
+                 cellColours=color_matrix,
+                 rowLabels=row_labels,
+                 colColours=list_of_colors,
+                 colWidths=col_widths,
+                 loc='right',
+                 bbox=[1.1, 0, width * num_col, 2])
+
+        return
+
+    def save_all_comp_table(self, data_key):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+
+        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='black', linestyle='--')
+        ref_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='s',
+                                    edgecolor='black')
+
+        artist_list = [cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist)]
+        label_list = ['Canonical Designation', 'LM Kmeans Center', 'pathway']
+
+        ts_dir = self.methods_ts_data[0].ts_dir
+
+        base_name = "z_dataset-" + self.methods_ts_data[0].molecule + "-TS-all-groups-" + data_key + "-table"
+
+        if not os.path.exists(os.path.join(ts_dir, base_name + '.png')):
+            self.plot_all_comp_table(data_key)
+            self.methods_ts_data[0].ts_class.plot_cano()
+
+            self.methods_ts_data[0].ts_class.plot.ax_rect.legend(artist_list,
+                       label_list,
+                       scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
+                       bbox_to_anchor=(0.5, -0.3), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
+
+            self.methods_ts_data[0].ts_class.plot.save(base_name, ts_dir)
+    #endregion
+
+    pass
 #endregion
