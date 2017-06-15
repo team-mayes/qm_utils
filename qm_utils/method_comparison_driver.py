@@ -113,7 +113,7 @@ def check_lm_running(comp_lm_dir, lm_data_dir, molecule):
         if os.path.isdir(os.path.join(comp_lm_dir, d)):
             count += 1
 
-    if (count - 1 != len(os.listdir(lm_data_dir))):
+    if (count - 2!= len(os.listdir(lm_data_dir))):
         print('Warning: not all methods may have run for ' + molecule + '! (lm)')
         print(comp_lm_dir + ' should contain the following directories:')
         for l in range(len(os.listdir(lm_data_dir))):
@@ -131,6 +131,8 @@ def check_ts_running(ts_working_dir, ts_data_dir, molecule):
         print('heatmaps')
 
 def save_comp_all_met_data(comp_all_met):
+    comp_all_met.write_uncompared_to_csv()
+
     comp_all_met.write_ts_to_csv('arc')
     comp_all_met.write_ts_to_csv('gibbs')
 

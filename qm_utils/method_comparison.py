@@ -2442,9 +2442,9 @@ class Compare_All_Methods:
         self.reorg_ts_methods()
 
         self.ts_dir = ts_dir_in
-
-        self.calc_added_kmeans_dict()
-
+        self.dir_init()
+    # # # init functions # # #
+    #region
     def reorg_ts_methods(self):
         aux_dict = {}
         aux_list = []
@@ -2473,6 +2473,19 @@ class Compare_All_Methods:
             aux_list.append(aux_dict[i])
 
         self.methods_ts_data = aux_list
+
+    def dir_init(self):
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, 'csv_data')):
+            os.makedirs(os.path.join(self.methods_ts_data[0].ts_dir, 'csv_data'))
+
+        self.ts_csv_data_dir = os.path.join(self.methods_ts_data[0].ts_dir, 'csv_data')
+
+        if self.methods_lm_data is not None:
+            if not os.path.exists(os.path.join(self.methods_lm_data[0].lm_dir, 'csv_data')):
+                os.makedirs(os.path.join(self.methods_lm_data[0].lm_dir, 'csv_data'))
+
+            self.lm_csv_data_dir = os.path.join(self.methods_lm_data[0].lm_dir, 'csv_data')
+    #endregion
 
     # # # csv writing functions # # #
     #region
@@ -2606,6 +2619,8 @@ class Compare_All_Methods:
         return
 
     def add_to_csv(self, filename):
+        self.calc_added_kmeans_dict()
+
         # add dict of kmeans points to the .csv file
         with open(filename, 'a', newline='') as file:
             w = csv.writer(file)
@@ -2615,159 +2630,157 @@ class Compare_All_Methods:
 
 
     def write_lm_to_csv(self):
-        molecule = self.methods_lm_data[0].molecule
+        if len(os.listdir(self.lm_csv_data_dir)) < 4:
+            molecule = self.methods_lm_data[0].molecule
 
-        group_RMSD_dict = {}
-        group_WRMSD_dict = {}
-        WSS_dict = {}
-        WWSS_dict = {}
+            group_RMSD_csv = os.path.join(self.lm_csv_data_dir, molecule + '-lm-group_RMSD.csv')
+            group_WRMSD_csv = os.path.join(self.lm_csv_data_dir, molecule + '-lm-group_WRMSD.csv')
+            WSS_csv = os.path.join(self.lm_csv_data_dir, molecule + '-lm-WSS.csv')
+            WWSS_csv = os.path.join(self.lm_csv_data_dir, molecule + '-lm-WWSS.csv')
 
-        group_RMSD_dict['group'] = []
-        group_WRMSD_dict['group'] = []
-        WSS_dict['group'] = []
-        WWSS_dict['group'] = []
+            group_RMSD_dict = {}
+            group_WRMSD_dict = {}
+            WSS_dict = {}
+            WWSS_dict = {}
 
-        group_RMSD_dict['pucker'] = []
-        group_WRMSD_dict['pucker'] = []
-        WSS_dict['pucker'] = []
-        WWSS_dict['pucker'] = []
+            group_RMSD_dict['group'] = []
+            group_WRMSD_dict['group'] = []
+            WSS_dict['group'] = []
+            WWSS_dict['group'] = []
 
-        # listing group names
-        for i in range(len(self.methods_lm_data[0].group_data)):
-            group_RMSD_dict['group'].append(i)
-            group_WRMSD_dict['group'].append(i)
-            WSS_dict['group'].append(i)
-            WWSS_dict['group'].append(i)
+            group_RMSD_dict['pucker'] = []
+            group_WRMSD_dict['pucker'] = []
+            WSS_dict['pucker'] = []
+            WWSS_dict['pucker'] = []
 
-        # listing group pucker
-        for i in range(len(self.methods_lm_data[0].group_data)):
-            group_RMSD_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
-            group_WRMSD_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
-            WSS_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
-            WWSS_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
+            # listing group names
+            for i in range(len(self.methods_lm_data[0].group_data)):
+                group_RMSD_dict['group'].append(i)
+                group_WRMSD_dict['group'].append(i)
+                WSS_dict['group'].append(i)
+                WWSS_dict['group'].append(i)
 
-        # filling method data for each dict
-        for i in range(len(self.methods_lm_data)):
-            method = self.methods_lm_data[i].method
+            # listing group pucker
+            for i in range(len(self.methods_lm_data[0].group_data)):
+                group_RMSD_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
+                group_WRMSD_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
+                WSS_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
+                WWSS_dict['pucker'].append(self.methods_lm_data[0].group_data[i]['name'])
 
-            group_RMSD_dict[method] = []
-            group_WRMSD_dict[method] = []
-            WSS_dict[method] = []
-            WWSS_dict[method] = []
+            # filling method data for each dict
+            for i in range(len(self.methods_lm_data)):
+                method = self.methods_lm_data[i].method
 
-            for j in range(len(self.methods_lm_data[i].group_data)):
-                group_RMSD_val = self.methods_lm_data[i].group_data[j]['group_RMSD']
-                group_WRMSD_val = self.methods_lm_data[i].group_data[j]['group_WRMSD']
-                WSS_val = self.methods_lm_data[i].group_data[j]['WSS']
-                WWSS_val = self.methods_lm_data[i].group_data[j]['WWSS']
+                group_RMSD_dict[method] = []
+                group_WRMSD_dict[method] = []
+                WSS_dict[method] = []
+                WWSS_dict[method] = []
 
-                group_RMSD_dict[method].append(group_RMSD_val)
-                group_WRMSD_dict[method].append(group_WRMSD_val)
-                WSS_dict[method].append(WSS_val)
-                WWSS_dict[method].append(WWSS_val)
-
-        group_RMSD_csv = os.path.join(self.lm_dir, molecule + '-lm-group_RMSD.csv')
-        group_WRMSD_csv = os.path.join(self.lm_dir, molecule + '-lm-group_WRMSD.csv')
-        WSS_csv = os.path.join(self.lm_dir, molecule + '-lm-WSS.csv')
-        WWSS_csv = os.path.join(self.lm_dir, molecule + '-lm-WWSS.csv')
-
-        with open(group_RMSD_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(group_RMSD_dict.keys())
-            w.writerows(zip(*group_RMSD_dict.values()))
-        with open(group_WRMSD_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(group_WRMSD_dict.keys())
-            w.writerows(zip(*group_WRMSD_dict.values()))
-        with open(WSS_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(WSS_dict.keys())
-            w.writerows(zip(*WSS_dict.values()))
-        with open(WWSS_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(WWSS_dict.keys())
-            w.writerows(zip(*WWSS_dict.values()))
-
-        return
-
-    def write_ts_to_csv(self, comp_key):
-        molecule = self.methods_ts_data[0].molecule
-
-        group_RMSD_dict = {}
-        group_WRMSD_dict = {}
-        WSS_dict = {}
-        WWSS_dict = {}
-
-        group_RMSD_dict['group'] = []
-        group_WRMSD_dict['group'] = []
-        WSS_dict['group'] = []
-        WWSS_dict['group'] = []
-
-        group_RMSD_dict['pucker'] = []
-        group_WRMSD_dict['pucker'] = []
-        WSS_dict['pucker'] = []
-        WWSS_dict['pucker'] = []
-
-        # listing under the hood names
-        for key in self.methods_ts_data[0].ref_path_group_data:
-            for i in range(len(self.methods_ts_data[0].ref_path_group_data[key])):
-                group_RMSD_dict['group'].append(key + '-' + str(i))
-                group_WRMSD_dict['group'].append(key + '-' + str(i))
-                WSS_dict['group'].append(key + '-' + str(i))
-                WWSS_dict['group'].append(key + '-' + str(i))
-
-        # listing group pucker
-        for key in self.methods_ts_data[0].ref_path_group_data:
-            for i in range(len(self.methods_ts_data[0].ref_path_group_data[key])):
-                group_RMSD_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
-                group_WRMSD_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
-                WSS_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
-                WWSS_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
-
-        # filling method data for each dict
-        for i in range(len(self.methods_ts_data)):
-            method = self.methods_ts_data[i].overall_data['method']
-
-            group_RMSD_dict[method] = []
-            group_WRMSD_dict[method] = []
-            WSS_dict[method] = []
-            WWSS_dict[method] = []
-
-            for key in self.methods_ts_data[i].ref_path_group_data:
-                for j in range(len(self.methods_ts_data[i].ref_path_group_data[key])):
-                    group_RMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_group_RMSD']
-                    group_WRMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_group_WRMSD']
-                    WSS_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_WSS']
-                    WWSS_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_WWSS']
+                for j in range(len(self.methods_lm_data[i].group_data)):
+                    group_RMSD_val = self.methods_lm_data[i].group_data[j]['group_RMSD']
+                    group_WRMSD_val = self.methods_lm_data[i].group_data[j]['group_WRMSD']
+                    WSS_val = self.methods_lm_data[i].group_data[j]['WSS']
+                    WWSS_val = self.methods_lm_data[i].group_data[j]['WWSS']
 
                     group_RMSD_dict[method].append(group_RMSD_val)
                     group_WRMSD_dict[method].append(group_WRMSD_val)
                     WSS_dict[method].append(WSS_val)
                     WWSS_dict[method].append(WWSS_val)
 
-        group_RMSD_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-group_RMSD.csv')
-        group_WRMSD_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-group_WRMSD.csv')
-        WSS_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-WSS.csv')
-        WWSS_csv = os.path.join(self.ts_dir, molecule + '-' + comp_key + '-ts-WWSS.csv')
+            with open(group_RMSD_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(group_RMSD_dict.keys())
+                w.writerows(zip(*group_RMSD_dict.values()))
+            with open(group_WRMSD_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(group_WRMSD_dict.keys())
+                w.writerows(zip(*group_WRMSD_dict.values()))
+            with open(WSS_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(WSS_dict.keys())
+                w.writerows(zip(*WSS_dict.values()))
+            with open(WWSS_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(WWSS_dict.keys())
+                w.writerows(zip(*WWSS_dict.values()))
 
-        with open(group_RMSD_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(group_RMSD_dict.keys())
-            w.writerows(zip(*group_RMSD_dict.values()))
-        with open(group_WRMSD_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(group_WRMSD_dict.keys())
-            w.writerows(zip(*group_WRMSD_dict.values()))
-        with open(WSS_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(WSS_dict.keys())
-            w.writerows(zip(*WSS_dict.values()))
-        with open(WWSS_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(WWSS_dict.keys())
-            w.writerows(zip(*WWSS_dict.values()))
+    def write_ts_to_csv(self, comp_key):
+        if len(os.listdir(self.ts_csv_data_dir)) < 9:
+            molecule = self.methods_ts_data[0].molecule
 
-        return
+            group_RMSD_dict = {}
+            group_WRMSD_dict = {}
+            WSS_dict = {}
+            WWSS_dict = {}
+
+            group_RMSD_dict['group'] = []
+            group_WRMSD_dict['group'] = []
+            WSS_dict['group'] = []
+            WWSS_dict['group'] = []
+
+            group_RMSD_dict['pucker'] = []
+            group_WRMSD_dict['pucker'] = []
+            WSS_dict['pucker'] = []
+            WWSS_dict['pucker'] = []
+
+            # listing under the hood names
+            for key in self.methods_ts_data[0].ref_path_group_data:
+                for i in range(len(self.methods_ts_data[0].ref_path_group_data[key])):
+                    group_RMSD_dict['group'].append(key + '-' + str(i))
+                    group_WRMSD_dict['group'].append(key + '-' + str(i))
+                    WSS_dict['group'].append(key + '-' + str(i))
+                    WWSS_dict['group'].append(key + '-' + str(i))
+
+            # listing group pucker
+            for key in self.methods_ts_data[0].ref_path_group_data:
+                for i in range(len(self.methods_ts_data[0].ref_path_group_data[key])):
+                    group_RMSD_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
+                    group_WRMSD_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
+                    WSS_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
+                    WWSS_dict['pucker'].append(self.methods_ts_data[0].ref_path_group_data[key][i]['name'])
+
+            # filling method data for each dict
+            for i in range(len(self.methods_ts_data)):
+                method = self.methods_ts_data[i].overall_data['method']
+
+                group_RMSD_dict[method] = []
+                group_WRMSD_dict[method] = []
+                WSS_dict[method] = []
+                WWSS_dict[method] = []
+
+                for key in self.methods_ts_data[i].ref_path_group_data:
+                    for j in range(len(self.methods_ts_data[i].ref_path_group_data[key])):
+                        group_RMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_group_RMSD']
+                        group_WRMSD_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_group_WRMSD']
+                        WSS_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_WSS']
+                        WWSS_val = self.methods_ts_data[i].ref_path_group_data[key][j][comp_key + '_WWSS']
+
+                        group_RMSD_dict[method].append(group_RMSD_val)
+                        group_WRMSD_dict[method].append(group_WRMSD_val)
+                        WSS_dict[method].append(WSS_val)
+                        WWSS_dict[method].append(WWSS_val)
+
+            group_RMSD_csv = os.path.join(self.ts_csv_data_dir, molecule + '-' + comp_key + '-ts-group_RMSD.csv')
+            group_WRMSD_csv = os.path.join(self.ts_csv_data_dir, molecule + '-' + comp_key + '-ts-group_WRMSD.csv')
+            WSS_csv = os.path.join(self.ts_csv_data_dir, molecule + '-' + comp_key + '-ts-WSS.csv')
+            WWSS_csv = os.path.join(self.ts_csv_data_dir, molecule + '-' + comp_key + '-ts-WWSS.csv')
+
+            with open(group_RMSD_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(group_RMSD_dict.keys())
+                w.writerows(zip(*group_RMSD_dict.values()))
+            with open(group_WRMSD_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(group_WRMSD_dict.keys())
+                w.writerows(zip(*group_WRMSD_dict.values()))
+            with open(WSS_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(WSS_dict.keys())
+                w.writerows(zip(*WSS_dict.values()))
+            with open(WWSS_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(WWSS_dict.keys())
+                w.writerows(zip(*WWSS_dict.values()))
 
     # debug information about W/RMSD calcs
     def write_debug_lm_to_csv(self):
@@ -2844,30 +2857,28 @@ class Compare_All_Methods:
     # writing to csv the pathways from each method which are connected but are not connected in the reference
     def write_uncompared_to_csv(self):
         molecule = self.methods_ts_data[0].molecule
+        uncompared_csv = os.path.join(self.ts_csv_data_dir, molecule + '-uncompared.csv')
 
-        uncompared_dict = {}
+        if not os.path.exists(uncompared_csv):
+            uncompared_dict = {}
 
-        uncompared_dict['group'] = []
-        uncompared_dict['pucker'] = []
-        uncompared_dict['method'] = []
+            uncompared_dict['group'] = []
+            uncompared_dict['pucker'] = []
+            uncompared_dict['method'] = []
 
-        for i in range(len(self.methods_ts_data)):
-            # listing under the hood names & pucker names
-            for key in self.methods_ts_data[i].path_group_data:
-                if key not in self.methods_ts_data[i].ref_path_group_data:
-                    for j in self.methods_ts_data[i].path_group_data[key]:
-                        uncompared_dict['group'].append(key + '-' + str(j))
-                        uncompared_dict['pucker'].append(self.methods_ts_data[i].path_group_data[key][j]['name'])
-                        uncompared_dict['method'].append(self.methods_ts_data[i].method)
+            for i in range(len(self.methods_ts_data)):
+                # listing under the hood names & pucker names
+                for key in self.methods_ts_data[i].path_group_data:
+                    if key not in self.methods_ts_data[i].ref_path_group_data:
+                        for j in self.methods_ts_data[i].path_group_data[key]:
+                            uncompared_dict['group'].append(key + '-' + str(j))
+                            uncompared_dict['pucker'].append(self.methods_ts_data[i].path_group_data[key][j]['name'])
+                            uncompared_dict['method'].append(self.methods_ts_data[i].method)
 
-        uncompared_csv = os.path.join(self.ts_dir, molecule + '-uncompared.csv')
-
-        with open(uncompared_csv, 'w', newline='') as file:
-            w = csv.writer(file)
-            w.writerow(uncompared_dict.keys())
-            w.writerows(zip(*uncompared_dict.values()))
-
-        return
+            with open(uncompared_csv, 'w', newline='') as file:
+                w = csv.writer(file)
+                w.writerow(uncompared_dict.keys())
+                w.writerows(zip(*uncompared_dict.values()))
 
     # writing to csv the number of comparable pathways for each method using both arc and gibbs comparisons
     def write_num_comp_lm_to_csv(self):
@@ -2876,31 +2887,32 @@ class Compare_All_Methods:
         for i in range(len(self.methods_lm_data)):
             method = self.methods_lm_data[i].method
 
-            num_comp_dict = {}
-
-            num_comp_dict['tolerance'] = []
-            num_comp_dict['num_comp_lm'] = []
-            num_comp_dict['accuracy'] = []
-
-            tolerance = 0
-            increment = 0.02
-
-            while tolerance <= 1:
-                num_comp_paths = self.methods_lm_data[i].calc_num_comp_lm(0.1, tolerance)
-                ref_nump_comp_paths = self.methods_lm_data[-1].calc_num_comp_lm(0.1, tolerance)
-
-                num_comp_dict['tolerance'].append(tolerance)
-                num_comp_dict['num_comp_lm'].append(num_comp_paths)
-                num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
-
-                tolerance += increment
-
             num_comp_csv = os.path.join(self.methods_lm_data[i].met_data_dir, molecule + '-' + method + '-num_comp_lm.csv')
 
-            with open(num_comp_csv, 'w', newline='') as file:
-                w = csv.writer(file)
-                w.writerow(num_comp_dict.keys())
-                w.writerows(zip(*num_comp_dict.values()))
+            if not os.path.exists(num_comp_csv):
+                num_comp_dict = {}
+
+                num_comp_dict['tolerance'] = []
+                num_comp_dict['num_comp_lm'] = []
+                num_comp_dict['accuracy'] = []
+
+                tolerance = 0
+                increment = 0.02
+
+                while tolerance <= 1:
+                    num_comp_paths = self.methods_lm_data[i].calc_num_comp_lm(0.1, tolerance)
+                    ref_nump_comp_paths = self.methods_lm_data[-1].calc_num_comp_lm(0.1, tolerance)
+
+                    num_comp_dict['tolerance'].append(tolerance)
+                    num_comp_dict['num_comp_lm'].append(num_comp_paths)
+                    num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
+
+                    tolerance += increment
+
+                with open(num_comp_csv, 'w', newline='') as file:
+                    w = csv.writer(file)
+                    w.writerow(num_comp_dict.keys())
+                    w.writerows(zip(*num_comp_dict.values()))
 
         return
 
@@ -2910,33 +2922,33 @@ class Compare_All_Methods:
         for i in range(len(self.methods_lm_data)):
             method = self.methods_lm_data[i].method
 
-            num_comp_dict = {}
+            num_comp_csv = os.path.join(self.methods_lm_data[i].met_data_dir,
+                                        molecule + '-' + method + '-gibbs_num_comp_lm.csv')
 
-            num_comp_dict['tolerance'] = []
-            num_comp_dict['num_comp_lm'] = []
-            num_comp_dict['accuracy'] = []
+            if not os.path.exists(num_comp_csv):
+                num_comp_dict = {}
 
-            tolerance = 0
-            increment = 0.02
+                num_comp_dict['tolerance'] = []
+                num_comp_dict['num_comp_lm'] = []
+                num_comp_dict['accuracy'] = []
 
-            while tolerance <= 1:
-                num_comp_paths = self.methods_lm_data[i].calc_gibbs_num_comp_lm(0.1, tolerance)
-                ref_nump_comp_paths = self.methods_lm_data[-1].calc_gibbs_num_comp_lm(0.1, tolerance)
+                tolerance = 0
+                increment = 0.02
 
-                num_comp_dict['tolerance'].append(tolerance)
-                num_comp_dict['num_comp_lm'].append(num_comp_paths)
-                num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
+                while tolerance <= 1:
+                    num_comp_paths = self.methods_lm_data[i].calc_gibbs_num_comp_lm(0.1, tolerance)
+                    ref_nump_comp_paths = self.methods_lm_data[-1].calc_gibbs_num_comp_lm(0.1, tolerance)
 
-                tolerance += increment
+                    num_comp_dict['tolerance'].append(tolerance)
+                    num_comp_dict['num_comp_lm'].append(num_comp_paths)
+                    num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
 
-            num_comp_csv = os.path.join(self.methods_lm_data[i].met_data_dir, molecule + '-' + method + '-gibbs_num_comp_lm.csv')
+                    tolerance += increment
 
-            with open(num_comp_csv, 'w', newline='') as file:
-                w = csv.writer(file)
-                w.writerow(num_comp_dict.keys())
-                w.writerows(zip(*num_comp_dict.values()))
-
-        return
+                with open(num_comp_csv, 'w', newline='') as file:
+                    w = csv.writer(file)
+                    w.writerow(num_comp_dict.keys())
+                    w.writerows(zip(*num_comp_dict.values()))
 
     def write_num_comp_paths_to_csv(self, comp_key, ref_type):
         molecule = self.methods_ts_data[0].molecule
@@ -2944,34 +2956,33 @@ class Compare_All_Methods:
         for i in range(len(self.methods_ts_data)):
             method = self.methods_ts_data[i].method
 
-            num_comp_dict = {}
-
-            num_comp_dict['tolerance'] = []
-            num_comp_dict['num_comp_paths'] = []
-            num_comp_dict['accuracy'] = []
-
-            tolerance = 0
-            increment = 0.02
-
-            while tolerance <= 1:
-                num_comp_paths = self.methods_ts_data[i].calc_num_comp_paths(0.1, tolerance, comp_key)
-                ref_nump_comp_paths = self.methods_ts_data[0].calc_num_comp_paths(0.1, tolerance, comp_key)
-
-                num_comp_dict['tolerance'].append(tolerance)
-                num_comp_dict['num_comp_paths'].append(num_comp_paths)
-                num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
-
-                tolerance += increment
-
             num_comp_csv = os.path.join(self.methods_ts_data[i].met_data_dir,
                                         molecule + '-' + method + '-' + comp_key + '-num_comp_paths_' + ref_type + '.csv')
 
-            with open(num_comp_csv, 'w', newline='') as file:
-                w = csv.writer(file)
-                w.writerow(num_comp_dict.keys())
-                w.writerows(zip(*num_comp_dict.values()))
+            if not os.path.exists(num_comp_csv):
+                num_comp_dict = {}
 
-        return
+                num_comp_dict['tolerance'] = []
+                num_comp_dict['num_comp_paths'] = []
+                num_comp_dict['accuracy'] = []
+
+                tolerance = 0
+                increment = 0.02
+
+                while tolerance <= 1:
+                    num_comp_paths = self.methods_ts_data[i].calc_num_comp_paths(0.1, tolerance, comp_key)
+                    ref_nump_comp_paths = self.methods_ts_data[0].calc_num_comp_paths(0.1, tolerance, comp_key)
+
+                    num_comp_dict['tolerance'].append(tolerance)
+                    num_comp_dict['num_comp_paths'].append(num_comp_paths)
+                    num_comp_dict['accuracy'].append(round(num_comp_paths / ref_nump_comp_paths, 3))
+
+                    tolerance += increment
+
+                with open(num_comp_csv, 'w', newline='') as file:
+                    w = csv.writer(file)
+                    w.writerow(num_comp_dict.keys())
+                    w.writerows(zip(*num_comp_dict.values()))
     #endregion
 
     # # # plotting functions # # #
