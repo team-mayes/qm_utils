@@ -136,14 +136,23 @@ def save_comp_all_met_data(comp_all_met):
     comp_all_met.write_ts_to_csv('arc')
     comp_all_met.write_ts_to_csv('gibbs')
 
+    comp_all_met.save_diff_trend_by_met()
+    comp_all_met.save_diff_trend_by_path()
+
     comp_all_met.write_num_comp_paths_to_csv('arc', 'added')
     comp_all_met.write_num_comp_paths_to_csv('gibbs', 'added')
 
-    comp_all_met.save_comp_table('comparable')
-    comp_all_met.save_comp_table('arc_group_WRMSD')
+    comp_all_met.save_comp_table('arc_comp', 'arc')
+    comp_all_met.save_comp_table('arc_group_WRMSD', 'arc')
 
-    comp_all_met.save_all_comp_table('comparable')
-    comp_all_met.save_all_comp_table('arc_group_WRMSD')
+    comp_all_met.save_comp_table('gibbs_comp', 'gibbs')
+    comp_all_met.save_comp_table('gibbs_group_WRMSD', 'gibbs')
+
+    comp_all_met.save_all_comp_table('arc_comp', 'arc')
+    comp_all_met.save_all_comp_table('arc_group_WRMSD', 'arc')
+
+    comp_all_met.save_all_comp_table('gibbs_comp', 'gibbs')
+    comp_all_met.save_all_comp_table('gibbs_group_WRMSD', 'gibbs')
 
 def save_lm_comp_class_data(lm_comp_class, overwrite):
     lm_comp_class.save_all_figures(overwrite)
@@ -192,8 +201,8 @@ def main():
     write_individual = False
 
     # run calcs for specific molecule
-    do_aglc = 1
-    do_bglc = 1
+    do_aglc = 0
+    do_bglc = 0
     do_bxyl = 1
     do_oxane = 1
 

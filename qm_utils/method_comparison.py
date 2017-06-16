@@ -107,7 +107,7 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
         cmap(np.linspace(minval, maxval, n)))
     return new_cmap
 
-def get_color_matrix(data_matrix, data_key):
+def get_color_matrix(data_matrix, data_key, comp_key):
     color_matrix = []
 
     cmap = plt.get_cmap('RdYlGn')
@@ -117,14 +117,14 @@ def get_color_matrix(data_matrix, data_key):
         color_matrix.append([])
 
         for j in range(len(data_matrix[i])):
-            if data_key == 'comparable':
+            if data_key == comp_key + '_comp':
                 if data_matrix[i][j] == False:
                     color_matrix[i].append(cmap(0))
                 elif data_matrix[i][j] == True:
                     color_matrix[i].append(cmap(0.99))
                 else:
                     color_matrix[i].append('white')
-            elif data_key == 'arc_group_WRMSD':
+            elif data_key == comp_key + '_group_WRMSD':
                 if isinstance(data_matrix[1][j], str):
                     color = 'white'
                 elif data_matrix[i][j] == 0:
@@ -150,6 +150,41 @@ def get_color_matrix(data_matrix, data_key):
                 color_matrix[i].append(color)
 
     return color_matrix
+
+def plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title):
+    plot.ax_rect.set_xlabel('Transition State')
+    plot.ax_rect.set_ylabel('G298 (kcal/mol)')
+
+    index = np.arange(size)
+    bar_width = 0.8
+    opacity = 0.8
+
+    plt.bar(index, ref_line_energy, bar_width,
+            alpha=opacity,
+            align='center',
+            color='black',
+            label='Reference')
+
+    plt.bar(index, line_energy, bar_width,
+            alpha=opacity,
+            align='center',
+            color='red',
+            label='Method')
+
+    plt.title(title)
+    plt.legend()
+
+    plt.xticks(index)
+
+    plot.ax_rect.set_ylim([0, ymax + 1])
+    plot.ax_rect.set_xticks(index)
+    plot.ax_rect.set_xticklabels(x_points, rotation=90)
+
+    major_ticksy = np.arange(0, ymax, 5)
+    minor_ticksy = np.arange(0, ymax, 2.5)
+
+    plot.ax_rect.set_yticks(major_ticksy)
+    plot.ax_rect.set_yticks(minor_ticksy, minor=True)
 #endregion
 
 # # # Classes # # #
@@ -1064,12 +1099,9 @@ class Transition_State_Compare():
         self.calc_min_ref_dist()
         self.calc_added_kmeans_dict()
 
-        # if added kmeans centers reference is used, assign comparability based of it
-        # otherwise use the original reference if it's input
-        if ts_ref_added_in is not None:
-            self.assign_comp_added(self.comp_cutoff, self.comp_tolerance, 'arc')
-        elif ts_ref_in is not None:
+        if ts_ref_in is not None:
             self.assign_comp_orig(self.comp_cutoff, self.comp_tolerance, 'arc')
+            self.assign_comp_orig(self.comp_cutoff, self.comp_tolerance, 'gibbs')
 
         # calculating the average method data for plotting purposes
         self.populate_avg_ts()
@@ -1236,13 +1268,6 @@ class Transition_State_Compare():
                         if self.path_group_data[key][j]['arc_lengths'][0][0] == i:
                             self.ref_path_group_data[key][i]['points'].append(self.path_group_data[key][j])
 
-        for key in self.ref_path_group_data:
-            for i in range(len(self.ref_path_group_data[key])):
-                for j in range(len(self.ref_path_group_data[key][i]['points'])):
-                    point = self.ref_path_group_data[key][i]['points'][j]
-
-                    point['gibbs'] = point['G298 (Hartrees)'] - self.ref_path_group_data[key][i]['G298 (Hartrees)']
-
         return
 
     def calc_min_ref_dist(self):
@@ -1291,9 +1316,11 @@ class Transition_State_Compare():
                 if group_WRMSD != 'n/a' and added_ref_group_WRMSD != 'n/a' and (group_WRMSD < comp_cutoff
                                                     or added_ref_group_WRMSD / group_WRMSD >= comp_tolerance):
 
-                    self.ref_path_group_data[path_group][i]['comparable'] = True
+                    self.ref_path_group_data[path_group][i][comp_key + '_comp'] = True
                 else:
-                    self.ref_path_group_data[path_group][i]['comparable'] = False
+                    self.ref_path_group_data[path_group][i][comp_key + '_comp'] = False
+
+        test = 0
 
     def assign_comp_orig(self, comp_cutoff, comp_tolerance, comp_key):
         for path_group in self.ref_path_group_data:
@@ -1304,9 +1331,9 @@ class Transition_State_Compare():
                 if group_WRMSD != 'n/a' and ref_group_WRMSD != 'n/a' and (group_WRMSD < comp_cutoff
                                                     or ref_group_WRMSD / group_WRMSD >= comp_tolerance):
 
-                    self.ref_path_group_data[path_group][i]['comparable'] = True
+                    self.ref_path_group_data[path_group][i][comp_key + '_comp'] = True
                 else:
-                    self.ref_path_group_data[path_group][i]['comparable'] = False
+                    self.ref_path_group_data[path_group][i][comp_key + '_comp'] = False
 
     def assign_closest_puckers(self):
         for group_key in self.path_group_data:
@@ -1471,6 +1498,11 @@ class Transition_State_Compare():
 
         self.all_groups_comp_dir = os.path.join(self.final_comp_dir, 'all_groups')
 
+        if not os.path.exists(os.path.join(self.ts_dir, 'diff_trend')):
+            os.makedirs(os.path.join(self.ts_dir, 'diff_trend'))
+
+        self.diff_trend_dir = os.path.join(self.ts_dir, 'diff_trend')
+
         return
     # endregion
 
@@ -1480,12 +1512,22 @@ class Transition_State_Compare():
     def do_calcs(self):
         for key in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[key])):
+                self.calc_weighting(key, i)
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                for j in range(len(self.ref_path_group_data[key][i]['points'])):
+                    point = self.ref_path_group_data[key][i]['points'][j]
+
+                    point['gibbs'] = point['G298 (Hartrees)'] - self.ref_path_group_data[key][i]['G298 (Hartrees)']
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
                 self.calc_WSS(key, i, 'arc')
                 self.calc_group_RMSD(key, i, 'arc')
                 self.calc_WSS(key, i, 'gibbs')
                 self.calc_group_RMSD(key, i, 'gibbs')
 
-                self.calc_weighting(key, i)
                 self.calc_WWSS(key, i, 'arc')
                 self.calc_WWSS(key, i, 'gibbs')
                 self.calc_group_WRMSD(key, i, 'arc')
@@ -1560,7 +1602,7 @@ class Transition_State_Compare():
                 self.ref_path_group_data[lm_group][ts_group]['points'][i]['weighting'] = \
                     self.ref_path_group_data[lm_group][ts_group]['points'][i]['ind_boltz'] / total_boltz
 
-        self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)'] = round(wt_gibbs, 3)
+        # self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)'] = round(wt_gibbs, 3)
 
     def calc_WWSS(self, lm_group, ts_group, comp_key):
         WWSS = 0
@@ -1826,7 +1868,7 @@ class Transition_State_Compare():
                                    [lm2_vert, 'green', 60], color, '-', 'face', 30)
     #endregion
 
-    # # # comparable plotting # # #
+    # # # comparison plotting # # #
     #region
     def plot_WRMSD_comp(self, comp_key):
         # plotting heatmap
@@ -1893,6 +1935,74 @@ class Transition_State_Compare():
                                        [lm1_vert, 'green', 60], 'red', '-')
                         plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, ts_color, 30],
                                        [lm2_vert, 'green', 60], 'red', '-')
+
+    def plot_diff_trend(self, plot):
+        plot.ax_rect.set_xlabel('Transition State')
+        plot.ax_rect.set_ylabel('G298 (kcal/mol)')
+
+        size = 0
+
+        line_energy = []
+        ref_line_energy = []
+
+        x_points = []
+
+        ymax = 0
+
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                ref_point = self.ref_path_group_data[key][i]
+
+                y_val = 0
+
+                for j in range(len(self.ref_path_group_data[key][i]['points'])):
+                    point = self.ref_path_group_data[key][i]['points'][j]
+
+                    y_val += point['weighting'] * point['G298 (Hartrees)']
+
+                if y_val > ymax:
+                    ymax = y_val
+
+                if ref_point['G298 (Hartrees)'] > ymax:
+                    ymax = ref_point['G298 (Hartrees)']
+
+                size += 1
+
+                line_energy.append(y_val)
+                ref_line_energy.append(ref_point['G298 (Hartrees)'])
+
+                x_points.append(ref_point['name'])
+
+        index = np.arange(size)
+        bar_width = 0.8
+        opacity = 0.8
+
+        plt.bar(index, ref_line_energy, bar_width,
+                alpha=opacity,
+                align='center',
+                color='black',
+                label='Reference')
+
+        plt.bar(index, line_energy, bar_width,
+                alpha=opacity,
+                align='center',
+                color='red',
+                label=self.method)
+
+        plt.title('Energy Trends')
+        plt.legend()
+
+        plt.xticks(index)
+
+        plot.ax_rect.set_ylim([0, ymax])
+        plot.ax_rect.set_xticks(index)
+        plot.ax_rect.set_xticklabels(x_points, rotation=90)
+
+        major_ticksy = np.arange(0, ymax, 5)
+        minor_ticksy = np.arange(0, ymax, 2.5)
+
+        plot.ax_rect.set_yticks(major_ticksy)
+        plot.ax_rect.set_yticks(minor_ticksy, minor=True)
     #endregion
 
     # # # heatmap plotting # # #
@@ -2426,6 +2536,15 @@ class Transition_State_Compare():
 
             self.ts_class.plot.save(base_name, self.gibbs_data_dir)
             self.ts_class.wipe_plot()
+
+    def save_diff_trend(self, overwrite):
+        base_name = self.molecule + "-diff-trend-" + self.method
+
+        if not os.path.exists(os.path.join(self.diff_trend_dir, base_name + '.png')) or overwrite:
+            plot = Plots(rect_arg=True)
+            self.plot_diff_trend(plot)
+
+            plot.save(base_name, self.diff_trend_dir)
     # endregion
 
     pass
@@ -2988,7 +3107,7 @@ class Compare_All_Methods:
     # # # plotting functions # # #
     #region
     # plotting functions for plots with table included
-    def plot_comp_table(self, path_group, data_key, ax):
+    def plot_comp_table(self, path_group, data_key, ax, comp_key):
         lm1_key = int(path_group.split('_')[0])
         lm2_key = int(path_group.split('_')[1])
 
@@ -3090,7 +3209,7 @@ class Compare_All_Methods:
             for j in range(num_col):
                 col_widths.append(width)
 
-        color_matrix = get_color_matrix(table_rows, data_key)
+        color_matrix = get_color_matrix(table_rows, data_key, comp_key)
 
         # bbox is [left, bottom, width, height]
         ax.table(cellText=table_rows,
@@ -3102,7 +3221,7 @@ class Compare_All_Methods:
                  loc='right',
                  bbox=[left_offset, 0, width * num_col, 1])
 
-    def save_comp_table(self, data_key):
+    def save_comp_table(self, data_key, comp_key):
         # Create custom artist
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
@@ -3130,12 +3249,12 @@ class Compare_All_Methods:
                     plot = Plots(False, False, False, False, True, False)
                     ax = plot.ax_circ_north
 
-                    self.plot_comp_table(path_group, data_key, ax)
+                    self.plot_comp_table(path_group, data_key, ax, comp_key)
                 elif self.methods_ts_data[0].south_groups.count(path_group) == 1:
                     plot = Plots(False, False, False, False, False, True)
                     ax = plot.ax_circ_south
 
-                    self.plot_comp_table(path_group, data_key, ax)
+                    self.plot_comp_table(path_group, data_key, ax, comp_key)
                 else:
                     plot = Plots(False, False, False, True, False, False)
 
@@ -3147,7 +3266,7 @@ class Compare_All_Methods:
                                 marker='+',
                                 edgecolor='face')
 
-                    self.plot_comp_table(path_group, data_key, ax)
+                    self.plot_comp_table(path_group, data_key, ax, comp_key)
 
                     # must set the limits after plotting or set autoscaling off
                     ax.set_xlim([-5, 365])
@@ -3162,17 +3281,17 @@ class Compare_All_Methods:
 
         self.methods_ts_data[0].ts_class.wipe_plot()
 
-    def is_physical(self, data_key, path_group, i):
-        if (data_key == 'arc_group_WRMSD' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
+    def is_physical(self, data_key, path_group, i, comp_key):
+        if (data_key == comp_key + '_group_WRMSD' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
             data_key] == 'n/a') \
-            or (data_key == 'comparable' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
+            or (data_key == comp_key + '_comp' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
                 data_key] == False):
 
                 return False
         else:
             return True
 
-    def plot_all_comp_table(self, data_key):
+    def plot_all_comp_table(self, data_key, comp_key):
         table_rows = []
         row_labels = []
 
@@ -3201,7 +3320,7 @@ class Compare_All_Methods:
 
             # storing header row
             for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-                if self.is_physical(data_key, path_group, i):
+                if self.is_physical(data_key, path_group, i, comp_key):
                     row.append(path_name + '_' + str(i))
 
         table_rows.append(row)
@@ -3239,7 +3358,7 @@ class Compare_All_Methods:
                 linestyle = '-'
 
                 # if pathway isn't physical, make it gray and dashed
-                if not self.is_physical(data_key, path_group, i):
+                if not self.is_physical(data_key, path_group, i, comp_key):
                     color = 'darkgray'
                     linestyle = '--'
                 else:
@@ -3279,9 +3398,9 @@ class Compare_All_Methods:
             #need to factor non-ref lm groups
             for path_group in self.methods_ts_data[j].ref_path_group_data:
                 for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-                    if not self.is_physical(data_key, path_group, i)\
-                        and ((data_key == 'arc_group_WRMSD' and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] != 'n/a')
-                             or (data_key == 'comparable' and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] is True)):
+                    if not self.is_physical(data_key, path_group, i, comp_key)\
+                        and ((data_key == comp_key + '_group_WRMSD' and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] != 'n/a')
+                             or (data_key == (comp_key + '_comp') and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] is True)):
 
                         not_physical_count += 1
 
@@ -3290,7 +3409,7 @@ class Compare_All_Methods:
 
             for path_group in self.methods_ts_data[j].ref_path_group_data:
                 for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-                    if self.is_physical(data_key, path_group, i):
+                    if self.is_physical(data_key, path_group, i, comp_key):
                         val = self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key]
 
                         if isinstance(val, float):
@@ -3315,7 +3434,7 @@ class Compare_All_Methods:
             for j in range(num_col):
                 col_widths.append(width)
 
-        color_matrix = get_color_matrix(table_rows, data_key)
+        color_matrix = get_color_matrix(table_rows, data_key, comp_key)
 
         # setting the first color of each row to white
         for i in range(num_row - 1):
@@ -3333,7 +3452,7 @@ class Compare_All_Methods:
 
         return
 
-    def save_all_comp_table(self, data_key):
+    def save_all_comp_table(self, data_key, comp_key):
         # Create custom artist
         size_scaling = 1
         met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
@@ -3348,12 +3467,17 @@ class Compare_All_Methods:
         artist_list = [cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist)]
         label_list = ['Canonical Designation', 'LM Kmeans Center', 'pathway']
 
-        ts_dir = self.methods_ts_data[0].ts_dir
-
         base_name = "z_dataset-" + self.methods_ts_data[0].molecule + "-TS-all-groups-" + data_key + "-table"
 
-        if not os.path.exists(os.path.join(ts_dir, base_name + '.png')):
-            self.plot_all_comp_table(data_key)
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1])):
+            os.makedirs(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1]))
+
+        save_dir = os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1])
+
+        if not os.path.exists(os.path.join(save_dir, base_name + '.png')) or\
+            not os.path.exists(os.path.join(self.ts_dir, base_name + '.png')):
+
+            self.plot_all_comp_table(data_key, comp_key)
             self.methods_ts_data[0].ts_class.plot_cano()
 
             self.methods_ts_data[0].ts_class.plot.ax_rect.legend(artist_list,
@@ -3361,7 +3485,124 @@ class Compare_All_Methods:
                        scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
                        bbox_to_anchor=(0.5, -0.3), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
 
-            self.methods_ts_data[0].ts_class.plot.save(base_name, ts_dir)
+            self.methods_ts_data[0].ts_class.plot.save(base_name, save_dir)
+            self.methods_ts_data[0].ts_class.plot.save(base_name, self.ts_dir)
+
+    def plot_diff_trend_by_path(self, plot, path_group, i):
+        size = 0
+
+        line_energy = []
+        ref_line_energy = []
+
+        x_points = []
+
+        ymax = 0
+
+        for j in range(len(self.methods_ts_data)):
+            ref_val = 0
+
+            for k in range(len(self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'])):
+                point = self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'][k]
+
+                ref_val += point['weighting'] * point['G298 (Hartrees)']
+
+            met_val = 0
+
+            for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
+                point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
+
+                met_val += point['weighting'] * point['G298 (Hartrees)']
+
+            if met_val > ymax:
+                ymax = met_val
+
+            if ref_val > ymax:
+                ymax = ref_val
+
+            size += 1
+
+            line_energy.append(met_val)
+            ref_line_energy.append(ref_val)
+
+            x_points.append(self.methods_ts_data[j].method)
+
+        title = 'Energy Trends - ' + self.methods_ts_data[0].ref_path_group_data[path_group][i]['name']
+
+        plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title)
+
+    def save_diff_trend_by_path(self):
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_path')):
+            os.makedirs(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_path'))
+
+        by_path_dir = os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_path')
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                base_name = self.methods_ts_data[0].molecule + "-diff-trend-" + path_group + '-' + str(i)
+
+                if not os.path.exists(os.path.join(by_path_dir, base_name + '.png')):
+                    plot = Plots(rect_arg=True)
+                    self.plot_diff_trend_by_path(plot, path_group, i)
+
+                    plot.save(base_name, by_path_dir)
+
+    def plot_diff_trend_by_met(self, plot, j):
+        size = 0
+
+        line_energy = []
+        ref_line_energy = []
+
+        x_points = []
+
+        ymax = 0
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                ref_val = 0
+
+                for k in range(len(self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'])):
+                    point = self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'][k]
+
+                    ref_val += point['weighting'] * point['G298 (Hartrees)']
+
+                met_val = 0
+
+                for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
+                    point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
+
+                    met_val += point['weighting'] * point['G298 (Hartrees)']
+
+                if met_val > ymax:
+                    ymax = met_val
+
+                if ref_val > ymax:
+                    ymax = ref_val
+
+                size += 1
+
+                line_energy.append(met_val)
+                ref_line_energy.append(ref_val)
+
+                x_points.append(self.methods_ts_data[0].ref_path_group_data[path_group][i]['name'])
+
+        title = 'Energy Trends - ' + self.methods_ts_data[0].method
+
+        plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title)
+
+    def save_diff_trend_by_met(self):
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met')):
+            os.makedirs(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met'))
+
+        by_met_dir = os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met')
+
+        for j in range(len(self.methods_ts_data)):
+            base_name = self.methods_ts_data[0].molecule + "-diff-trend-" + self.methods_ts_data[j].method
+
+            if not os.path.exists(os.path.join(by_met_dir, base_name + '.png')):
+                plot = Plots(rect_arg=True)
+                self.plot_diff_trend_by_met(plot, j)
+
+                plot.save(base_name, by_met_dir)
     #endregion
 
     pass

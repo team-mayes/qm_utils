@@ -954,14 +954,19 @@ class Transition_States():
 # class for initializing plots
 class Plots():
     # arguments are bools for creating the 2d and 3d plots
-    def __init__(self, twoD_arg=False, threeD_arg=False, merc_arg=False, ts_merc_arg=False, north_pol_arg=False, south_pol_arg=False):
+    def __init__(self, twoD_arg=False, threeD_arg=False, merc_arg=False, ts_merc_arg=False, north_pol_arg=False, south_pol_arg=False, rect_arg=False):
         self.fig = plt.figure()
 
+        if rect_arg:
+            self.fig, self.ax_rect = plt.subplots(facecolor='white')
+
         if twoD_arg:
-            gs = gridspec.GridSpec(2, 2)
-            self.ax_rect = self.fig.add_subplot(gs[1:, :], facecolor='white')
+            norm_param = 1
+
+            gs = gridspec.GridSpec(2 * norm_param, 2 * norm_param)
+            self.ax_rect = self.fig.add_subplot(gs[(1 * norm_param):, :], facecolor='white')
             self.ax_circ_north = self.fig.add_subplot(gs[0, 0], projection='polar')
-            self.ax_circ_south = self.fig.add_subplot(gs[0, 1], projection='polar')
+            self.ax_circ_south = self.fig.add_subplot(gs[0, 1 * norm_param], projection='polar')
 
             self.ax_rect.set_xlim([-5, 365])
             self.ax_rect.set_ylim([105, 75])
