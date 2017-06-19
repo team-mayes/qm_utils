@@ -164,6 +164,8 @@ def main(argv=None):
 
         if args.mole == 'bxyl':
             atoms_order = 20
+        elif args.mole == 'bglc':
+            atoms_order = 24
         else:
             print('Missing the molecule type in norm...')
 
