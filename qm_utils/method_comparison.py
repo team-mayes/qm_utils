@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-The purpose of this script is to make comparisons for a particular QM method to the reference set of HSP.
+The purpose of this script is to make comparisons for a particular QM method to the REFERENCE set of HSP.
 """
 
 # # # import # # #
@@ -163,7 +163,7 @@ def plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, ti
             alpha=opacity,
             align='center',
             color='black',
-            label='Reference')
+            label='REFERENCE')
 
     plt.bar(index, line_energy, bar_width,
             alpha=opacity,
@@ -194,13 +194,13 @@ class Local_Minima_Compare():
     class for organizing the local minima information
     """
     def __init__(self, molecule_in, method_in, lm_dataset_in, lm_class_in, lm_dir_in, lm_ref_in=None):
-        # tolerance for comparisons between method and reference
+        # tolerance for comparisons between method and REFERENCE
         # used in self.calc_num_comp_lm()
         self.comp_tolerance = 0.1
         self.comp_cutoff = 0.1
 
         self.molecule = molecule_in
-        self.method = method_in
+        self.method = method_in.upper()
 
         self.lm_class = lm_class_in
         self.lm_ref = lm_ref_in
@@ -301,6 +301,12 @@ class Local_Minima_Compare():
             os.makedirs(os.path.join(self.met_data_dir, 'overall'))
 
         self.overall_dir = os.path.join(self.met_data_dir, 'overall')
+
+        # checks if directory exists, and creates it if not
+        if not os.path.exists(os.path.join(self.lm_dir, 'overall')):
+            os.makedirs(os.path.join(self.lm_dir, 'overall'))
+
+        self.lm_overall_dir = os.path.join(self.lm_dir, 'overall')
 
         # checks if directory exists, and creates it if not
         if not os.path.exists(os.path.join(self.met_data_dir, 'groups')):
@@ -808,7 +814,7 @@ class Local_Minima_Compare():
                                           scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
                                           bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
 
-        plt.title(self.method, loc='left')
+        self.lm_class.plot.ax_rect.set_title(self.method, loc='left')
 
     def show(self):
         self.lm_class.show()
@@ -850,6 +856,30 @@ class Local_Minima_Compare():
 
                 self.lm_class.plot.save(base_name + '-group_' + str(i), self.groups_dir)
                 self.lm_class.wipe_plot()
+
+    def save_all_groupings(self, overwrite):
+        # Create custom artist
+        size_scaling = 1
+        ref_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30*size_scaling, c='red', marker='o', edgecolor='face')
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=15*size_scaling, c='blue', marker='o', edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=45*size_scaling, c='black', marker='+', edgecolor='face')
+        path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
+
+        artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
+        label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
+
+        base_name = "z_dataset-" + self.molecule + "-LM-" + self.method
+
+        # if file either doesn't exist or needs to be overwritten
+        if not os.path.exists(os.path.join(self.lm_overall_dir, base_name + '-all_groupings' + '.png')) or overwrite:
+            # saves a plot of all groupings
+            self.plot_all_groupings()
+            self.lm_class.plot_cano()
+
+            self.set_title_and_legend(artist_list, label_list)
+
+            self.lm_class.plot.save(base_name + '-all_groupings', self.lm_overall_dir)
+            self.lm_class.wipe_plot()
 
     def save_all_figures_raw(self, overwrite):
         # Create custom artists
@@ -1060,11 +1090,11 @@ class Transition_State_Compare():
         self.comp_tolerance = 0.1
         self.comp_cutoff = 0.1
 
-        # ts and lm classes with reference information
+        # ts and lm classes with REFERENCE information
         self.lm_class = lm_class_in
         self.ts_class = ts_class_in
 
-        # reference ts_comp and added reference ts_comp objects
+        # REFERENCE ts_comp and added REFERENCE ts_comp objects
         self.ts_ref = ts_ref_in
         self.ts_ref_added = ts_ref_added_in
 
@@ -1072,7 +1102,7 @@ class Transition_State_Compare():
         self.ts_dataset = ts_dataset_in
 
         self.molecule = molecule_in
-        self.method = method_in
+        self.method = method_in.upper()
 
         # dir for saving
         self.ts_dir = ts_dir_in
@@ -1981,7 +2011,7 @@ class Transition_State_Compare():
                 alpha=opacity,
                 align='center',
                 color='black',
-                label='Reference')
+                label='REFERENCE')
 
         plt.bar(index, line_energy, bar_width,
                 alpha=opacity,
@@ -2176,7 +2206,7 @@ class Transition_State_Compare():
 
     # # # organization functions # # #
     #region
-    # returns whether a pair of local mins are connected by a transition state in the reference data
+    # returns whether a pair of local mins are connected by a transition state in the REFERENCE data
     def is_a_ref_path(self, path_group):
         if path_group in self.ref_path_group_data:
             return True
@@ -2226,7 +2256,7 @@ class Transition_State_Compare():
         ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
 
         artist_list = [ref_path_Artist, cano_lm_Artist, met_lm_Artist, met_ts_Artist, path_Artist]
-        label_list = ['Reference pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
+        label_list = ['REFERENCE pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
@@ -2256,7 +2286,7 @@ class Transition_State_Compare():
         ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
 
         artist_list = [ref_path_Artist, cano_lm_Artist, met_lm_Artist, met_ts_Artist, path_Artist]
-        label_list = ['Reference pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
+        label_list = ['REFERENCE pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
@@ -2293,7 +2323,7 @@ class Transition_State_Compare():
 
         artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist),
                        (path_Artist, met_ts_Artist)]
-        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'reference pathway',
+        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE pathway',
                       self.method + ' pathway']
 
         for path_group in self.ref_path_group_data:
@@ -2331,7 +2361,7 @@ class Transition_State_Compare():
                                     edgecolor='gray')
 
         artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist), (path_Artist, met_ts_Artist)]
-        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'reference pathway', self.method + ' pathway']
+        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE pathway', self.method + ' pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + "-all_groups_comp-" + self.method
 
@@ -2395,7 +2425,7 @@ class Transition_State_Compare():
                                     edgecolor='black')
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist, met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS', self.method + ' TS', 'Pathway']
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
 
@@ -2426,7 +2456,7 @@ class Transition_State_Compare():
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
                        met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS',
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS',
                       self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
@@ -2491,7 +2521,7 @@ class Transition_State_Compare():
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
                        met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS',
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS',
                       self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
@@ -2523,7 +2553,7 @@ class Transition_State_Compare():
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
                        met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'reference TS',
+        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS',
                       self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
@@ -2571,21 +2601,21 @@ class Compare_All_Methods:
         for i in range(len(self.methods_ts_data)):
             method = self.methods_ts_data[i].method
 
-            if method == 'reference':
+            if method == 'REFERENCE':
                 aux_dict[0] = self.methods_ts_data[i]
-            elif method == 'addedref':
+            elif method == 'ADDEDREF':
                 aux_dict[1] = self.methods_ts_data[i]
-            elif method == 'b3lyp':
+            elif method == 'B3LYP':
                 aux_dict[2] = self.methods_ts_data[i]
-            elif method == 'dftb':
+            elif method == 'DFTB':
                 aux_dict[3] = self.methods_ts_data[i]
-            elif method == 'am1':
+            elif method == 'AM1':
                 aux_dict[4] = self.methods_ts_data[i]
-            elif method == 'pm3':
+            elif method == 'PM3':
                 aux_dict[5] = self.methods_ts_data[i]
-            elif method == 'pm3mm':
+            elif method == 'PM3MM':
                 aux_dict[6] = self.methods_ts_data[i]
-            elif method == 'pm6':
+            elif method == 'PM6':
                 aux_dict[7] = self.methods_ts_data[i]
 
         for i in range(len(self.methods_ts_data)):
@@ -2973,7 +3003,7 @@ class Compare_All_Methods:
 
         return
 
-    # writing to csv the pathways from each method which are connected but are not connected in the reference
+    # writing to csv the pathways from each method which are connected but are not connected in the REFERENCE
     def write_uncompared_to_csv(self):
         molecule = self.methods_ts_data[0].molecule
         uncompared_csv = os.path.join(self.ts_csv_data_dir, molecule + '-uncompared.csv')
