@@ -148,6 +148,9 @@ def get_color_matrix(data_matrix, data_key, comp_key):
                     color = cmap(comp_ratio)
 
                 color_matrix[i].append(color)
+            else:
+                color = 'white'
+                color_matrix[i].append(color)
 
     return color_matrix
 
@@ -1245,6 +1248,8 @@ class Transition_State_Compare():
 
                 self.ref_path_group_data[ref_key].append(ref_data)
 
+        self.ref_path_group_data = OrderedDict(sorted(self.ref_path_group_data.items(), key=itemgetter(0), reverse=False))
+
         return
 
     def populate_path_group_data(self):
@@ -1349,8 +1354,6 @@ class Transition_State_Compare():
                     self.ref_path_group_data[path_group][i][comp_key + '_comp'] = True
                 else:
                     self.ref_path_group_data[path_group][i][comp_key + '_comp'] = False
-
-        test = 0
 
     def assign_comp_orig(self, comp_cutoff, comp_tolerance, comp_key):
         for path_group in self.ref_path_group_data:
@@ -1544,12 +1547,34 @@ class Transition_State_Compare():
             for i in range(len(self.ref_path_group_data[key])):
                 self.calc_weighting(key, i)
 
+            if self.ts_ref is None:
+                weighted_gibbs = 0
+
+                # calc weighted gibbs to compare methods to
+                for j in range(len(self.ref_path_group_data[key][i]['points'])):
+                    ref_point = self.ref_path_group_data[key][i]['points'][j]
+                    weighted_gibbs += ref_point['G298 (Hartrees)'] * ref_point['weighting']
+
+                self.ref_path_group_data[key][i]['G298 (Hartrees)'] = weighted_gibbs
+
         for key in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[key])):
+                weighted_gibbs = 0
+
+                # calc weighted gibbs to compare methods to
+                if self.ts_ref is not None:
+                    for j in range(len(self.ts_ref.ref_path_group_data[key][i]['points'])):
+                        ref_point = self.ts_ref.ref_path_group_data[key][i]['points'][j]
+                        weighted_gibbs += ref_point['G298 (Hartrees)'] * ref_point['weighting']
+                else:
+                    for j in range(len(self.ref_path_group_data[key][i]['points'])):
+                        ref_point = self.ref_path_group_data[key][i]['points'][j]
+                        weighted_gibbs += ref_point['G298 (Hartrees)'] * ref_point['weighting']
+
                 for j in range(len(self.ref_path_group_data[key][i]['points'])):
                     point = self.ref_path_group_data[key][i]['points'][j]
 
-                    point['gibbs'] = point['G298 (Hartrees)'] - self.ref_path_group_data[key][i]['G298 (Hartrees)']
+                    point['gibbs'] = point['G298 (Hartrees)'] - weighted_gibbs
 
         for key in self.ref_path_group_data:
             for i in range(len(self.ref_path_group_data[key])):
@@ -2588,6 +2613,7 @@ class Compare_All_Methods:
         self.group_WRMSD_vals = {}
 
         self.methods_ts_data = methods_ts_data_in
+
         self.reorg_ts_methods()
 
         self.ts_dir = ts_dir_in
@@ -3311,13 +3337,9 @@ class Compare_All_Methods:
 
         self.methods_ts_data[0].ts_class.wipe_plot()
 
-    def is_physical(self, data_key, path_group, i, comp_key):
-        if (data_key == comp_key + '_group_WRMSD' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
-            data_key] == 'n/a') \
-            or (data_key == comp_key + '_comp' and self.methods_ts_data[0].ref_path_group_data[path_group][i][
-                data_key] == False):
-
-                return False
+    def is_physical(self, path_group, i):
+        if self.methods_ts_data[0].ref_path_group_data[path_group][i]['arc_group_WRMSD'] == 'n/a':
+            return False
         else:
             return True
 
@@ -3326,7 +3348,7 @@ class Compare_All_Methods:
         row_labels = []
 
         # storing the row names
-        row_labels.append('Path Names:')
+        row_labels.append('Paths:')
 
         for i in range(len(self.methods_ts_data)):
             row_labels.append(self.methods_ts_data[i].method)
@@ -3334,7 +3356,7 @@ class Compare_All_Methods:
         # initializing column names
         row = []
 
-        row.append('unphysical paths')
+        row.append('unphysical')
 
         for path_group in self.methods_ts_data[0].ref_path_group_data:
             lm1_key = int(path_group.split('_')[0])
@@ -3350,7 +3372,7 @@ class Compare_All_Methods:
 
             # storing header row
             for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-                if self.is_physical(data_key, path_group, i, comp_key):
+                if self.is_physical(path_group, i):
                     row.append(path_name + '_' + str(i))
 
         table_rows.append(row)
@@ -3388,7 +3410,7 @@ class Compare_All_Methods:
                 linestyle = '-'
 
                 # if pathway isn't physical, make it gray and dashed
-                if not self.is_physical(data_key, path_group, i, comp_key):
+                if not self.is_physical(path_group, i):
                     color = 'darkgray'
                     linestyle = '--'
                 else:
@@ -3428,9 +3450,8 @@ class Compare_All_Methods:
             #need to factor non-ref lm groups
             for path_group in self.methods_ts_data[j].ref_path_group_data:
                 for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-                    if not self.is_physical(data_key, path_group, i, comp_key)\
-                        and ((data_key == comp_key + '_group_WRMSD' and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] != 'n/a')
-                             or (data_key == (comp_key + '_comp') and self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key] is True)):
+                    if not self.is_physical(path_group, i)\
+                        and self.methods_ts_data[j].ref_path_group_data[path_group][i][comp_key + '_group_WRMSD'] != 'n/a':
 
                         not_physical_count += 1
 
@@ -3439,8 +3460,16 @@ class Compare_All_Methods:
 
             for path_group in self.methods_ts_data[j].ref_path_group_data:
                 for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-                    if self.is_physical(data_key, path_group, i, comp_key):
+                    if self.is_physical(path_group, i):
                         val = self.methods_ts_data[j].ref_path_group_data[path_group][i][data_key]
+
+                        if data_key == 'G298 (Hartrees)':
+                            val = 0
+
+                            for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
+                                point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
+
+                                val += point['G298 (Hartrees)'] * point['weighting']
 
                         if isinstance(val, float):
                             val = round(val, 3)
@@ -3499,10 +3528,16 @@ class Compare_All_Methods:
 
         base_name = "z_dataset-" + self.methods_ts_data[0].molecule + "-TS-all-groups-" + data_key + "-table"
 
-        if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1])):
-            os.makedirs(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1]))
+        if data_key == 'G298 (Hartrees)':
+            if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split(' ')[1])):
+                os.makedirs(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split(' ')[1]))
 
-        save_dir = os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1])
+            save_dir = os.path.join(self.methods_ts_data[0].ts_dir, data_key.split(' ')[1])
+        else:
+            if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1])):
+                os.makedirs(os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1]))
+
+            save_dir = os.path.join(self.methods_ts_data[0].ts_dir, data_key.split('_')[1])
 
         if not os.path.exists(os.path.join(save_dir, base_name + '.png')) or\
             not os.path.exists(os.path.join(self.ts_dir, base_name + '.png')):

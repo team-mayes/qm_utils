@@ -1,0 +1,48 @@
+This is BibTeX, Version 0.99d (TeX Live 2016)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: puckering_project.aux
+The style file: unsrt.bst
+Database file #1: mybib.bib
+Warning--there's a number but no volume in Pereira2017
+You've used 22 entries,
+            1791 wiz_defined-function locations,
+            609 strings with 9213 characters,
+and the built_in function-call counts, 6326 in all, are:
+= -- 478
+> -- 476
+< -- 2
++ -- 166
+- -- 144
+* -- 570
+:= -- 1077
+add.period$ -- 64
+call.type$ -- 22
+change.case$ -- 22
+chr.to.int$ -- 0
+cite$ -- 23
+duplicate$ -- 198
+empty$ -- 518
+format.name$ -- 144
+if$ -- 1307
+int.to.chr$ -- 0
+int.to.str$ -- 22
+missing$ -- 19
+newline$ -- 110
+num.names$ -- 24
+pop$ -- 46
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 87
+stack$ -- 0
+substring$ -- 457
+swap$ -- 32
+text.length$ -- 2
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 1
+while$ -- 56
+width$ -- 24
+write$ -- 234
+(There was 1 warning)

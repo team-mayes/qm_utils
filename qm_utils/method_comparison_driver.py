@@ -156,6 +156,8 @@ def save_comp_all_met_data(comp_all_met):
     comp_all_met.save_all_comp_table('gibbs_comp', 'gibbs')
     comp_all_met.save_all_comp_table('gibbs_group_WRMSD', 'gibbs')
 
+    comp_all_met.save_all_comp_table('G298 (Hartrees)', 'gibbs')
+
 def save_lm_comp_class_data(lm_comp_class, overwrite):
     lm_comp_class.save_all_figures(overwrite)
     lm_comp_class.save_all_groupings(overwrite)
@@ -198,7 +200,7 @@ def main():
     overwrite = False
 
     # write the info for lm and/or ts
-    write_lm = True
+    write_lm = False
     write_ts = True
 
     write_individual = False
@@ -206,7 +208,7 @@ def main():
     # run calcs for specific molecule
     do_aglc = 0
     do_bglc = 0
-    do_bxyl = 1
+    do_bxyl = 0
     do_oxane = 1
 
     do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
