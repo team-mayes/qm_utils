@@ -154,7 +154,7 @@ def get_color_matrix(data_matrix, data_key, comp_key):
 
     return color_matrix
 
-def plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title):
+def plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title, method=''):
     plot.ax_rect.set_xlabel('Transition State')
     plot.ax_rect.set_ylabel('G298 (kcal/mol)')
 
@@ -172,7 +172,7 @@ def plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, ti
             alpha=opacity,
             align='center',
             color='red',
-            label='Method')
+            label=method)
 
     plt.title(title)
     plt.legend()
@@ -181,10 +181,10 @@ def plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, ti
 
     plot.ax_rect.set_ylim([0, ymax + 1])
     plot.ax_rect.set_xticks(index)
-    plot.ax_rect.set_xticklabels(x_points, rotation=90)
+    plot.ax_rect.set_xticklabels(x_points, rotation=75)
 
-    major_ticksy = np.arange(0, ymax, 5)
-    minor_ticksy = np.arange(0, ymax, 2.5)
+    major_ticksy = np.arange(0, ymax + 5, 2)
+    minor_ticksy = np.arange(0, ymax + 5, 1)
 
     plot.ax_rect.set_yticks(major_ticksy)
     plot.ax_rect.set_yticks(minor_ticksy, minor=True)
@@ -232,14 +232,15 @@ class Local_Minima_Compare():
         for i in range(len(self.lm_dataset)):
             self.lm_dataset[i]['G298 (Hartrees)'] = 627.509 * float(self.lm_dataset[i]['G298 (Hartrees)'])
 
-        min_G298 = self.lm_dataset[0]['G298 (Hartrees)']
+        # setting reference to be lowest energy in dataset
+        self.min_G298 = self.lm_dataset[0]['G298 (Hartrees)']
 
         for i in range(len(self.lm_dataset)):
-            if self.lm_dataset[i]['G298 (Hartrees)'] < min_G298:
-                min_G298 = self.lm_dataset[i]['G298 (Hartrees)']
+            if self.lm_dataset[i]['G298 (Hartrees)'] < self.min_G298:
+                self.min_G298 = self.lm_dataset[i]['G298 (Hartrees)']
 
         for i in range(len(self.lm_dataset)):
-            self.lm_dataset[i]['G298 (Hartrees)'] -= min_G298
+            self.lm_dataset[i]['G298 (Hartrees)'] -= self.min_G298
 
     def populate_hartree_data(self):
         for i in range(len(self.lm_dataset)):
@@ -817,7 +818,7 @@ class Local_Minima_Compare():
                                           scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
                                           bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
 
-        self.lm_class.plot.ax_rect.set_title(self.method, loc='left')
+        self.lm_class.plot.ax_rect.set_title(self.method)
 
     def show(self):
         self.lm_class.show()
@@ -1088,10 +1089,12 @@ class Transition_State_Compare():
     """
     class for organizing the transition state information
     """
-    def  __init__(self, molecule_in, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in, ts_ref_in=None, ts_ref_added_in=None):
+    def __init__(self, molecule_in, method_in, ts_dataset_in, lm_class_in, ts_class_in, ts_dir_in, min_G298_in=None, ts_ref_in=None, ts_ref_added_in=None):
         # tolerances for comparability
         self.comp_tolerance = 0.1
         self.comp_cutoff = 0.1
+
+        self.min_G298 = min_G298_in
 
         # ts and lm classes with REFERENCE information
         self.lm_class = lm_class_in
@@ -1125,6 +1128,7 @@ class Transition_State_Compare():
         self.populate_ts_groups()
 
         self.do_calcs()
+
         self.assign_closest_puckers()
         self.assign_group_name()
 
@@ -1147,20 +1151,13 @@ class Transition_State_Compare():
     # # # __init__ functions # # #
     # region
     def fix_hartrees(self):
+        for i in range(len(self.ts_dataset)):
+            self.ts_dataset[i]['G298 (Hartrees)'] = float(self.ts_dataset[i]['G298 (Hartrees)'])
+            self.ts_dataset[i]['G298 (Hartrees)'] -= self.min_G298 / 627.509
+
         # converting hartrees to kcal/mol
         for i in range(len(self.ts_dataset)):
             self.ts_dataset[i]['G298 (Hartrees)'] = 627.509 * float(self.ts_dataset[i]['G298 (Hartrees)'])
-
-        self.min_G298 = self.ts_dataset[0]['G298 (Hartrees)']
-
-        for i in range(len(self.ts_dataset)):
-            if self.ts_dataset[i]['G298 (Hartrees)'] < self.min_G298:
-                self.min_G298 = self.ts_dataset[i]['G298 (Hartrees)']
-
-        for i in range(len(self.ts_dataset)):
-            self.ts_dataset[i]['G298 (Hartrees)'] -= self.min_G298
-
-        self.min_G298 = self.min_G298 / 627.509
 
     def populate_hartree_data(self):
         for i in range(len(self.ts_dataset)):
@@ -1537,6 +1534,12 @@ class Transition_State_Compare():
         self.diff_trend_dir = os.path.join(self.ts_dir, 'diff_trend')
 
         return
+
+    def populate_delta_gibbs(self):
+
+
+        return
+
     # endregion
 
     # # # do_calc functions # # #
@@ -2616,6 +2619,9 @@ class Compare_All_Methods:
 
         self.reorg_ts_methods()
 
+        if self.methods_lm_data is not None:
+            self.reorg_lm_methods()
+
         self.ts_dir = ts_dir_in
         self.dir_init()
     # # # init functions # # #
@@ -2629,25 +2635,50 @@ class Compare_All_Methods:
 
             if method == 'REFERENCE':
                 aux_dict[0] = self.methods_ts_data[i]
-            elif method == 'ADDEDREF':
-                aux_dict[1] = self.methods_ts_data[i]
             elif method == 'B3LYP':
-                aux_dict[2] = self.methods_ts_data[i]
+                aux_dict[1] = self.methods_ts_data[i]
             elif method == 'DFTB':
-                aux_dict[3] = self.methods_ts_data[i]
+                aux_dict[2] = self.methods_ts_data[i]
             elif method == 'AM1':
-                aux_dict[4] = self.methods_ts_data[i]
+                aux_dict[3] = self.methods_ts_data[i]
             elif method == 'PM3':
-                aux_dict[5] = self.methods_ts_data[i]
+                aux_dict[4] = self.methods_ts_data[i]
             elif method == 'PM3MM':
-                aux_dict[6] = self.methods_ts_data[i]
+                aux_dict[5] = self.methods_ts_data[i]
             elif method == 'PM6':
-                aux_dict[7] = self.methods_ts_data[i]
+                aux_dict[6] = self.methods_ts_data[i]
 
         for i in range(len(self.methods_ts_data)):
             aux_list.append(aux_dict[i])
 
         self.methods_ts_data = aux_list
+
+    def reorg_lm_methods(self):
+        aux_dict = {}
+        aux_list = []
+
+        for i in range(len(self.methods_lm_data)):
+            method = self.methods_ts_data[i].method
+
+            if method == 'REFERENCE':
+                aux_dict[0] = self.methods_lm_data[i]
+            elif method == 'B3LYP':
+                aux_dict[1] = self.methods_lm_data[i]
+            elif method == 'DFTB':
+                aux_dict[2] = self.methods_lm_data[i]
+            elif method == 'AM1':
+                aux_dict[3] = self.methods_lm_data[i]
+            elif method == 'PM3':
+                aux_dict[4] = self.methods_lm_data[i]
+            elif method == 'PM3MM':
+                aux_dict[5] = self.methods_lm_data[i]
+            elif method == 'PM6':
+                aux_dict[6] = self.methods_lm_data[i]
+
+        for i in range(len(self.methods_lm_data)):
+            aux_list.append(aux_dict[i])
+
+        self.methods_lm_data = aux_list
 
     def dir_init(self):
         if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, 'csv_data')):
@@ -2775,7 +2806,7 @@ class Compare_All_Methods:
                     phi_lm2 = self.added_points[key][0]['lm2']['phi']
                     theta_lm2 = self.added_points[key][0]['lm2']['theta']
 
-                    min_G298 = self.methods_ts_data[0].ts_ref.min_G298
+                    min_G298 = self.methods_ts_data[0].ts_ref.min_G298 * 627.509
 
                     self.added_skm_dict['File Name'].append('n/a')
                     self.added_skm_dict['Pucker'].append('n/a')
@@ -3623,36 +3654,37 @@ class Compare_All_Methods:
 
         for path_group in self.methods_ts_data[0].ref_path_group_data:
             for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
-                ref_val = 0
+                if(self.is_physical(path_group, i)):
+                    ref_val = 0
 
-                for k in range(len(self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'])):
-                    point = self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'][k]
+                    for k in range(len(self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'])):
+                        point = self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'][k]
 
-                    ref_val += point['weighting'] * point['G298 (Hartrees)']
+                        ref_val += point['weighting'] * point['G298 (Hartrees)']
 
-                met_val = 0
+                    met_val = 0
 
-                for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
-                    point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
+                    for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
+                        point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
 
-                    met_val += point['weighting'] * point['G298 (Hartrees)']
+                        met_val += point['weighting'] * point['G298 (Hartrees)']
 
-                if met_val > ymax:
-                    ymax = met_val
+                    if met_val > ymax:
+                        ymax = met_val
 
-                if ref_val > ymax:
-                    ymax = ref_val
+                    if ref_val > ymax:
+                        ymax = ref_val
 
-                size += 1
+                    size += 1
 
-                line_energy.append(met_val)
-                ref_line_energy.append(ref_val)
+                    line_energy.append(met_val)
+                    ref_line_energy.append(ref_val)
 
-                x_points.append(self.methods_ts_data[0].ref_path_group_data[path_group][i]['name'])
+                    x_points.append(self.methods_ts_data[0].ref_path_group_data[path_group][i]['name'])
 
-        title = 'Energy Trends - ' + self.methods_ts_data[0].method
+        title = 'Energy Trends - ' + self.methods_ts_data[j].method
 
-        plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title)
+        plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title, self.methods_ts_data[j].method)
 
     def save_diff_trend_by_met(self):
         if not os.path.exists(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met')):

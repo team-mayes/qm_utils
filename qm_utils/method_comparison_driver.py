@@ -208,7 +208,7 @@ def main():
     # run calcs for specific molecule
     do_aglc = 0
     do_bglc = 0
-    do_bxyl = 0
+    do_bxyl = 1
     do_oxane = 1
 
     do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
@@ -224,6 +224,8 @@ def main():
     num_clusters = [15, 13, 9, 8]
     #endregion
 
+    min_G298_dict = {}
+
     # for each molecule, perform the comparisons
     for i in range(len(mol_list_dir)):
         if do_molecule[i]:
@@ -231,6 +233,7 @@ def main():
             #region
             molecule = mol_list_dir[i]
 
+            min_G298_dict[molecule] = {}
             # # # directory init # # #
             #region
             # checks if directory exists, and creates it if not
@@ -315,8 +318,12 @@ def main():
                     if save and write_lm:
                         save_lm_comp_class_data(lm_comp_class, overwrite)
 
+                    min_G298_dict[molecule][method.upper()] = lm_comp_class.min_G298
+
                     lm_comp_data_list.append(lm_comp_class)
             #endregion
+
+            min_G298_dict[molecule]['ADDEDREF'] = 0
 
             # # # transition state comparison data initialization # # #
             #region
@@ -337,16 +344,17 @@ def main():
 
                     ref_ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
 
-                    ref_ts_comp_class = Transition_State_Compare(molecule, 'reference', ref_ts_hartree, lm_class,
-                                                                 ts_class, comp_ts_dir)
+                    ref_ts_comp_class = Transition_State_Compare(molecule, 'REFERENCE', ref_ts_hartree, lm_class,
+                                                                 ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'])
 
                     ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
-                                                             ts_class, comp_ts_dir, ref_ts_comp_class)
+                                                             ts_class, comp_ts_dir, min_G298_dict[molecule][method.upper()], ref_ts_comp_class)
 
                     if save and write_ts:
                         save_ts_comp_class_data(ts_comp_class, overwrite, write_individual)
 
-                    ts_comp_data_list.append(ts_comp_class)
+                    if ts_comp_class.method != 'ADDEDREF':
+                        ts_comp_data_list.append(ts_comp_class)
             #endregion
 
             comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir, lm_comp_data_list, comp_lm_dir)
@@ -421,21 +429,22 @@ def main():
 
                     ref_ts_hartree = read_csv_to_dict(
                         os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
-                    ref_ts_comp_class = Transition_State_Compare(molecule, method, ref_ts_hartree, lm_class,
-                                                                 ts_class, comp_ts_dir)
+                    ref_ts_comp_class = Transition_State_Compare(molecule, 'REFERENCE', ref_ts_hartree, lm_class,
+                                                                 ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'])
 
                     added_ref_ts_hartree = read_csv_to_dict(
                         os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-addedref.csv'), mode='r')
-                    added_ref_ts_comp_class = Transition_State_Compare(molecule, method, added_ref_ts_hartree, lm_class,
-                                                                 ts_class, comp_ts_dir)
+                    added_ref_ts_comp_class = Transition_State_Compare(molecule, 'ADDEDREF', added_ref_ts_hartree, lm_class,
+                                                                 ts_class, comp_ts_dir, min_G298_dict[molecule]['ADDEDREF'])
 
                     ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
-                                                             ts_class, comp_ts_dir, ref_ts_comp_class, added_ref_ts_comp_class)
+                                                             ts_class, comp_ts_dir, min_G298_dict[molecule][method.upper()], ref_ts_comp_class, added_ref_ts_comp_class)
 
                     if save and write_ts:
                         save_ts_comp_class_data(ts_comp_class, overwrite, write_individual)
 
-                    ts_comp_data_list.append(ts_comp_class)
+                    if ts_comp_class.method != 'ADDEDREF':
+                        ts_comp_data_list.append(ts_comp_class)
             # endregion
 
             comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir)
@@ -465,5 +474,3 @@ if __name__ == '__main__':
     status = main()
     sys.exit(status)
 #endregion
-
-# HI JUSTIN...DO YOU SEE THIS?
