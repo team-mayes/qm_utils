@@ -1128,6 +1128,7 @@ class Transition_State_Compare():
         self.populate_ts_groups()
 
         self.do_calcs()
+        self.populate_met_energies()
 
         self.assign_closest_puckers()
         self.assign_group_name()
@@ -1233,8 +1234,10 @@ class Transition_State_Compare():
                 ref_data['theta'] = self.ts_class.ts_groups[key][i]['ts_vert_pol'][1]
                 ref_data['lm1'] = {}
                 ref_data['lm2'] = {}
+                ref_data['lm1']['group'] = int(key.split('_')[0])
                 ref_data['lm1']['phi'] = self.lm_class.groups_dict[int(key.split('_')[0])]['mean_phi']
                 ref_data['lm1']['theta'] = self.lm_class.groups_dict[int(key.split('_')[0])]['mean_theta']
+                ref_data['lm2']['group'] = int(key.split('_')[1])
                 ref_data['lm2']['phi'] = self.lm_class.groups_dict[int(key.split('_')[1])]['mean_phi']
                 ref_data['lm2']['theta'] = self.lm_class.groups_dict[int(key.split('_')[1])]['mean_theta']
 
@@ -1535,11 +1538,21 @@ class Transition_State_Compare():
 
         return
 
-    def populate_delta_gibbs(self):
+    # with forward direction as endothermic
+    def populate_met_energies(self):
+        for path_group in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[path_group])):
+                weighted_gibbs = 0
 
+                for j in range(len(self.ref_path_group_data[path_group][i]['points'])):
+                    point = self.ref_path_group_data[path_group][i]['points'][j]
 
-        return
+                    weighted_gibbs += point['G298 (Hartrees)'] * point['weighting']
 
+                if len(self.ref_path_group_data[path_group][i]['points']) > 0:
+                    self.ref_path_group_data[path_group][i]['weighted_gibbs'] = weighted_gibbs
+                else:
+                    self.ref_path_group_data[path_group][i]['weighted_gibbs'] = 'n/a'
     # endregion
 
     # # # do_calc functions # # #
@@ -2617,13 +2630,21 @@ class Compare_All_Methods:
 
         self.methods_ts_data = methods_ts_data_in
 
+        self.molecule = self.methods_ts_data[0].molecule
+
         self.reorg_ts_methods()
+
+        self.populate_comp_counts()
 
         if self.methods_lm_data is not None:
             self.reorg_lm_methods()
 
+        for i in range(len(self.methods_ts_data)):
+            self.populate_delta_gibbs(i)
+
         self.ts_dir = ts_dir_in
         self.dir_init()
+
     # # # init functions # # #
     #region
     def reorg_ts_methods(self):
@@ -2633,20 +2654,44 @@ class Compare_All_Methods:
         for i in range(len(self.methods_ts_data)):
             method = self.methods_ts_data[i].method
 
-            if method == 'REFERENCE':
-                aux_dict[0] = self.methods_ts_data[i]
-            elif method == 'B3LYP':
-                aux_dict[1] = self.methods_ts_data[i]
-            elif method == 'DFTB':
-                aux_dict[2] = self.methods_ts_data[i]
-            elif method == 'AM1':
-                aux_dict[3] = self.methods_ts_data[i]
-            elif method == 'PM3':
-                aux_dict[4] = self.methods_ts_data[i]
-            elif method == 'PM3MM':
-                aux_dict[5] = self.methods_ts_data[i]
-            elif method == 'PM6':
-                aux_dict[6] = self.methods_ts_data[i]
+            if self.molecule == 'oxane':
+                if method == 'REFERENCE':
+                    aux_dict[0] = self.methods_ts_data[i]
+                elif method == 'APFD':
+                    aux_dict[1] = self.methods_ts_data[i]
+                elif method == 'B3LYP':
+                    aux_dict[2] = self.methods_ts_data[i]
+                elif method == 'BMK':
+                    aux_dict[3] = self.methods_ts_data[i]
+                elif method == 'M06L':
+                    aux_dict[4] = self.methods_ts_data[i]
+                elif method == 'PBE':
+                    aux_dict[5] = self.methods_ts_data[i]
+                elif method == 'DFTB':
+                    aux_dict[6] = self.methods_ts_data[i]
+                elif method == 'AM1':
+                    aux_dict[7] = self.methods_ts_data[i]
+                elif method == 'PM3':
+                    aux_dict[8] = self.methods_ts_data[i]
+                elif method == 'PM3MM':
+                    aux_dict[9] = self.methods_ts_data[i]
+                elif method == 'PM6':
+                    aux_dict[10] = self.methods_ts_data[i]
+            else:
+                if method == 'REFERENCE':
+                    aux_dict[0] = self.methods_ts_data[i]
+                elif method == 'B3LYP':
+                    aux_dict[1] = self.methods_ts_data[i]
+                elif method == 'DFTB':
+                    aux_dict[2] = self.methods_ts_data[i]
+                elif method == 'AM1':
+                    aux_dict[3] = self.methods_ts_data[i]
+                elif method == 'PM3':
+                    aux_dict[4] = self.methods_ts_data[i]
+                elif method == 'PM3MM':
+                    aux_dict[5] = self.methods_ts_data[i]
+                elif method == 'PM6':
+                    aux_dict[6] = self.methods_ts_data[i]
 
         for i in range(len(self.methods_ts_data)):
             aux_list.append(aux_dict[i])
@@ -2658,27 +2703,116 @@ class Compare_All_Methods:
         aux_list = []
 
         for i in range(len(self.methods_lm_data)):
-            method = self.methods_ts_data[i].method
+            method = self.methods_lm_data[i].method
 
-            if method == 'REFERENCE':
-                aux_dict[0] = self.methods_lm_data[i]
-            elif method == 'B3LYP':
-                aux_dict[1] = self.methods_lm_data[i]
-            elif method == 'DFTB':
-                aux_dict[2] = self.methods_lm_data[i]
-            elif method == 'AM1':
-                aux_dict[3] = self.methods_lm_data[i]
-            elif method == 'PM3':
-                aux_dict[4] = self.methods_lm_data[i]
-            elif method == 'PM3MM':
-                aux_dict[5] = self.methods_lm_data[i]
-            elif method == 'PM6':
-                aux_dict[6] = self.methods_lm_data[i]
+            if self.molecule == 'oxane':
+                if method == 'REFERENCE':
+                    aux_dict[0] = self.methods_lm_data[i]
+                elif method == 'APFD':
+                    aux_dict[1] = self.methods_lm_data[i]
+                elif method == 'B3LYP':
+                    aux_dict[2] = self.methods_lm_data[i]
+                elif method == 'BMK':
+                    aux_dict[3] = self.methods_lm_data[i]
+                elif method == 'M06L':
+                    aux_dict[4] = self.methods_lm_data[i]
+                elif method == 'PBE':
+                    aux_dict[5] = self.methods_lm_data[i]
+                elif method == 'DFTB':
+                    aux_dict[6] = self.methods_lm_data[i]
+                elif method == 'AM1':
+                    aux_dict[7] = self.methods_lm_data[i]
+                elif method == 'PM3':
+                    aux_dict[8] = self.methods_lm_data[i]
+                elif method == 'PM3MM':
+                    aux_dict[9] = self.methods_lm_data[i]
+                elif method == 'PM6':
+                    aux_dict[10] = self.methods_lm_data[i]
+            else:
+                if method == 'REFERENCE':
+                    aux_dict[0] = self.methods_lm_data[i]
+                elif method == 'B3LYP':
+                    aux_dict[1] = self.methods_lm_data[i]
+                elif method == 'DFTB':
+                    aux_dict[2] = self.methods_lm_data[i]
+                elif method == 'AM1':
+                    aux_dict[3] = self.methods_lm_data[i]
+                elif method == 'PM3':
+                    aux_dict[4] = self.methods_lm_data[i]
+                elif method == 'PM3MM':
+                    aux_dict[5] = self.methods_lm_data[i]
+                elif method == 'PM6':
+                    aux_dict[6] = self.methods_lm_data[i]
 
         for i in range(len(self.methods_lm_data)):
             aux_list.append(aux_dict[i])
 
         self.methods_lm_data = aux_list
+
+    def populate_comp_counts(self):
+        for j in range(len(self.methods_ts_data)):
+            self.calc_unphys_paths(j)
+
+            self.methods_ts_data[j].num_phys_paths_arc = self.methods_ts_data[j].calc_num_comp_paths(0.1, 0.1, 'arc')
+            self.methods_ts_data[j].num_phys_paths_gibbs = self.methods_ts_data[j].calc_num_comp_paths(5, 0.02, 'gibbs')
+
+    def calc_unphys_paths(self, j):
+        not_physical_count = 0
+
+        # getting the number of non physical paths
+        for path_group in self.methods_ts_data[j].ref_path_group_data:
+            for i in range(len(self.methods_ts_data[j].ref_path_group_data[path_group])):
+                if not self.is_physical(path_group, i) \
+                    and self.methods_ts_data[j].ref_path_group_data[path_group][i]['arc_group_WRMSD'] != 'n/a':
+
+                    not_physical_count += 1
+
+        for path_group in self.methods_ts_data[j].path_group_data:
+            if path_group not in self.methods_ts_data[j].ref_path_group_data:
+                not_physical_count += len(self.methods_ts_data[j].path_group_data[path_group])
+
+        self.methods_ts_data[j].num_unphys_paths = not_physical_count
+
+    def populate_delta_gibbs(self, i):
+        # populate method lm energies
+        for path_group in self.methods_ts_data[i].ref_path_group_data:
+            for j in range(len(self.methods_ts_data[i].ref_path_group_data[path_group])):
+                path = self.methods_ts_data[i].ref_path_group_data[path_group][j]
+
+                lm1_group = path['lm1']['group']
+                lm2_group = path['lm2']['group']
+
+                path['lm1']['weighted_gibbs'] = float(self.methods_lm_data[i].group_data[lm1_group]['weighted_gibbs'])
+                path['lm2']['weighted_gibbs'] = float(self.methods_lm_data[i].group_data[lm2_group]['weighted_gibbs'])
+
+        # populate delta gibbs for forward and reverse directions
+        for path_group in self.methods_ts_data[i].ref_path_group_data:
+            for j in range(len(self.methods_ts_data[i].ref_path_group_data[path_group])):
+                ts = self.methods_ts_data[i].ref_path_group_data[path_group][j]
+
+                ts_gibbs = ts['weighted_gibbs']
+                lm1_gibbs = ts['lm1']['weighted_gibbs']
+                lm2_gibbs = ts['lm2']['weighted_gibbs']
+
+                if ts_gibbs == 'n/a':
+                    ts['forward_gibbs'] = 'n/a'
+                    ts['reverse_gibbs'] = 'n/a'
+                else:
+                    # if the first lm is the lowest in energy
+                    if lm1_gibbs < lm2_gibbs:
+                        forward_gibbs = ts_gibbs - lm1_gibbs
+                        reverse_gibbs = ts_gibbs - lm2_gibbs
+                    else:
+                        forward_gibbs = ts_gibbs - lm2_gibbs
+                        reverse_gibbs = ts_gibbs - lm1_gibbs
+
+                    ts['forward_gibbs'] = forward_gibbs
+                    ts['reverse_gibbs'] = reverse_gibbs
+
+                # checks that the ts is an actual barrier
+                if ts['forward_gibbs'] != 'n/a' and ts['reverse_gibbs'] != 'n/a':
+                    if(ts['forward_gibbs'] < 0 or ts['reverse_gibbs'] < 0):
+                        print('(' + self.molecule + '-' + self.methods_ts_data[i].method + ' ' + path_group + '-' + str(i) + ')' + ' WARNING: ts energy is less than a lm energy for pathway')
 
     def dir_init(self):
         if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, 'csv_data')):
@@ -3584,6 +3718,131 @@ class Compare_All_Methods:
             self.methods_ts_data[0].ts_class.plot.save(base_name, save_dir)
             self.methods_ts_data[0].ts_class.plot.save(base_name, self.ts_dir)
 
+
+    def plot_sum_comp_table(self):
+        table_rows = []
+        row_labels = []
+        header = []
+
+        # storing the row names
+        for i in range(len(self.methods_ts_data)):
+            row_labels.append(self.methods_ts_data[i].method)
+
+        header.append('unphys_paths')
+        header.append('phys_paths_arc')
+        header.append('phys_paths_gibbs')
+        header.append('accuracy')
+
+        # plotting pathways
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            lm1_key = int(path_group.split('_')[0])
+            lm2_key = int(path_group.split('_')[1])
+
+            lm1_data = self.methods_ts_data[0].lm_class.groups_dict[lm1_key]
+            lm2_data = self.methods_ts_data[0].lm_class.groups_dict[lm2_key]
+
+            lm1_vert = pol2cart([float(lm1_data['mean_phi']), float(lm1_data['mean_theta'])])
+            lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
+
+            # plotting data and storing colors
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                # accounting for the potential use of the added kmeans centers
+                if len(self.methods_ts_data) == 8:
+                    group_ts_vert = pol2cart([self.methods_ts_data[1].ref_path_group_data[path_group][i]['phi'],
+                                              self.methods_ts_data[1].ref_path_group_data[path_group][i]['theta']])
+                else:
+                    group_ts_vert = pol2cart([self.methods_ts_data[0].ref_path_group_data[path_group][i]['phi'],
+                                              self.methods_ts_data[0].ref_path_group_data[path_group][i]['theta']])
+
+                # if pathway is physical, plot it
+                if self.is_physical(path_group, i):
+                    ts_path_color = 'red'
+                    ts_color = 'blue'
+                    linestyle = '-'
+
+                    plot_line(self.methods_ts_data[0].ts_class.plot.ax_rect, [group_ts_vert, ts_color, 30],
+                              [lm1_vert, 'green', 60], ts_path_color, linestyle)
+                    plot_line(self.methods_ts_data[0].ts_class.plot.ax_rect, [group_ts_vert, ts_color, 30],
+                              [lm2_vert, 'green', 60], ts_path_color, linestyle)
+
+                    if self.methods_ts_data[0].ref_north_groups.count(path_group) == 1:
+                        plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_north, [group_ts_vert, ts_color, 30],
+                                       [lm1_vert, 'green', 60], ts_path_color, linestyle)
+                        plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_north, [group_ts_vert, ts_color, 30],
+                                       [lm2_vert, 'green', 60], ts_path_color, linestyle)
+                    if self.methods_ts_data[0].ref_south_groups.count(path_group) == 1:
+                        plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_south, [group_ts_vert, ts_color, 30],
+                                       [lm1_vert, 'green', 60], ts_path_color, linestyle)
+                        plot_on_circle(self.methods_ts_data[0].ts_class.plot.ax_circ_south, [group_ts_vert, ts_color, 30],
+                                       [lm2_vert, 'green', 60], ts_path_color, linestyle)
+
+        for j in range(len(self.methods_ts_data)):
+            row = []
+
+            num_unphys = self.methods_ts_data[j].num_unphys_paths
+            num_comp_arc = self.methods_ts_data[j].num_phys_paths_arc
+            num_comp_gibbs = self.methods_ts_data[j].num_phys_paths_gibbs
+
+            row.append(num_unphys)
+            row.append(num_comp_arc)
+            row.append(num_comp_gibbs)
+
+            accuracy = round(((num_comp_arc + num_comp_gibbs) / 2 - num_unphys) / self.methods_ts_data[0].num_phys_paths_arc, 2)
+
+            row.append(accuracy)
+
+            table_rows.append(row)
+
+        num_row = len(self.methods_ts_data)
+        num_col = 4
+
+        col_widths = []
+
+        width = 0.1
+
+        # setting column width
+        for i in range(num_row):
+            for j in range(num_col):
+                col_widths.append(width)
+
+        # bbox is [left, bottom, width, height]
+        self.methods_ts_data[0].ts_class.plot.ax_rect.table(cellText=table_rows,
+                 cellLoc='center',
+                 rowLabels=row_labels,
+                 colLabels=header,
+                 colWidths=col_widths,
+                 loc='right',
+                 bbox=[1.2, 0, width * num_col, 2])
+
+    def save_sum_comp_table(self):
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+
+        ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red', linestyle='--')
+        ref_ts_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='blue', marker='s',
+                                    edgecolor='blue')
+
+        artist_list = [cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist)]
+        label_list = ['Canonical Designation', 'LM Kmeans Center', 'pathway']
+
+        base_name = "z_dataset-" + self.methods_ts_data[0].molecule + "-TS-num-comp-table"
+
+        if not os.path.exists(os.path.join(self.ts_dir, base_name + '.png')):
+            self.plot_sum_comp_table()
+            self.methods_ts_data[0].ts_class.plot_cano()
+
+            self.methods_ts_data[0].ts_class.plot.ax_rect.legend(artist_list,
+                       label_list,
+                       scatterpoints=1, fontsize=8, frameon=False, framealpha=0.75,
+                       bbox_to_anchor=(0.5, -0.3), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
+
+            self.methods_ts_data[0].ts_class.plot.save(base_name, self.ts_dir)
+
+
     def plot_diff_trend_by_path(self, plot, path_group, i):
         size = 0
 
@@ -3642,49 +3901,89 @@ class Compare_All_Methods:
 
                     plot.save(base_name, by_path_dir)
 
-    def plot_diff_trend_by_met(self, plot, j):
-        size = 0
 
-        line_energy = []
-        ref_line_energy = []
+    def plot_diff_trend_by_met(self, plot):
+        ymax = 0
+        bar_data = []
+
+        for j in range(len(self.methods_ts_data)):
+            line_energy = []
+
+            for path_group in self.methods_ts_data[0].ref_path_group_data:
+                for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                    if(self.is_physical(path_group, i)):
+                        met_val = 0
+
+                        for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
+                            point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
+
+                            met_val += point['weighting'] * point['G298 (Hartrees)']
+
+                        if met_val > ymax:
+                            ymax = met_val
+
+                        if len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points']) == 0:
+                            met_val = -999
+
+                        line_energy.append(met_val)
+
+            bar_data.append(line_energy)
 
         x_points = []
-
-        ymax = 0
+        size = 0
 
         for path_group in self.methods_ts_data[0].ref_path_group_data:
             for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
                 if(self.is_physical(path_group, i)):
-                    ref_val = 0
-
-                    for k in range(len(self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'])):
-                        point = self.methods_ts_data[0].ts_ref.ref_path_group_data[path_group][i]['points'][k]
-
-                        ref_val += point['weighting'] * point['G298 (Hartrees)']
-
-                    met_val = 0
-
-                    for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
-                        point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
-
-                        met_val += point['weighting'] * point['G298 (Hartrees)']
-
-                    if met_val > ymax:
-                        ymax = met_val
-
-                    if ref_val > ymax:
-                        ymax = ref_val
-
                     size += 1
-
-                    line_energy.append(met_val)
-                    ref_line_energy.append(ref_val)
-
                     x_points.append(self.methods_ts_data[0].ref_path_group_data[path_group][i]['name'])
 
-        title = 'Energy Trends - ' + self.methods_ts_data[j].method
+        title = 'Energy Trends - ' + self.molecule
 
-        plot_diff_trend(plot, ref_line_energy, line_energy, x_points, size, ymax, title, self.methods_ts_data[j].method)
+        plot.ax_rect.set_xlabel('Transition State')
+        plot.ax_rect.set_ylabel('G298 (kcal/mol)')
+
+        length = len(self.methods_ts_data)
+
+        # doesn't change anything
+        scaling = 1
+
+        index = np.arange(size)
+        bar_width = 1 / length - 0.02
+        opacity = 0.8
+
+        cmap = plt.get_cmap('Vega20')
+        # allows for incrementing over up to 20 colors
+        increment = 0.0524
+        seed_num = 0
+
+        for i in range(length):
+            method = self.methods_ts_data[i].method
+            color = cmap(seed_num)
+            seed_num += increment
+
+            bar = plt.bar(scaling * (index + bar_width * i), bar_data[i], scaling * bar_width,
+                            alpha=opacity,
+                            align='center',
+                            color=color,
+                            label=method)
+
+            for rect in bar:
+                if rect.get_height() == 999:
+                    plt.text(rect.get_x(), 0.3, 'n.a.', fontsize=2.5, color=color, rotation=90)
+
+        plt.title(title)
+        plt.legend()
+
+        plot.ax_rect.set_ylim([0, ymax])
+        plot.ax_rect.set_xticks(scaling * (index + bar_width * length / 2))
+        plot.ax_rect.set_xticklabels(x_points, rotation=75)
+
+        major_ticksy = np.arange(0, ymax + 1, 2)
+        minor_ticksy = np.arange(0, ymax + 1, 1)
+
+        plot.ax_rect.set_yticks(major_ticksy)
+        plot.ax_rect.set_yticks(minor_ticksy, minor=True)
 
     def save_diff_trend_by_met(self):
         if not os.path.exists(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met')):
@@ -3692,14 +3991,145 @@ class Compare_All_Methods:
 
         by_met_dir = os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met')
 
+        base_name = self.methods_ts_data[0].molecule + "-diff-trend"
+
+        if not os.path.exists(os.path.join(by_met_dir, base_name + '.png')):
+            plot = Plots(rect_arg=True)
+            self.plot_diff_trend_by_met(plot)
+
+            plot.save(base_name, by_met_dir)
+
+
+    def plot_rxn_coord(self, plot, path_group, i):
+        # setting y_lim
+        ref_val = self.methods_ts_data[0].ref_path_group_data[path_group][i]['forward_gibbs']
+
+        plot.ax_rect.set_ylim(-ref_val / 10, ref_val + ref_val / 10)
+
+        table_rows = []
+        row_labels = []
+
+        # storing the row names
         for j in range(len(self.methods_ts_data)):
-            base_name = self.methods_ts_data[0].molecule + "-diff-trend-" + self.methods_ts_data[j].method
+            row_labels.append(self.methods_ts_data[j].method)
 
-            if not os.path.exists(os.path.join(by_met_dir, base_name + '.png')):
-                plot = Plots(rect_arg=True)
-                self.plot_diff_trend_by_met(plot, j)
+        # initializing column names
+        header = []
 
-                plot.save(base_name, by_met_dir)
+        header.append('Forward_Gibbs')
+        header.append('Reverse_Gibbs')
+
+        list_of_colors = []
+
+        cmap = plt.get_cmap('Vega20')
+        # allows for incrementing over 20 colors
+        increment = 0.0524
+        seed_num = 0
+
+        # creating lines for each method
+        for j in range(len(self.methods_ts_data)):
+            color = cmap(seed_num)
+            seed_num += increment
+
+            list_of_colors.append(color)
+
+            if self.methods_ts_data[j].ref_path_group_data[path_group][i]['forward_gibbs'] != 'n/a':
+                method = self.methods_ts_data[j].method
+                y_vals = []
+                x_vals = []
+
+                ts = self.methods_ts_data[j].ref_path_group_data[path_group][i]
+
+                lm1_val = 0
+                lm2_val = ts['forward_gibbs'] - ts['reverse_gibbs']
+                ts_val = ts['forward_gibbs']
+
+                # energies
+                y_vals.append(lm1_val)
+                y_vals.append(lm1_val)
+
+                y_vals.append(ts_val)
+                y_vals.append(ts_val)
+
+                y_vals.append(lm2_val)
+                y_vals.append(lm2_val)
+
+                # rxn_coord
+                x_vals.append(1)
+                x_vals.append(2)
+
+                x_vals.append(3)
+                x_vals.append(4)
+
+                x_vals.append(5)
+                x_vals.append(6)
+
+                plot.ax_rect.plot(x_vals, y_vals, color=color, label=method)
+
+        ts_name = self.methods_ts_data[0].ref_path_group_data[path_group][i]['name']
+        lm1_name = self.methods_ts_data[0].ref_path_group_data[path_group][i]['lm1']['name']
+        lm2_name = self.methods_ts_data[0].ref_path_group_data[path_group][i]['lm2']['name']
+
+        plt.title(ts_name + ' connected by ' + lm1_name + ' and ' + lm2_name)
+
+        for j in range(len(self.methods_ts_data)):
+            row = []
+
+            forward_gibbs = self.methods_ts_data[j].ref_path_group_data[path_group][i]['forward_gibbs']
+            reverse_gibbs = self.methods_ts_data[j].ref_path_group_data[path_group][i]['reverse_gibbs']
+
+            if forward_gibbs != 'n/a':
+                forward_gibbs = round(forward_gibbs, 1)
+
+            if reverse_gibbs != 'n/a':
+                reverse_gibbs = round(reverse_gibbs, 1)
+
+            row.append(forward_gibbs)
+            row.append(reverse_gibbs)
+
+            table_rows.append(row)
+
+        num_row = len(self.methods_ts_data)
+        num_col = 2
+
+        col_widths = []
+
+        width = 0.1
+
+        # setting column width
+        for i in range(num_row):
+            for j in range(num_col):
+                col_widths.append(width)
+
+        # bbox is [left, bottom, width, height]
+        plot.ax_rect.table(cellText=table_rows,
+                            cellLoc='center',
+                            rowLabels=row_labels,
+                            rowColours=list_of_colors,
+                            colWidths=col_widths,
+                            colLabels=header,
+                            loc='right',
+                            bbox=[1.1, 0, width * num_col, 1])
+
+    def save_rxn_coord(self):
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].ts_dir, 'rxn_coord')):
+            os.makedirs(os.path.join(self.methods_ts_data[0].ts_dir, 'rxn_coord'))
+
+        save_dir = os.path.join(self.methods_ts_data[0].ts_dir, 'rxn_coord')
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                # only plotting physical paths
+                if self.methods_ts_data[0].ref_path_group_data[path_group][i]['forward_gibbs'] != 'n/a':
+                    base_name = self.methods_ts_data[0].molecule + "-TS-rxn_coord-" + path_group + '-' + str(i)
+
+                    if not os.path.exists(os.path.join(save_dir, base_name + '.png')):
+                        plot = Plots(rxn_arg=True)
+                        plot.ax_rect.get_xaxis().set_ticks([])
+
+                        self.plot_rxn_coord(plot, path_group, i)
+
+                        plot.save(base_name, save_dir)
     #endregion
 
     pass

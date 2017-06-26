@@ -30,11 +30,10 @@ QM_1_DIR = os.path.dirname(__file__)
 # root of project
 QM_0_DIR = os.path.dirname(QM_1_DIR)
 
-TEST_DIR = os.path.join(QM_0_DIR, 'tests')
-TEST_DATA_DIR = os.path.join(TEST_DIR, 'test_data')
+PROG_DATA_DIR = os.path.join(QM_0_DIR, 'pucker_prog_data')
 
-MET_COMP_DIR = os.path.join(TEST_DATA_DIR, 'method_comparison')
-SV_DIR = os.path.join(TEST_DATA_DIR, 'spherical_kmeans_voronoi')
+MET_COMP_DIR = os.path.join(PROG_DATA_DIR, 'method_comparison')
+SV_DIR = os.path.join(PROG_DATA_DIR, 'spherical_kmeans_voronoi')
 #endregion
 
 # # # Helper Functions # # #
@@ -144,6 +143,8 @@ def save_comp_all_met_data(comp_all_met):
     comp_all_met.write_num_comp_paths_to_csv('arc', 'added')
     comp_all_met.write_num_comp_paths_to_csv('gibbs', 'added')
 
+    comp_all_met.save_sum_comp_table()
+
     comp_all_met.save_comp_table('arc_comp', 'arc')
     comp_all_met.save_comp_table('arc_group_WRMSD', 'arc')
 
@@ -157,6 +158,8 @@ def save_comp_all_met_data(comp_all_met):
     comp_all_met.save_all_comp_table('gibbs_group_WRMSD', 'gibbs')
 
     comp_all_met.save_all_comp_table('G298 (Hartrees)', 'gibbs')
+
+    comp_all_met.save_rxn_coord()
 
 def save_lm_comp_class_data(lm_comp_class, overwrite):
     lm_comp_class.save_all_figures(overwrite)
@@ -196,11 +199,11 @@ def main():
     # # # save init # # #
     #region
     save = True
-    # overwrite existing plots, True is resource intensive
+    # overwrite existing plots, True is VERY resource intensive
     overwrite = False
 
     # write the info for lm and/or ts
-    write_lm = False
+    write_lm = True
     write_ts = True
 
     write_individual = False
@@ -401,10 +404,17 @@ def main():
                 os.makedirs(os.path.join(comp_mol_dir, 'transitions_state_added'))
 
             comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state_added')
+
+            # checks if directory exists, and creates it if not
+            if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
+                os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
+
+            lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
             # # # calcs # # #
             # region
             # # # comparison data initialization # # #
             # region
+            lm_comp_data_list = []
             ts_comp_data_list = []
 
             # initialization info for local minimum clustering for specific molecule
@@ -418,6 +428,32 @@ def main():
                                             sv_mol_dir)[3]
             ts_class = Transition_States(ts_data_dict, lm_class)
             # endregion
+
+            # # # local minimum comparison data initialization # # #
+            # region
+            # for every local min data file in the directory perform the comparison calculations
+            for filename in os.listdir(lm_data_dir):
+                if filename.endswith(".csv"):
+                    lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
+                    method = (filename.split('-', 3)[3]).split('.')[0]
+
+                    ref_lm_hartree = read_csv_to_dict(
+                        os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
+
+                    ref_lm_comp_class = Local_Minima_Compare(molecule, 'reference', ref_lm_hartree, lm_class,
+                                                             comp_lm_dir)
+                    lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir,
+                                                         ref_lm_comp_class)
+
+                    if save and write_lm:
+                        save_lm_comp_class_data(lm_comp_class, overwrite)
+
+                    min_G298_dict[molecule][method.upper()] = lm_comp_class.min_G298
+
+                    lm_comp_data_list.append(lm_comp_class)
+            # endregion
+
+            min_G298_dict[molecule]['ADDEDREF'] = 0
 
             # # # transition state comparison data initialization # # #
             # region
@@ -447,7 +483,7 @@ def main():
                         ts_comp_data_list.append(ts_comp_class)
             # endregion
 
-            comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir)
+            comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir, lm_comp_data_list, comp_lm_dir)
             # endregion
 
             if debug:

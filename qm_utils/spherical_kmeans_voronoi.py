@@ -954,7 +954,7 @@ class Transition_States():
 # class for initializing plots
 class Plots():
     # arguments are bools for creating the 2d and 3d plots
-    def __init__(self, twoD_arg=False, threeD_arg=False, merc_arg=False, ts_merc_arg=False, north_pol_arg=False, south_pol_arg=False, rect_arg=False):
+    def __init__(self, twoD_arg=False, threeD_arg=False, merc_arg=False, ts_merc_arg=False, north_pol_arg=False, south_pol_arg=False, rect_arg=False, rxn_arg=False):
         self.fig = plt.figure()
 
         if rect_arg:
@@ -1005,6 +1005,20 @@ class Plots():
             self.ax_circ_south = self.fig.add_subplot(gs[0, 0], projection='polar')
 
             self.ax_circ_south_init()
+
+        if rxn_arg:
+            self.fig, self.ax_rect = plt.subplots(facecolor='white')
+
+            self.rxn_init()
+
+    def rxn_init(self):
+        major_ticksy = np.arange(0, 20, 2)
+        minor_ticksy = np.arange(0, 20, 1)
+        self.ax_rect.set_yticks(major_ticksy)
+        self.ax_rect.set_yticks(minor_ticksy, minor=True)
+
+        self.ax_rect.set_xlabel('Reaction Coordinate')
+        self.ax_rect.set_ylabel(r'$\Delta$' + 'G (kcal/mol)')
 
     def twoD_init(self):
         self.ax_rect_init()
