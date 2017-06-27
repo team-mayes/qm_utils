@@ -1127,15 +1127,20 @@ class Transition_State_Compare():
         self.populate_path_group_data()
         self.populate_ts_groups()
 
+        # calculating added kmeans centers
+        self.calc_min_ref_dist()
+        self.calc_furthest_raw_ref()
+        self.calc_closest_ref()
+        if ts_ref_in is not None:
+            self.calc_added_kmeans_dict()
+
         self.do_calcs()
         self.populate_met_energies()
+        if ts_ref_in is not None:
+            self.calc_unphys_paths()
 
         self.assign_closest_puckers()
         self.assign_group_name()
-
-        # calculating added kmeans centers
-        self.calc_min_ref_dist()
-        self.calc_added_kmeans_dict()
 
         if ts_ref_in is not None:
             self.assign_comp_orig(self.comp_cutoff, self.comp_tolerance, 'arc')
@@ -1329,6 +1334,63 @@ class Transition_State_Compare():
 
         self.min_ref_dist = min_dist
 
+    # calculates distance to closest ref ts given a ref ts
+    def calc_closest_ref(self):
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                # to assure the first distance will be less
+                min_dist = 100
+
+                point1 = self.ref_path_group_data[key][i]
+
+                for key2 in self.ref_path_group_data:
+                    for j in range(len(self.ref_path_group_data[key2])):
+                        if not (key == key2 and i == j):
+                            point2 = self.ref_path_group_data[key2][j]
+
+                            theta1 = point1['theta']
+                            theta2 = point2['theta']
+
+                            phi1 = point1['phi']
+                            phi2 = point2['phi']
+
+                            curr_dist = arc_length_calculator(phi1, theta1, phi2, theta2)
+
+                            if curr_dist < min_dist:
+                                min_dist = curr_dist
+
+                self.ref_path_group_data[key][i]['closest_ref_dist'] = min_dist
+
+    # calculates distance to furthest cluster ref ts given a ref ts
+    def calc_furthest_raw_ref(self):
+        for key in self.ref_path_group_data:
+            for i in range(len(self.ref_path_group_data[key])):
+                self.ref_path_group_data[key][i]['furthest_raw_ref_dist'] = 0
+
+        if self.ts_ref is not None:
+            for key in self.ts_ref.ref_path_group_data:
+                for i in range(len(self.ts_ref.ref_path_group_data[key])):
+                    # to assure the first distance will be less
+                    max_dist = 0
+
+                    point1 = self.ts_ref.ref_path_group_data[key][i]
+
+                    for j in range(len(self.ts_ref.ref_path_group_data[key][i]['points'])):
+                        point2 = self.ts_ref.ref_path_group_data[key][i]['points'][j]
+
+                        theta1 = point1['theta']
+                        theta2 = point2['theta']
+
+                        phi1 = point1['phi']
+                        phi2 = point2['phi']
+
+                        curr_dist = arc_length_calculator(phi1, theta1, phi2, theta2)
+
+                        if curr_dist > max_dist:
+                            max_dist = curr_dist
+
+                    self.ref_path_group_data[key][i]['furthest_raw_ref_dist'] = max_dist
+
     def calc_added_kmeans_dict(self):
         self.added_points = {}
 
@@ -1337,10 +1399,89 @@ class Transition_State_Compare():
 
             for i in range(len(self.ref_path_group_data[key])):
                 points = self.ref_path_group_data[key][i]['points']
+                points_list = []
 
                 for j in range(len(points)):
-                    if points[j]['arc'] > self.min_ref_dist:
+                    if points[j]['arc'] <= self.ref_path_group_data[key][i]['closest_ref_dist']\
+                        or points[j]['arc'] <= self.ref_path_group_data[key][i]['furthest_raw_ref_dist'] + 0.06:
+
+                        points_list.append(points[j])
+                    else:
                         self.added_points[key].append(points[j])
+
+                self.ref_path_group_data[key][i]['points'] = points_list
+
+    def calc_unphys_paths(self):
+        unphys_paths = 0
+        unphys_list = []
+
+        for key in self.added_points:
+            data_points = []
+
+            for i in range(len(self.added_points[key])):
+                phi = self.added_points[key][i]['phi']
+                theta = self.added_points[key][i]['theta']
+
+                data_points.append(pol2cart([phi, theta]))
+
+            number_clusters = 0
+            # initialize so while loop happens at least once
+            error = 1
+
+            if len(self.added_points[key]) > 0:
+                # increasing number of clusters until error is low
+                # self.methods_ts_data[0].comp_tolerance
+                while error > 0.15:
+                    number_clusters += 1
+
+                    # Uses packages to calculate the k-means spherical centers
+                    skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
+                    skm.fit(data_points)
+                    skm_centers = skm.cluster_centers_
+                    skm_centers = skm_centers.tolist()
+
+                    coord_list = []
+
+                    for i in range(len(self.added_points[key])):
+                        phi1 = self.added_points[key][i]['phi']
+                        theta1 = self.added_points[key][i]['theta']
+
+                        # initialized to large value so min_dist is at least the first iteration
+                        min_dist = 100
+
+                        # finding closest skm center to current point
+                        for j in range(len(skm_centers)):
+                            skm_center = skm_centers[j]
+                            skm_center = cart2pol(skm_center)
+
+                            phi2 = skm_center[0]
+                            theta2 = skm_center[1]
+
+                            curr_dist = arc_length_calculator(phi1, theta1, phi2, theta2)
+
+                            if curr_dist < min_dist:
+                                min_dist = curr_dist
+                                added_skm = j
+
+                                curr_coord = [phi2, theta2]
+
+                        coord_list.append(curr_coord)
+
+                        self.added_points[key][i]['arc_to_added_skm'] = min_dist
+                        self.added_points[key][i]['added_skm'] = added_skm
+
+                    error = calc_error(self.added_points[key])
+
+            unphys_paths += number_clusters
+
+            if number_clusters > 0:
+                unphys_list.append([key, number_clusters])
+
+        for path_group in self.path_group_data:
+            if path_group not in self.ref_path_group_data:
+                unphys_paths += len(self.path_group_data[path_group])
+
+        self.num_unphys_paths = unphys_paths
 
     def assign_comp_added(self, comp_cutoff, comp_tolerance, comp_key):
         for path_group in self.ref_path_group_data:
@@ -1672,8 +1813,6 @@ class Transition_State_Compare():
                     * self.ref_path_group_data[lm_group][ts_group]['points'][i]['G298 (Hartrees)']
                 self.ref_path_group_data[lm_group][ts_group]['points'][i]['weighting'] = \
                     self.ref_path_group_data[lm_group][ts_group]['points'][i]['ind_boltz'] / total_boltz
-
-        # self.ref_path_group_data[lm_group][ts_group]['G298 (Hartrees)'] = round(wt_gibbs, 3)
 
     def calc_WWSS(self, lm_group, ts_group, comp_key):
         WWSS = 0
@@ -2632,12 +2771,10 @@ class Compare_All_Methods:
 
         self.molecule = self.methods_ts_data[0].molecule
 
+        self.reorg_lm_methods()
         self.reorg_ts_methods()
 
         self.populate_comp_counts()
-
-        if self.methods_lm_data is not None:
-            self.reorg_lm_methods()
 
         for i in range(len(self.methods_ts_data)):
             self.populate_delta_gibbs(i)
@@ -2677,6 +2814,17 @@ class Compare_All_Methods:
                     aux_dict[9] = self.methods_ts_data[i]
                 elif method == 'PM6':
                     aux_dict[10] = self.methods_ts_data[i]
+            elif self.molecule == 'bglc':
+                if method == 'REFERENCE':
+                    aux_dict[0] = self.methods_ts_data[i]
+                elif method == 'AM1':
+                    aux_dict[1] = self.methods_ts_data[i]
+                elif method == 'PM3':
+                    aux_dict[2] = self.methods_ts_data[i]
+                elif method == 'PM3MM':
+                    aux_dict[3] = self.methods_ts_data[i]
+                elif method == 'PM6':
+                    aux_dict[4] = self.methods_ts_data[i]
             else:
                 if method == 'REFERENCE':
                     aux_dict[0] = self.methods_ts_data[i]
@@ -2728,6 +2876,17 @@ class Compare_All_Methods:
                     aux_dict[9] = self.methods_lm_data[i]
                 elif method == 'PM6':
                     aux_dict[10] = self.methods_lm_data[i]
+            elif self.molecule == 'bglc':
+                if method == 'REFERENCE':
+                    aux_dict[0] = self.methods_lm_data[i]
+                elif method == 'AM1':
+                    aux_dict[1] = self.methods_lm_data[i]
+                elif method == 'PM3':
+                    aux_dict[2] = self.methods_lm_data[i]
+                elif method == 'PM3MM':
+                    aux_dict[3] = self.methods_lm_data[i]
+                elif method == 'PM6':
+                    aux_dict[4] = self.methods_lm_data[i]
             else:
                 if method == 'REFERENCE':
                     aux_dict[0] = self.methods_lm_data[i]
@@ -2759,17 +2918,19 @@ class Compare_All_Methods:
     def calc_unphys_paths(self, j):
         not_physical_count = 0
 
-        # getting the number of non physical paths
-        for path_group in self.methods_ts_data[j].ref_path_group_data:
-            for i in range(len(self.methods_ts_data[j].ref_path_group_data[path_group])):
-                if not self.is_physical(path_group, i) \
-                    and self.methods_ts_data[j].ref_path_group_data[path_group][i]['arc_group_WRMSD'] != 'n/a':
+        # # getting the number of non physical paths
+        # for path_group in self.methods_ts_data[j].ref_path_group_data:
+        #     for i in range(len(self.methods_ts_data[j].ref_path_group_data[path_group])):
+        #         if not self.is_physical(path_group, i) \
+        #             and self.methods_ts_data[j].ref_path_group_data[path_group][i]['arc_group_WRMSD'] != 'n/a':
+        #
+        #             not_physical_count += 1
+        #
+        # for path_group in self.methods_ts_data[j].path_group_data:
+        #     if path_group not in self.methods_ts_data[j].ref_path_group_data:
+        #         not_physical_count += len(self.methods_ts_data[j].path_group_data[path_group])
 
-                    not_physical_count += 1
-
-        for path_group in self.methods_ts_data[j].path_group_data:
-            if path_group not in self.methods_ts_data[j].ref_path_group_data:
-                not_physical_count += len(self.methods_ts_data[j].path_group_data[path_group])
+        not_physical_count = self.methods_ts_data[j].num_unphys_paths
 
         self.methods_ts_data[j].num_unphys_paths = not_physical_count
 
@@ -3970,7 +4131,7 @@ class Compare_All_Methods:
 
             for rect in bar:
                 if rect.get_height() == 999:
-                    plt.text(rect.get_x(), 0.3, 'n.a.', fontsize=2.5, color=color, rotation=90)
+                    plt.text(rect.get_x(), 1, 'n.a.', fontsize=6, color=color, rotation=90)
 
         plt.title(title)
         plt.legend()
@@ -3985,19 +4146,109 @@ class Compare_All_Methods:
         plot.ax_rect.set_yticks(major_ticksy)
         plot.ax_rect.set_yticks(minor_ticksy, minor=True)
 
+        plt.subplots_adjust(0, 0, 4, 1)
+
     def save_diff_trend_by_met(self):
-        if not os.path.exists(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met')):
-            os.makedirs(os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met'))
-
-        by_met_dir = os.path.join(self.methods_ts_data[0].diff_trend_dir, 'by_met')
-
         base_name = self.methods_ts_data[0].molecule + "-diff-trend"
 
-        if not os.path.exists(os.path.join(by_met_dir, base_name + '.png')):
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].diff_trend_dir, base_name + '.png')):
             plot = Plots(rect_arg=True)
             self.plot_diff_trend_by_met(plot)
 
-            plot.save(base_name, by_met_dir)
+            plot.save(base_name, self.methods_ts_data[0].diff_trend_dir)
+
+
+    def plot_vert_diff_trend(self, plot):
+        xmax = 0
+        bar_data = []
+
+        for j in range(len(self.methods_ts_data)):
+            line_energy = []
+
+            for path_group in self.methods_ts_data[0].ref_path_group_data:
+                for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                    if(self.is_physical(path_group, i)):
+                        met_val = 0
+
+                        for k in range(len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'])):
+                            point = self.methods_ts_data[j].ref_path_group_data[path_group][i]['points'][k]
+
+                            met_val += point['weighting'] * point['G298 (Hartrees)']
+
+                        if met_val > xmax:
+                            xmax = met_val
+
+                        if len(self.methods_ts_data[j].ref_path_group_data[path_group][i]['points']) == 0:
+                            met_val = -999
+
+                        line_energy.append(met_val)
+
+            bar_data.append(line_energy)
+
+        y_points = []
+        size = 0
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            for i in range(len(self.methods_ts_data[0].ref_path_group_data[path_group])):
+                if(self.is_physical(path_group, i)):
+                    size += 1
+                    y_points.append(self.methods_ts_data[0].ref_path_group_data[path_group][i]['name'])
+
+        title = 'Energy Trends - ' + self.molecule
+
+        plot.ax_rect.set_ylabel('Transition State')
+        plot.ax_rect.set_xlabel('G298 (kcal/mol)')
+
+        length = len(self.methods_ts_data)
+
+        index = np.arange(size)
+        bar_width = 1 / length
+        opacity = 0.8
+
+        cmap = plt.get_cmap('Vega20')
+        # allows for incrementing over up to 20 colors
+        increment = 0.0524
+        seed_num = 0
+
+        for i in range(length):
+            method = self.methods_ts_data[i].method
+            color = cmap(seed_num)
+            seed_num += increment
+
+            bar = plt.barh(index + bar_width * i, bar_data[i], bar_width,
+                            alpha=opacity,
+                            align='center',
+                            color=color,
+                            label=method)
+
+            for rect in bar:
+                if rect.get_width() == 999:
+                    plt.text(0.2, rect.get_y() + bar_width / 4, 'n.a.', fontsize=6, color=color)
+
+        plt.title(title)
+        plt.legend()
+
+        plot.ax_rect.set_xlim([0, xmax])
+        plot.ax_rect.set_yticks(index + bar_width * length / 2)
+        plot.ax_rect.set_yticklabels(y_points)
+
+        major_ticksx = np.arange(0, xmax + 1, 2)
+        minor_ticksx = np.arange(0, xmax + 1, 1)
+
+        plot.ax_rect.set_xticks(major_ticksx)
+        plot.ax_rect.set_xticks(minor_ticksx, minor=True)
+
+        plt.subplots_adjust(0, 0, 1, 4)
+
+    def save_vert_diff_trend(self):
+        base_name = self.methods_ts_data[0].molecule + "-diff-trend-vert"
+
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].diff_trend_dir, base_name + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.plot_vert_diff_trend(plot)
+
+            plot.save(base_name, self.methods_ts_data[0].diff_trend_dir)
 
 
     def plot_rxn_coord(self, plot, path_group, i):

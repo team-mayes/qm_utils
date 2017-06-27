@@ -132,32 +132,35 @@ def check_ts_running(ts_working_dir, ts_data_dir, molecule):
         print('heatmaps')
 
 def save_comp_all_met_data(comp_all_met):
+    save_comp_tables = False
+
     comp_all_met.write_uncompared_to_csv()
 
     comp_all_met.write_ts_to_csv('arc')
     comp_all_met.write_ts_to_csv('gibbs')
 
+    comp_all_met.save_vert_diff_trend()
     comp_all_met.save_diff_trend_by_met()
-    comp_all_met.save_diff_trend_by_path()
 
     comp_all_met.write_num_comp_paths_to_csv('arc', 'added')
     comp_all_met.write_num_comp_paths_to_csv('gibbs', 'added')
 
     comp_all_met.save_sum_comp_table()
 
-    comp_all_met.save_comp_table('arc_comp', 'arc')
-    comp_all_met.save_comp_table('arc_group_WRMSD', 'arc')
+    if save_comp_tables:
+        comp_all_met.save_comp_table('arc_comp', 'arc')
+        comp_all_met.save_comp_table('arc_group_WRMSD', 'arc')
 
-    comp_all_met.save_comp_table('gibbs_comp', 'gibbs')
-    comp_all_met.save_comp_table('gibbs_group_WRMSD', 'gibbs')
+        comp_all_met.save_comp_table('gibbs_comp', 'gibbs')
+        comp_all_met.save_comp_table('gibbs_group_WRMSD', 'gibbs')
 
-    comp_all_met.save_all_comp_table('arc_comp', 'arc')
-    comp_all_met.save_all_comp_table('arc_group_WRMSD', 'arc')
+        comp_all_met.save_all_comp_table('arc_comp', 'arc')
+        comp_all_met.save_all_comp_table('arc_group_WRMSD', 'arc')
 
-    comp_all_met.save_all_comp_table('gibbs_comp', 'gibbs')
-    comp_all_met.save_all_comp_table('gibbs_group_WRMSD', 'gibbs')
+        comp_all_met.save_all_comp_table('gibbs_comp', 'gibbs')
+        comp_all_met.save_all_comp_table('gibbs_group_WRMSD', 'gibbs')
 
-    comp_all_met.save_all_comp_table('G298 (Hartrees)', 'gibbs')
+        comp_all_met.save_all_comp_table('G298 (Hartrees)', 'gibbs')
 
     comp_all_met.save_rxn_coord()
 
@@ -210,7 +213,7 @@ def main():
 
     # run calcs for specific molecule
     do_aglc = 0
-    do_bglc = 0
+    do_bglc = 1
     do_bxyl = 1
     do_oxane = 1
 
