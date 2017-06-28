@@ -1403,10 +1403,13 @@ class Transition_State_Compare():
 
                 for j in range(len(points)):
                     if points[j]['arc'] <= self.ref_path_group_data[key][i]['closest_ref_dist']\
-                        or points[j]['arc'] <= self.ref_path_group_data[key][i]['furthest_raw_ref_dist'] + 0.06:
+                        or points[j]['arc'] <= self.ref_path_group_data[key][i]['furthest_raw_ref_dist']\
+                        or points[j]['arc'] <= 0.26:
 
+                        points[j]['phys'] = True
                         points_list.append(points[j])
                     else:
+                        points[j]['phys'] = False
                         self.added_points[key].append(points[j])
 
                 self.ref_path_group_data[key][i]['points'] = points_list
@@ -1917,7 +1920,10 @@ class Transition_State_Compare():
                 plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'blue', 60], [lm1_vert, 'green', 60], 'red')
                 plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'blue', 60], [lm2_vert, 'green', 60], 'red')
 
-    def plot_path_group_single(self, path_group):
+    def plot_path_group_single(self, path_group, ts_color='blue', path_color='red', plot=None):
+        if plot is None:
+            plot = self.ts_class.plot
+
         lm1_key = int(path_group.split('_')[0])
         lm2_key = int(path_group.split('_')[1])
 
@@ -1928,19 +1934,27 @@ class Transition_State_Compare():
         lm2_vert = pol2cart([float(lm2_data['mean_phi']), float(lm2_data['mean_theta'])])
 
         for i in self.path_group_data[path_group]:
+            if self.path_group_data[path_group][i]['phys'] == False:
+                linestyle = ':'
+            else:
+                linestyle = '-'
+
             ts_vert = pol2cart([self.path_group_data[path_group][i]['phi'], self.path_group_data[path_group][i]['theta']])
 
-            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'blue', 60], [lm1_vert, 'green', 60], 'red')
-            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'blue', 60], [lm2_vert, 'green', 60], 'red')
+            plot_line(plot.ax_rect, [ts_vert, ts_color, 60], [lm1_vert, 'green', 60], path_color, linestyle)
+            plot_line(plot.ax_rect, [ts_vert, ts_color, 60], [lm2_vert, 'green', 60], path_color, linestyle)
 
             if self.north_groups.count(path_group) == 1:
-                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'blue', 60], [lm1_vert, 'green', 60], 'red')
-                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'blue', 60], [lm2_vert, 'green', 60], 'red')
+                plot_on_circle(plot.ax_circ_north, [ts_vert, ts_color, 60], [lm1_vert, 'green', 60], path_color, linestyle)
+                plot_on_circle(plot.ax_circ_north, [ts_vert, ts_color, 60], [lm2_vert, 'green', 60], path_color, linestyle)
             if self.south_groups.count(path_group) == 1:
-                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'blue', 60], [lm1_vert, 'green', 60], 'red')
-                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'blue', 60], [lm2_vert, 'green', 60], 'red')
+                plot_on_circle(plot.ax_circ_south, [ts_vert, ts_color, 60], [lm1_vert, 'green', 60], path_color, linestyle)
+                plot_on_circle(plot.ax_circ_south, [ts_vert, ts_color, 60], [lm2_vert, 'green', 60], path_color, linestyle)
 
-    def plot_ref_path_group_single(self, path_group):
+    def plot_ref_path_group_single(self, path_group, plot=None, color = 'gray'):
+        if plot is None:
+            plot = self.ts_class.plot
+
         lm1_key = int(path_group.split('_')[0])
         lm2_key = int(path_group.split('_')[1])
 
@@ -1953,15 +1967,15 @@ class Transition_State_Compare():
         for i in range(len(self.ref_path_group_data[path_group])):
             ts_vert = pol2cart([self.ref_path_group_data[path_group][i]['phi'], self.ref_path_group_data[path_group][i]['theta']])
 
-            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray', '-.')
-            plot_line(self.ts_class.plot.ax_rect, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray', '-.')
+            plot_line(plot.ax_rect, [ts_vert, color, 30], [lm1_vert, 'green', 60], color, '-.')
+            plot_line(plot.ax_rect, [ts_vert, color, 30], [lm2_vert, 'green', 60], color, '-.')
 
             if self.ref_north_groups.count(path_group) == 1:
-                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray', '-.')
-                plot_on_circle(self.ts_class.plot.ax_circ_north, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray', '-.')
+                plot_on_circle(plot.ax_circ_north, [ts_vert, color, 30], [lm1_vert, 'green', 60], color, '-.')
+                plot_on_circle(plot.ax_circ_north, [ts_vert, color, 30], [lm2_vert, 'green', 60], color, '-.')
             if self.ref_south_groups.count(path_group) == 1:
-                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'gray', 30], [lm1_vert, 'green', 60], 'gray', '-.')
-                plot_on_circle(self.ts_class.plot.ax_circ_south, [ts_vert, 'gray', 30], [lm2_vert, 'green', 60], 'gray', '-.')
+                plot_on_circle(plot.ax_circ_south, [ts_vert, color, 30], [lm1_vert, 'green', 60], color, '-.')
+                plot_on_circle(plot.ax_circ_south, [ts_vert, color, 30], [lm2_vert, 'green', 60], color, '-.')
 
     def plot_all_path_groups_raw(self):
         for key in self.path_group_data:
@@ -2929,10 +2943,8 @@ class Compare_All_Methods:
         # for path_group in self.methods_ts_data[j].path_group_data:
         #     if path_group not in self.methods_ts_data[j].ref_path_group_data:
         #         not_physical_count += len(self.methods_ts_data[j].path_group_data[path_group])
-
-        not_physical_count = self.methods_ts_data[j].num_unphys_paths
-
-        self.methods_ts_data[j].num_unphys_paths = not_physical_count
+        #
+        # self.methods_ts_data[j].num_unphys_paths = not_physical_count
 
     def populate_delta_gibbs(self, i):
         # populate method lm energies
@@ -3488,6 +3500,96 @@ class Compare_All_Methods:
 
     # # # plotting functions # # #
     #region
+    # met_comp
+    #region
+    def plot_mets_comp(self, plot, path_group, mets_colors_dict):
+        # reference clusters are blue
+        # reference raw are light non outlined blue
+        # methods are diff colors
+
+        # mets_colors_dict is {[ts_color, path_color], ...}
+        for key, val in mets_colors_dict.items():
+            if path_group in self.methods_ts_data[key].path_group_data:
+                self.methods_ts_data[key].plot_path_group_single(path_group, val[0], val[1], plot)
+
+        for path in self.methods_ts_data[key].ref_path_group_data:
+            self.methods_ts_data[key].plot_ref_path_group_single(path, plot)
+
+        self.methods_ts_data[key].plot_ref_path_group_single(path_group, plot, 'black')
+
+    def save_mets_comp(self):
+        mets_colors_dict = {}
+
+        mets_colors_dict[4] = ['salmon', 'salmon']
+        mets_colors_dict[3] = ['yellowgreen', 'yellowgreen']
+        mets_colors_dict[2] = ['lightblue', 'lightblue']
+        mets_colors_dict[0] = ['blue', 'red']
+
+        # Create custom artist
+        size_scaling = 1
+        met_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='green', marker='o',
+                                    edgecolor='face')
+        cano_lm_Artist = plt.scatter((5000, 5000), (4999, 4999), s=60 * size_scaling, c='black', marker='+',
+                                     edgecolor='face')
+
+        artist_dict = {}
+
+        for key, val in mets_colors_dict.items():
+            ts_artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c=val[0], marker='s',
+                                    edgecolor=val[0])
+            path_artist = plt.Line2D((5000, 5000), (4999, 4999), c=val[1], linestyle='-')
+
+            artist_dict[key] = (path_artist, ts_artist)
+
+        ref_ts_artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='gray', marker='s',
+                                edgecolor='face')
+        ref_path_artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', linestyle='-.')
+
+        curr_ref_ts_artist = plt.scatter((5000, 5000), (4999, 4999), s=30 * size_scaling, c='black', marker='s',
+                                edgecolor='face')
+        curr_ref_path_artist = plt.Line2D((5000, 5000), (4999, 4999), c='black', linestyle='-.')
+
+        ts_data = self.methods_ts_data
+
+        artist_list = [cano_lm_Artist, met_lm_Artist,
+                       (curr_ref_ts_artist, curr_ref_path_artist),
+                       (ref_ts_artist, ref_path_artist),
+                       artist_dict[0], artist_dict[2],
+                       artist_dict[3], artist_dict[4]]
+        label_list = ['Canonical Designation', 'LM Kmeans Center',
+                      'REFERENCE Kmeans Centers (curr lm group)',
+                      'REFERENCE Kmeans Centers',
+                      ts_data[0].method, ts_data[2].method,
+                      ts_data[3].method, ts_data[4].method]
+
+        if not os.path.exists(os.path.join(self.methods_ts_data[0].plot_save_dir, 'mets_comp')):
+            os.makedirs(os.path.join(self.methods_ts_data[0].plot_save_dir, 'mets_comp'))
+
+        mets_comp_dir = os.path.join(self.methods_ts_data[0].plot_save_dir, 'mets_comp')
+
+        for path_group in self.methods_ts_data[0].ref_path_group_data:
+            base_name = self.methods_ts_data[0].molecule + '-mets_comp-' + path_group
+
+            if not os.path.exists(os.path.join(mets_comp_dir, base_name + '.png')):
+                plot = Plots(twoD_arg=True)
+
+                self.plot_mets_comp(plot, path_group, mets_colors_dict)
+                self.methods_ts_data[0].ts_class.plot_cano(plot)
+
+                plot.ax_rect.legend(artist_list,
+                                     label_list,
+                                     scatterpoints=1, fontsize=8, frameon=False,
+                                     framealpha=0.75,
+                                     bbox_to_anchor=(0.5, -0.3), loc=9, borderaxespad=0,
+                                     ncol=4).set_zorder(100)
+
+                plot.ax_rect.set_ylim(185, -5)
+
+                plot.save(base_name, mets_comp_dir)
+    #endregion
+
+    # tables
+    #region
     # plotting functions for plots with table included
     def plot_comp_table(self, path_group, data_key, ax, comp_key):
         lm1_key = int(path_group.split('_')[0])
@@ -4002,8 +4104,10 @@ class Compare_All_Methods:
                        bbox_to_anchor=(0.5, -0.3), loc=9, borderaxespad=0, ncol=4).set_zorder(100)
 
             self.methods_ts_data[0].ts_class.plot.save(base_name, self.ts_dir)
+    #endregion
 
-
+    # diff_trends
+    #region
     def plot_diff_trend_by_path(self, plot, path_group, i):
         size = 0
 
@@ -4249,8 +4353,10 @@ class Compare_All_Methods:
             self.plot_vert_diff_trend(plot)
 
             plot.save(base_name, self.methods_ts_data[0].diff_trend_dir)
+    #endregion
 
-
+    # rxn_coord
+    #region
     def plot_rxn_coord(self, plot, path_group, i):
         # setting y_lim
         ref_val = self.methods_ts_data[0].ref_path_group_data[path_group][i]['forward_gibbs']
@@ -4381,6 +4487,7 @@ class Compare_All_Methods:
                         self.plot_rxn_coord(plot, path_group, i)
 
                         plot.save(base_name, save_dir)
+    #endregion
     #endregion
 
     pass

@@ -885,8 +885,11 @@ class Transition_States():
         return
 
     # plots canonical designations
-    def plot_cano(self):
-        self.plot.ax_rect.scatter(self.lm_class.cano_points['phi_cano'], self.lm_class.cano_points['theta_cano'], s=60, c='black',
+    def plot_cano(self, plot=None):
+        if plot == None:
+            plot = self.plot
+
+        plot.ax_rect.scatter(self.lm_class.cano_points['phi_cano'], self.lm_class.cano_points['theta_cano'], s=60, c='black',
                                   marker='+',
                                   edgecolor='face')
 

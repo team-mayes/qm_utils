@@ -122,7 +122,7 @@ def check_lm_running(comp_lm_dir, lm_data_dir, molecule):
         print('csv_data')
 
 def check_ts_running(ts_working_dir, ts_data_dir, molecule):
-    if (len(os.listdir(ts_working_dir)) - 3 != len(os.listdir(ts_data_dir))):
+    if (len(os.listdir(ts_working_dir)) - 4 != len(os.listdir(ts_data_dir))):
         print('Warning: not all methods may have run for ' + molecule + '! (ts)')
         print(ts_working_dir + ' should contain the following directories:')
         for l in range(len(os.listdir(ts_data_dir))):
@@ -130,11 +130,14 @@ def check_ts_running(ts_working_dir, ts_data_dir, molecule):
         print('final_comp')
         print('all_groupings')
         print('heatmaps')
+        print('mets_comp')
 
 def save_comp_all_met_data(comp_all_met):
     save_comp_tables = False
 
     comp_all_met.write_uncompared_to_csv()
+
+    comp_all_met.save_mets_comp()
 
     comp_all_met.write_ts_to_csv('arc')
     comp_all_met.write_ts_to_csv('gibbs')
@@ -180,11 +183,12 @@ def save_lm_comp_class_data(lm_comp_class, overwrite):
 def save_ts_comp_class_data(ts_comp_class, overwrite, write_individual):
     ts_comp_class.save_all_groups_comp(overwrite)
 
+    ts_comp_class.save_all_figures_single(overwrite)
+
     if write_individual:
         ts_comp_class.save_group_comp(overwrite)
 
         ts_comp_class.save_all_figures_raw(overwrite)
-        ts_comp_class.save_all_figures_single(overwrite)
         ts_comp_class.save_all_groupings(overwrite)
 
         ts_comp_class.save_WRMSD_comp(overwrite)
@@ -213,9 +217,9 @@ def main():
 
     # run calcs for specific molecule
     do_aglc = 0
-    do_bglc = 1
+    do_bglc = 0
     do_bxyl = 1
-    do_oxane = 1
+    do_oxane = 0
 
     do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
 
@@ -394,118 +398,118 @@ def main():
         for i in range(len(mol_list_dir)):
             print(i)
 
-    # for each molecule, perform the comparisons
-    for i in range(len(mol_list_dir)):
-        if do_molecule[i]:
-            molecule = mol_list_dir[i]
-            comp_mol_dir = os.path.join(MET_COMP_DIR, mol_list_dir[i])
-            sv_mol_dir = os.path.join(sv_all_mol_dir, mol_list_dir[i])
-            ts_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
-
-            # checks if directory exists, and creates it if not
-            if not os.path.exists(os.path.join(comp_mol_dir, 'transitions_state_added')):
-                os.makedirs(os.path.join(comp_mol_dir, 'transitions_state_added'))
-
-            comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state_added')
-
-            # checks if directory exists, and creates it if not
-            if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
-                os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
-
-            lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
-            # # # calcs # # #
-            # region
-            # # # comparison data initialization # # #
-            # region
-            lm_comp_data_list = []
-            ts_comp_data_list = []
-
-            # initialization info for local minimum clustering for specific molecule
-            number_clusters = num_clusters[i]
-            dict_cano = read_csv_canonical_designations('CP_params.csv', SV_DIR)
-            data_points, phi_raw, theta_raw, energy = read_csv_data('z_' + mol_list_dir[i] + '_lm-b3lyp_howsugarspucker.csv',
-                                                                    sv_mol_dir)
-            lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
-
-            ts_data_dict = read_csv_data_TS('z_' + mol_list_dir[i] + '_TS-b3lyp_hsp_added_kmeans.csv',
-                                            sv_mol_dir)[3]
-            ts_class = Transition_States(ts_data_dict, lm_class)
-            # endregion
-
-            # # # local minimum comparison data initialization # # #
-            # region
-            # for every local min data file in the directory perform the comparison calculations
-            for filename in os.listdir(lm_data_dir):
-                if filename.endswith(".csv"):
-                    lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
-                    method = (filename.split('-', 3)[3]).split('.')[0]
-
-                    ref_lm_hartree = read_csv_to_dict(
-                        os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
-
-                    ref_lm_comp_class = Local_Minima_Compare(molecule, 'reference', ref_lm_hartree, lm_class,
-                                                             comp_lm_dir)
-                    lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir,
-                                                         ref_lm_comp_class)
-
-                    if save and write_lm:
-                        save_lm_comp_class_data(lm_comp_class, overwrite)
-
-                    min_G298_dict[molecule][method.upper()] = lm_comp_class.min_G298
-
-                    lm_comp_data_list.append(lm_comp_class)
-            # endregion
-
-            min_G298_dict[molecule]['ADDEDREF'] = 0
-
-            # # # transition state comparison data initialization # # #
-            # region
-            # for every ts data file in the directory perform the comparison calculations
-            for filename in os.listdir(ts_data_dir):
-                if filename.endswith(".csv"):
-                    ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
-                    method = (filename.split('-', 3)[3]).split('.')[0]
-
-                    ref_ts_hartree = read_csv_to_dict(
-                        os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
-                    ref_ts_comp_class = Transition_State_Compare(molecule, 'REFERENCE', ref_ts_hartree, lm_class,
-                                                                 ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'])
-
-                    added_ref_ts_hartree = read_csv_to_dict(
-                        os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-addedref.csv'), mode='r')
-                    added_ref_ts_comp_class = Transition_State_Compare(molecule, 'ADDEDREF', added_ref_ts_hartree, lm_class,
-                                                                 ts_class, comp_ts_dir, min_G298_dict[molecule]['ADDEDREF'])
-
-                    ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
-                                                             ts_class, comp_ts_dir, min_G298_dict[molecule][method.upper()], ref_ts_comp_class, added_ref_ts_comp_class)
-
-                    if save and write_ts:
-                        save_ts_comp_class_data(ts_comp_class, overwrite, write_individual)
-
-                    if ts_comp_class.method != 'ADDEDREF':
-                        ts_comp_data_list.append(ts_comp_class)
-            # endregion
-
-            comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir, lm_comp_data_list, comp_lm_dir)
-            # endregion
-
-            if debug:
-                comp_all_met.write_debug_ts_to_csv()
-
-            if save:
-                # save the comparison data
-                if write_ts:
-                    save_comp_all_met_data(comp_all_met)
-
-            check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
-
-    if (len(os.listdir(MET_COMP_DIR)) != len(mol_list_dir)):
-        print('Warning: the seed molecule directory and the populated molecule directory are not the same size!')
-        print('This could be due to stray files/folders in either directory.')
-        print('It could also be due to certain molecules not running.')
-        print('The following molecules should have run:')
-        for i in range(len(mol_list_dir)):
-            print(mol_list_dir(i))
+    # # for each molecule, perform the comparisons
+    # for i in range(len(mol_list_dir)):
+    #     if do_molecule[i]:
+    #         molecule = mol_list_dir[i]
+    #         comp_mol_dir = os.path.join(MET_COMP_DIR, mol_list_dir[i])
+    #         sv_mol_dir = os.path.join(sv_all_mol_dir, mol_list_dir[i])
+    #         ts_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
+    #
+    #         # checks if directory exists, and creates it if not
+    #         if not os.path.exists(os.path.join(comp_mol_dir, 'transitions_state_added')):
+    #             os.makedirs(os.path.join(comp_mol_dir, 'transitions_state_added'))
+    #
+    #         comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state_added')
+    #
+    #         # checks if directory exists, and creates it if not
+    #         if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
+    #             os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
+    #
+    #         lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
+    #         # # # calcs # # #
+    #         # region
+    #         # # # comparison data initialization # # #
+    #         # region
+    #         lm_comp_data_list = []
+    #         ts_comp_data_list = []
+    #
+    #         # initialization info for local minimum clustering for specific molecule
+    #         number_clusters = num_clusters[i]
+    #         dict_cano = read_csv_canonical_designations('CP_params.csv', SV_DIR)
+    #         data_points, phi_raw, theta_raw, energy = read_csv_data('z_' + mol_list_dir[i] + '_lm-b3lyp_howsugarspucker.csv',
+    #                                                                 sv_mol_dir)
+    #         lm_class = Local_Minima(number_clusters, data_points, dict_cano, phi_raw, theta_raw, energy)
+    #
+    #         ts_data_dict = read_csv_data_TS('z_' + mol_list_dir[i] + '_TS-b3lyp_hsp_added_kmeans.csv',
+    #                                         sv_mol_dir)[3]
+    #         ts_class = Transition_States(ts_data_dict, lm_class)
+    #         # endregion
+    #
+    #         # # # local minimum comparison data initialization # # #
+    #         # region
+    #         # for every local min data file in the directory perform the comparison calculations
+    #         for filename in os.listdir(lm_data_dir):
+    #             if filename.endswith(".csv"):
+    #                 lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
+    #                 method = (filename.split('-', 3)[3]).split('.')[0]
+    #
+    #                 ref_lm_hartree = read_csv_to_dict(
+    #                     os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
+    #
+    #                 ref_lm_comp_class = Local_Minima_Compare(molecule, 'reference', ref_lm_hartree, lm_class,
+    #                                                          comp_lm_dir)
+    #                 lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir,
+    #                                                      ref_lm_comp_class)
+    #
+    #                 if save and write_lm:
+    #                     save_lm_comp_class_data(lm_comp_class, overwrite)
+    #
+    #                 min_G298_dict[molecule][method.upper()] = lm_comp_class.min_G298
+    #
+    #                 lm_comp_data_list.append(lm_comp_class)
+    #         # endregion
+    #
+    #         min_G298_dict[molecule]['ADDEDREF'] = 0
+    #
+    #         # # # transition state comparison data initialization # # #
+    #         # region
+    #         # for every ts data file in the directory perform the comparison calculations
+    #         for filename in os.listdir(ts_data_dir):
+    #             if filename.endswith(".csv"):
+    #                 ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
+    #                 method = (filename.split('-', 3)[3]).split('.')[0]
+    #
+    #                 ref_ts_hartree = read_csv_to_dict(
+    #                     os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
+    #                 ref_ts_comp_class = Transition_State_Compare(molecule, 'REFERENCE', ref_ts_hartree, lm_class,
+    #                                                              ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'])
+    #
+    #                 added_ref_ts_hartree = read_csv_to_dict(
+    #                     os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-addedref.csv'), mode='r')
+    #                 added_ref_ts_comp_class = Transition_State_Compare(molecule, 'ADDEDREF', added_ref_ts_hartree, lm_class,
+    #                                                              ts_class, comp_ts_dir, min_G298_dict[molecule]['ADDEDREF'])
+    #
+    #                 ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
+    #                                                          ts_class, comp_ts_dir, min_G298_dict[molecule][method.upper()], ref_ts_comp_class, added_ref_ts_comp_class)
+    #
+    #                 if save and write_ts:
+    #                     save_ts_comp_class_data(ts_comp_class, overwrite, write_individual)
+    #
+    #                 if ts_comp_class.method != 'ADDEDREF':
+    #                     ts_comp_data_list.append(ts_comp_class)
+    #         # endregion
+    #
+    #         comp_all_met = Compare_All_Methods(ts_comp_data_list, comp_ts_dir, lm_comp_data_list, comp_lm_dir)
+    #         # endregion
+    #
+    #         if debug:
+    #             comp_all_met.write_debug_ts_to_csv()
+    #
+    #         if save:
+    #             # save the comparison data
+    #             if write_ts:
+    #                 save_comp_all_met_data(comp_all_met)
+    #
+    #         check_ts_running(ts_comp_class.plot_save_dir, ts_data_dir, molecule)
+    #
+    # if (len(os.listdir(MET_COMP_DIR)) != len(mol_list_dir)):
+    #     print('Warning: the seed molecule directory and the populated molecule directory are not the same size!')
+    #     print('This could be due to stray files/folders in either directory.')
+    #     print('It could also be due to certain molecules not running.')
+    #     print('The following molecules should have run:')
+    #     for i in range(len(mol_list_dir)):
+    #         print(mol_list_dir(i))
 
     return 0
 
