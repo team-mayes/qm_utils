@@ -133,7 +133,7 @@ def check_ts_running(ts_working_dir, ts_data_dir, molecule):
         print('mets_comp')
 
 def save_comp_all_met_data(comp_all_met):
-    save_comp_tables = False
+    save_comp_tables = True
 
     comp_all_met.write_uncompared_to_csv()
 
@@ -219,7 +219,7 @@ def main():
     do_aglc = 0
     do_bglc = 0
     do_bxyl = 1
-    do_oxane = 0
+    do_oxane = 1
 
     do_molecule = [do_aglc, do_bglc, do_bxyl, do_oxane]
 
@@ -232,6 +232,11 @@ def main():
     mol_list_dir = os.listdir(sv_all_mol_dir)
 
     num_clusters = [15, 13, 9, 8]
+    aglc_tol = [[0, 0], [0, 0], 0.26]
+    bglc_tol = [[0.15, 0.15], [5, 0.15], 0.26]
+    bxyl_tol = [[0.15, 0.15], [5, 0.15], 0.26]
+    oxane_tol = [[0.15, 0.15], [1.2, 0.15], 0.26]
+    tolerances = [aglc_tol, bglc_tol, bxyl_tol, oxane_tol]
     #endregion
 
     min_G298_dict = {}
@@ -355,10 +360,10 @@ def main():
                     ref_ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
 
                     ref_ts_comp_class = Transition_State_Compare(molecule, 'REFERENCE', ref_ts_hartree, lm_class,
-                                                                 ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'])
+                                                                 ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'], mol_tol=tolerances[i])
 
                     ts_comp_class = Transition_State_Compare(molecule, method, ts_hartree, lm_class,
-                                                             ts_class, comp_ts_dir, min_G298_dict[molecule][method.upper()], ref_ts_comp_class)
+                                                             ts_class, comp_ts_dir, min_G298_dict[molecule][method.upper()], ref_ts_comp_class, mol_tol=tolerances[i])
 
                     if save and write_ts:
                         save_ts_comp_class_data(ts_comp_class, overwrite, write_individual)

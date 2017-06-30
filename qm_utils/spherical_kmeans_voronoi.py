@@ -156,8 +156,64 @@ def get_pol_coords(vert_1, vert_2):
 
     return arc_coords
 
+def get_circ_coords(vert_c, r2):
+    # desired number of pts in arclength & line
+    NUM_PTS = 100
+
+    r1 = 1
+    r3 = np.sqrt(3) * r2
+
+    x1 = 0
+    y1 = 0
+    z1 = 0
+
+    x2 = vert_c[0]
+    y2 = vert_c[1]
+    z2 = vert_c[2]
+
+    A = 2*(x2-x1)
+    B = 2*(y2-y1)
+    C = 2*(z2-z1)
+
+    D = x1**2 - x2**2 + y1**2 - y2**2 + z1**2 - z2**2 - r1**2 + r2**2
+
+    t_line = (x1*A + y1*B + z1*C + D) / (A*(x1-x2) + B*(y1-y2) + C*(z1-z2))
+
+    x_c = x1 + t_line * (x2 - x1)
+    y_c = y1 + t_line * (y2 - y1)
+    z_c = z1 + t_line * (z2 - z1)
+
+    normal_vector = cart2pol([A, B, C])
+
+    phi = normal_vector[0]
+    theta = normal_vector[1]
+
+    t = -np.pi
+
+    points = []
+
+    while t < np.pi:
+        x = r3*np.cos(t)*(-np.sin(phi)) + r3*np.sin(t)*(np.cos(theta)*np.cos(phi)) + x_c
+        y = r3*np.cos(t)*(np.cos(phi)) + r3*np.sin(t)*(np.cos(theta)*np.sin(phi)) + y_c
+        z = r3*np.sin(t)*(-np.sin(theta)) + z_c
+
+        points.append([x, y, z])
+
+        t += np.pi/NUM_PTS
+
+    circle = []
+
+    circle.append([])
+    circle.append([])
+
+    for i in range(len(points)):
+        circle[0].append(cart2pol(points[i])[0])
+        circle[1].append(cart2pol(points[i])[1])
+
+    return circle
+
 # plots a line on a rectangular plot (2D)
-# vert_n: [vert in polar, color, size]
+# vert_n: [vert in cart, color, size]
 # vert_1 always ts, vert_2 always lm
 def plot_line(ax, vert_1, vert_2, line_color, line_style='-', edge_color='face', zorder=10):
     ax.set_ylim(105, 75)
@@ -176,6 +232,19 @@ def plot_line(ax, vert_1, vert_2, line_color, line_style='-', edge_color='face',
     ax.scatter(line[0][-1], line[1][-1], s=vert_2[2], c=vert_2[1], marker='o', edgecolor='face', zorder=zorder)
 
     return
+
+def plot_circle(ax, vert, radius, line_color, line_style='-'):
+    ax.set_ylim(105, 75)
+
+    circle = get_circ_coords(vert, radius)
+
+    if (is_end(circle)):
+        two_edges = split_in_two(circle)
+
+        ax.plot(two_edges[0][0], two_edges[0][1], color=line_color, linestyle=line_style, zorder=1)
+        ax.plot(two_edges[1][0], two_edges[1][1], color=line_color, linestyle=line_style, zorder=1)
+    else:
+        ax.plot(circle[0], circle[1], color=line_color, linestyle=line_style)
 
 # plots a line on a rectangular plot (2D)
 def plot_vor_line(ax, vert_1, vert_2, line_color):
