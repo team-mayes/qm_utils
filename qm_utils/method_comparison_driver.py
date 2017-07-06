@@ -1,6 +1,6 @@
 
 """
-The purpose of this script is to make comparisons for a particular QM method to the reference set of HSP.
+The purpose of this script is to make comparisons for a particular QM method to the REFERENCE set of HSP.
 """
 
 # # # import # # #
@@ -325,9 +325,9 @@ def main():
                     lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
                     method = (filename.split('-', 3)[3]).split('.')[0]
 
-                    ref_lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
+                    ref_lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-REFERENCE.csv'), mode='r')
 
-                    ref_lm_comp_class = Local_Minima_Compare(molecule, 'reference', ref_lm_hartree, lm_class, comp_lm_dir)
+                    ref_lm_comp_class = Local_Minima_Compare(molecule, 'REFERENCE', ref_lm_hartree, lm_class, comp_lm_dir)
                     lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir, ref_lm_comp_class)
 
                     if save and write_lm:
@@ -357,7 +357,7 @@ def main():
                     ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, filename), mode='r')
                     method = (filename.split('-', 3)[3]).split('.')[0]
 
-                    ref_ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
+                    ref_ts_hartree = read_csv_to_dict(os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-REFERENCE.csv'), mode='r')
 
                     ref_ts_comp_class = Transition_State_Compare(molecule, 'REFERENCE', ref_ts_hartree, lm_class,
                                                                  ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'], mol_tol=tolerances[i])
@@ -450,9 +450,9 @@ def main():
     #                 method = (filename.split('-', 3)[3]).split('.')[0]
     #
     #                 ref_lm_hartree = read_csv_to_dict(
-    #                     os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-reference.csv'), mode='r')
+    #                     os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-REFERENCE.csv'), mode='r')
     #
-    #                 ref_lm_comp_class = Local_Minima_Compare(molecule, 'reference', ref_lm_hartree, lm_class,
+    #                 ref_lm_comp_class = Local_Minima_Compare(molecule, 'REFERENCE', ref_lm_hartree, lm_class,
     #                                                          comp_lm_dir)
     #                 lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir,
     #                                                      ref_lm_comp_class)
@@ -476,7 +476,7 @@ def main():
     #                 method = (filename.split('-', 3)[3]).split('.')[0]
     #
     #                 ref_ts_hartree = read_csv_to_dict(
-    #                     os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-reference.csv'), mode='r')
+    #                     os.path.join(ts_data_dir, 'z_dataset-' + molecule + '-TS-REFERENCE.csv'), mode='r')
     #                 ref_ts_comp_class = Transition_State_Compare(molecule, 'REFERENCE', ref_ts_hartree, lm_class,
     #                                                              ts_class, comp_ts_dir, min_G298_dict[molecule]['REFERENCE'])
     #

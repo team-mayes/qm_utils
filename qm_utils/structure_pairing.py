@@ -321,7 +321,7 @@ def compute_rmsd_between_puckers(phi, theta, new_cp_params=None, q_val=1):
     to the closest pucker.
     :param phi: phi value (0 to 360)
     :param theta: theta value (180 to 0)
-    :param new_cp_params: any new reference points that you might want to include in the analysis.
+    :param new_cp_params: any new REFERENCE points that you might want to include in the analysis.
     :param q_val: the value of the radius on the surface of the sphere. Note that if that radius changes your results
                     might change
     :return: the pucker that is closely associated with the particular input structure, and the arc_length value
@@ -411,19 +411,19 @@ def comparing_TS_pathways(ts_dict, lm_dict, reference_ts, reference_lm):
     """
     This script completes the sorting for TS states while looking at pathways. The sorting is based on the following
     criteria:
-    (1) For a particular TS, which HSP reference TS are within a predetermined arc length tolerance. All reference TSs
+    (1) For a particular TS, which HSP REFERENCE TS are within a predetermined arc length tolerance. All REFERENCE TSs
     that meet this criteria are kept.
-    (2) Now, the LM associated with each HSP reference TS and the LM associated with a particular TS are compared.
+    (2) Now, the LM associated with each HSP REFERENCE TS and the LM associated with a particular TS are compared.
     Again, arc length calculations are computed and compared to the respective LM. If both LM are within a certain
-    arc length tolerance, then the HSP reference group is assigned as a match for the particular TS. This process is
+    arc length tolerance, then the HSP REFERENCE group is assigned as a match for the particular TS. This process is
     repeated for all TS.
-    (3) If there exist multiple matches (a particular TS has multiple HSP reference TS), then the pathway with the
+    (3) If there exist multiple matches (a particular TS has multiple HSP REFERENCE TS), then the pathway with the
     smaller arc length value is selected.
 
     :param ts_dict: the TS dict associated for a particular method
     :param lm_dict: the LM dict assiciated for a particular method
-    :param reference_ts: the HSP reference TS dict
-    :param reference_lm: the HSP reference LM dict
+    :param reference_ts: the HSP REFERENCE TS dict
+    :param reference_lm: the HSP REFERENCE LM dict
     :return: overall_ts_dict (all information), matching_ts_dict (matching only), missing_ts_dict (missing only) ...
     (note that the all of these dicts are updated with new information pertaining to their pathways and such).
     """
@@ -952,11 +952,11 @@ def generating_lm_structures(dict):
 def rmsd_calculator(rmsd_dict, lm_dict, ts_dict):
     """
 
-    Performs all of the RMSD between HSP reference grouping and the method in question.
+    Performs all of the RMSD between HSP REFERENCE grouping and the method in question.
 
     :param rmsd_dict: the dict containing all of the relative Gibbs free energies for the group
-    :param lm_dict: the reference HSP LM group
-    :param ts_dict: the reference HSP TS group
+    :param lm_dict: the REFERENCE HSP LM group
+    :param ts_dict: the REFERENCE HSP TS group
     :return: the RMSD information for each method-job type combination
     """
 
@@ -1072,9 +1072,9 @@ def writer_rmsd_information(overall_dict, dir_data):
 # # # # OLDER FUNCTIONS # # # #
 def comparing_across_methods(method_dict, reference_dict, arc_tol=TOL_ARC_LENGTH_CROSS):
     """
-    This script compared the structures generated from one particular method to the reference set of structures from HSP
+    This script compared the structures generated from one particular method to the REFERENCE set of structures from HSP
     :param method_dict: the list of dicts for a particular method
-    :param reference_dict: the reference dict to compare the puckers too
+    :param reference_dict: the REFERENCE dict to compare the puckers too
     :param arc_tol: the tolerance for arc length (if below tolerance, the structures are then grouped together)
     :return: updated_method_dict (contains the grouping solely based on arc length)
     """

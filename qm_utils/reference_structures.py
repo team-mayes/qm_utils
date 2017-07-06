@@ -130,13 +130,13 @@ LIST_PUCKER = ['4c1',  'oe', 'oh1',  'e1', '2h1',  '2e', '2h3',  'e3', '4h3',  '
 
 def local_min_reference_points(data_dict, arc_tol=TOL_ARC_LENGTH, print_status='off'):
     """
-    This script generates the local min reference points by calculating groups based on
+    This script generates the local min REFERENCE points by calculating groups based on
     arc length calculations between the respective points.
 
     :param data_dict: the local min data dict
     :param arc_tol: the tolerance for the arc length grouping
-    :param print_status: whether or not to pring the print the phi and theta parameters for the reference group
-    :return: a dict containing the local min reference groups and the phi and theta values
+    :param print_status: whether or not to pring the print the phi and theta parameters for the REFERENCE group
+    :return: a dict containing the local min REFERENCE groups and the phi and theta values
     """
     structure_dict = {}
     ind_dict = {}

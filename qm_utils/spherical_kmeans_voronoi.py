@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-The purpose if this script is to perform spherical k-means and spherical voronoi to determine the reference structures
+The purpose if this script is to perform spherical k-means and spherical voronoi to determine the REFERENCE structures
 for HSP. The output will serve as the foundation for making all comparisons across different methods.
 
 """

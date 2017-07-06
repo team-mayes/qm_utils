@@ -233,7 +233,7 @@ class Local_Minima_Compare():
         for i in range(len(self.lm_dataset)):
             self.lm_dataset[i]['G298 (Hartrees)'] = 627.509 * float(self.lm_dataset[i]['G298 (Hartrees)'])
 
-        # setting reference to be lowest energy in dataset
+        # setting REFERENCE to be lowest energy in dataset
         self.min_G298 = self.lm_dataset[0]['G298 (Hartrees)']
 
         for i in range(len(self.lm_dataset)):
@@ -3502,8 +3502,8 @@ class Compare_All_Methods:
         plot_circle(plot.ax_rect, ts_vert, self.methods_ts_data[0].tol_threshold, 'blue')
 
     def plot_mets_comp(self, plot, path_group, i, mets_colors_dict):
-        # reference clusters are blue
-        # reference raw are light non outlined blue
+        # REFERENCE clusters are blue
+        # REFERENCE raw are light non outlined blue
         # methods are diff colors
 
         # mets_colors_dict is {[ts_color, path_color], ...}
