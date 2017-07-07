@@ -42,7 +42,7 @@ DEFAULT_TEMPERATURE = 298.15
 K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
 HART2KCAL = 627.509
 
-REFERENCE = 'B3LYP'
+REFERENCE = 'REFERENCE'
 
 ################################### Helper Functions#####################################
 #                                                                                       #
@@ -213,6 +213,8 @@ class Plots():
         self.fig.set_size_inches(9, 5)
         self.fig.savefig(filename1, facecolor=self.fig.get_facecolor(), transparent=True, dpi=300, bbox_inches='tight')
 
+# # # Structures # # #
+#region
 class Structure():
     def __init__(self, phi, theta, gibbs=None, name=None):
         self.phi = phi
@@ -221,13 +223,16 @@ class Structure():
         self.name = name
 
 class Local_Minimum(Structure):
-    def __init__(self, phi, theta, gibbs, name):
+    def __init__(self, phi, theta, gibbs=None, name=None):
         Structure.__init__(self, phi, theta, gibbs, name)
 
 class Transition_State(Structure):
     def __init__(self, phi, theta, gibbs, name):
         Structure.__init__(self, phi, theta, gibbs, name)
+#endregion
 
+# # # Pathways # # #
+#region
 class Pathway():
     def __init__(self, TS, LM1, LM2):
         self.TS = TS
@@ -376,14 +381,122 @@ class Method_Pathways():
 
             self.Pathways.append(Pathway(TS, LM1, LM2))
 
+class Reference_Pathways():
+    def __init__(self, LM_csv_filename, TS_csv_filename):
+        self.method = 'REFERENCE'
+
+        self.parse_LM_csv(LM_csv_filename)
+        self.parse_TS_csv(TS_csv_filename)
+
+        self.create_structure_list()
+
+    def check_energies(self):
+        for i in range(len(self.Pathways)):
+            TS_gibbs = self.Pathways[i].TS.gibbs
+            LM1_gibbs = self.Pathways[i].LM1.gibbs
+            LM2_gibbs = self.Pathways[i].LM2.gibbs
+
+            try:
+                assert(TS_gibbs > LM1_gibbs and TS_gibbs > LM2_gibbs)
+            except AssertionError:
+                print('TS energy not greater than both LMs')
+                print('TS.gibbs = ' + TS_gibbs)
+                print('LM1.gibbs = ' + LM1_gibbs)
+                print('LM2.gibbs = ' + LM2_gibbs)
+        pass
+
+    def parse_LM_csv(self, LM_csv_filename):
+        self.LM_csv_list = []
+
+        LM_csv_dict = read_csv_to_dict(LM_csv_filename, mode='r')
+
+        for i in range(len(LM_csv_dict)):
+            info = LM_csv_dict[i]
+            phi = float(info['phi'])
+            theta = float(info['theta'])
+            gibbs = float(info['G298 (Hartrees)'])
+            name = info['Pucker']
+
+            self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name))
+
+    def parse_TS_csv(self, TS_csv_filename):
+        TS_csv_dict = read_csv_to_dict(TS_csv_filename, mode='r')
+
+        self.Pathways = []
+
+        for i in range(len(TS_csv_dict)):
+            info = TS_csv_dict[i]
+            phi = float(info['phi'])
+            theta = float(info['theta'])
+            gibbs = float(info['G298 (Hartrees)'])
+            name = info['Pucker']
+
+            phi_lm1 = float(info['phi_lm1'])
+            theta_lm1 = float(info['theta_lm1'])
+            phi_lm2 = float(info['phi_lm2'])
+            theta_lm2 = float(info['theta_lm2'])
+
+            try:
+                assert(float(info['Freq 1']) < 0)
+            except AssertionError:
+                print('Transition State has a non-negative Freq 1')
+                exit(1)
+
+            TS = Transition_State(phi, theta, gibbs, name)
+            LM1 = Local_Minimum(phi=phi_lm1,
+                                theta=theta_lm1)
+            LM2 = Local_Minimum(phi=phi_lm2,
+                                theta=theta_lm2)
+
+            self.Pathways.append(Pathway(TS, LM1, LM2))
+
+    def create_structure_list(self):
+        self.structure_list = []
+
+        for i in range(len(self.Pathways)):
+            self.structure_list.append(self.Pathways[i].TS)
+
+        for i in range(len(self.LM_csv_list)):
+            self.structure_list.append(self.LM_csv_list[i])
+
+    def normalize_energies(self):
+        self.min_gibbs = self.structure_list[0].gibbs
+
+        for i in range(len(self.structure_list)):
+            curr_gibbs = self.structure_list[i].gibbs
+
+            if curr_gibbs < self.min_gibbs:
+                self.min_gibbs = curr_gibbs
+
+        for i in range(len(self.LM_csv_list)):
+            self.LM_csv_list[i].gibbs -= self.min_gibbs
+            self.LM_csv_list[i].gibbs *= HART2KCAL
+
+        for i in range(len(self.Pathways)):
+            TS = self.Pathways[i].TS
+            LM1 = self.Pathways[i].LM1
+            LM2 = self.Pathways[i].LM2
+
+            TS.gibbs -= self.min_gibbs
+            TS.gibbs *= HART2KCAL
+
+            LM1.gibbs -= self.min_gibbs
+            LM1.gibbs *= HART2KCAL
+
+            LM2.gibbs -= self.min_gibbs
+            LM2.gibbs *= HART2KCAL
+#endregion
+
 class Reference_Landscape():
     # # # Init # # #
     #region
-    def __init__(self, LM_csv_filename, TS_csv_filename, IRC_csv_filename, method):
-        self.method = method
+    def __init__(self, LM_csv_filename, TS_csv_filename):
+        self.method = 'REFERENCE'
 
-        self.Reference_Pathways = Method_Pathways(LM_csv_filename, TS_csv_filename, IRC_csv_filename, method).Pathways
-        self.Local_Minima = Method_Pathways(LM_csv_filename, TS_csv_filename, IRC_csv_filename, method).LM_csv_list
+        self.Reference_Pathways = Reference_Pathways(LM_csv_filename, TS_csv_filename)
+
+        self.Pathways = self.Reference_Pathways.Pathways
+        self.Local_Minima = self.Reference_Pathways.LM_csv_list
         self.Reference_Structures = self.get_Reference_Structures()
 
         self.canonical_designations = read_csv_canonical_designations('CP_params.csv', SV_DIR)
@@ -394,13 +507,39 @@ class Reference_Landscape():
         self.assign_region_names()
         self.assign_skm_labels()
 
+        self.placeholder_IRC_energies()
+        self.Reference_Pathways.normalize_energies()
+        self.Reference_Pathways.check_energies()
+
+    def get_avg_LM_energy(self, LM):
+        energy = 0
+        num_points = 0
+
+        for j in range(len(self.Local_Minima)):
+            if self.Local_Minima[j].closest_skm == LM.closest_skm:
+                energy += self.Local_Minima[j].gibbs
+                num_points += 1
+
+        avg_energy = energy / num_points
+
+        LM.gibbs = avg_energy
+
+    def placeholder_IRC_energies(self):
+        for i in range(len(self.Reference_Pathways.Pathways)):
+            LM1 = self.Reference_Pathways.Pathways[i].LM1
+            LM2 = self.Reference_Pathways.Pathways[i].LM2
+
+            self.get_avg_LM_energy(LM1)
+            self.get_avg_LM_energy(LM2)
+
+
     def get_Reference_Structures(self):
         structures_list = []
 
-        for i in range(len(self.Reference_Pathways)):
-            structures_list.append(self.Reference_Pathways[i].TS)
-            structures_list.append(self.Reference_Pathways[i].LM1)
-            structures_list.append(self.Reference_Pathways[i].LM2)
+        for i in range(len(self.Pathways)):
+            structures_list.append(self.Pathways[i].TS)
+            structures_list.append(self.Pathways[i].LM1)
+            structures_list.append(self.Pathways[i].LM2)
 
         for i in range(len(self.Local_Minima)):
             structures_list.append(self.Local_Minima[i])
@@ -428,11 +567,13 @@ class Reference_Landscape():
             unbinned = True
 
             for j in range(len(self.Reference_Structures)):
-                if self.canonical_designations[i].name == self.Reference_Structures[j].name:
+                structure = self.Reference_Structures[j]
+
+                if self.get_closest_cano(structure.phi, structure.theta) == self.canonical_designations[i].name:
                     unbinned = False
 
             if unbinned:
-                self.unbinned_canos.append(self.canonical_designations)
+                self.unbinned_canos.append(self.canonical_designations[i])
 
     def tessellate(self, number_clusters):
         centers = []
@@ -444,8 +585,8 @@ class Reference_Landscape():
 
             centers.append(center)
 
-        for i in range(len(self.unbinned_canos[0])):
-            structure = self.unbinned_canos[0][i]
+        for i in range(len(self.unbinned_canos)):
+            structure = self.unbinned_canos[i]
 
             center = pol2cart([float(structure.phi), float(structure.theta)])
 
@@ -489,19 +630,6 @@ class Reference_Landscape():
 
             passnum = passnum - 1
 
-    def populate_skm_structures(self):
-        self.skm_structures = []
-
-        for i in range(len(self.skm.cluster_centers_)):
-            for j in range(len(self.Reference_Structures)):
-                pass
-
-
-            self.skm_structures.append(Structure(phi=0,
-                                                 theta=0,
-                                                 gibbs=None,
-                                                 name=None))
-
     def get_closest_cano(self, phi, theta):
         min_dist = 100
 
@@ -532,14 +660,17 @@ class Reference_Landscape():
             self.skm_name_list.append(name)
 
     def assign_skm_labels(self):
-        for i in range(len(self.Reference_Pathways)):
-            TS = self.Reference_Pathways[i].TS
-            LM1 = self.Reference_Pathways[i].LM1
-            LM2 = self.Reference_Pathways[i].LM2
+        for i in range(len(self.Pathways)):
+            TS = self.Pathways[i].TS
+            LM1 = self.Pathways[i].LM1
+            LM2 = self.Pathways[i].LM2
 
             self.calc_closest_skm(TS)
             self.calc_closest_skm(LM1)
             self.calc_closest_skm(LM2)
+
+        for i in range(len(self.Local_Minima)):
+            self.calc_closest_skm(self.Local_Minima[i])
 
     def calc_closest_skm(self, structure):
         min_dist = 100
@@ -587,34 +718,49 @@ class Reference_Landscape():
 
                     plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color)
 
+        self.plot_regions_names(plot)
+
+    # gets highest (lowest) theta of a region
+    def get_highest_theta(self, region):
+        theta_vals = []
+
+        for i in range(len(region)):
+            vert_index = region[i]
+            vert = cart2pol(self.sv.vertices[vert_index])
+
+            theta_vals.append(vert[1])
+
+        min_theta = 360
+
+        for i in range(len(theta_vals)):
+            if theta_vals[i] < min_theta:
+                min_theta = theta_vals[i]
+
+        return min_theta
+
     def plot_regions_names(self, plot):
         for i in range(len(self.skm_name_list)):
             name = self.skm_name_list[i]
 
-            vert = cart2pol(self.skm.cluster_centers_[i])
+            region = self.sv.regions[i]
 
-            phi = vert[0]
-            theta = vert[1]
+            theta = self.get_highest_theta(region) + 7
+            phi = cart2pol(self.skm.cluster_centers_[i])[0] - 5
 
-            if theta < REGION_THRESHOLD:
-                theta += 10
+            if i == 0:
+                theta = 20
+                phi = 180
 
-            if theta > 180 - REGION_THRESHOLD:
-                theta -= 5
-
-            if phi > 20 and phi < 340:
-                phi -= 10
-
-            plot.ax_rect.annotate(name, xy=(phi, theta), xytext=(phi, theta))
+            plot.ax_rect.annotate(name, xy=(phi, theta), xytext=(phi, theta), fontsize=8)
 
     def plot_skm_centers(self, plot):
         phi_vals = []
         theta_vals = []
 
-        for i in range(len(self.Reference_Pathways)):
-            TS_skm = self.Reference_Pathways[i].TS.closest_skm
-            LM1_skm = self.Reference_Pathways[i].LM1.closest_skm
-            LM2_skm = self.Reference_Pathways[i].LM2.closest_skm
+        for i in range(len(self.Pathways)):
+            TS_skm = self.Pathways[i].TS.closest_skm
+            LM1_skm = self.Pathways[i].LM1.closest_skm
+            LM2_skm = self.Pathways[i].LM2.closest_skm
 
             TS_vert = cart2pol(self.skm.cluster_centers_[TS_skm])
             phi_vals.append(TS_vert[0])
@@ -652,11 +798,11 @@ class Compare_Methods():
         self.molecule = molecule
         self.dir_init()
 
-        self.ref_landscape_init()
+        self.reference_landscape_init()
 
         self.Method_Pathways_dict = {}
-
         self.Method_Pathways_init()
+
         self.assign_structure_names()
 
         self.assign_met_colors_and_markers()
@@ -671,14 +817,13 @@ class Compare_Methods():
 
         for method in self.Method_Pathways_dict:
             self.populate_skm_groupings(method)
-
             self.populate_pathway_groupings(method)
             self.populate_local_minima(method)
-
             self.do_calcs(method)
-            self.normalize_comp_metrics(method, 'gibbs')
-            self.normalize_comp_metrics(method, 'arc')
+
             self.normalize_pathways(method)
+
+        pass
 
     def normalize_pathways(self, method):
         for key in self.Method_Pathways_dict[method].pathway_groupings:
@@ -699,6 +844,24 @@ class Compare_Methods():
                     self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_norm_group_WRMSD'] = met_metric / ref_metric
             else:
                 self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_norm_group_WRMSD'] = 'n/a'
+
+
+    def dir_init(self):
+        self.MOL_DATA_DIR = make_dir(os.path.join(SV_DIR, self.molecule))
+        self.MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
+
+        self.IRC_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'IRC'))
+        self.LM_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'LM'))
+        self.TS_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'TS'))
+
+        self.IRC_DATA_dir_list = os.listdir(os.path.join(self.MOL_DATA_DIR, 'IRC'))
+
+    def reference_landscape_init(self):
+        ref_LM_csv_filename = os.path.join(self.MOL_DATA_DIR, 'z_oxane_LM-b3lyp_howsugarspucker.csv')
+        ref_TS_csv_filename = os.path.join(self.MOL_DATA_DIR, 'z_oxane_TS-b3lyp_howsugarspucker.csv')
+
+        self.reference_landscape = Reference_Landscape(LM_csv_filename=ref_LM_csv_filename,
+                                                       TS_csv_filename=ref_TS_csv_filename)
 
     def assign_structure_names(self):
         for method in self.Method_Pathways_dict:
@@ -726,15 +889,9 @@ class Compare_Methods():
 
             self.Method_Pathways_dict[method].comp_metrics = {}
 
-    def ref_landscape_init(self):
-        ref_IRC_csv_filename = os.path.join(self.IRC_DATA_DIR, 'z_dataset-oxane-IRC-' + REFERENCE + '.csv')
-        ref_LM_csv_filename = os.path.join(self.LM_DATA_DIR, 'z_dataset-oxane-LM-' + REFERENCE + '.csv')
-        ref_TS_csv_filename = os.path.join(self.TS_DATA_DIR, 'z_dataset-oxane-TS-' + REFERENCE + '.csv')
+        self.Method_Pathways_dict['REFERENCE'] = self.reference_landscape.Reference_Pathways
+        self.Method_Pathways_dict['REFERENCE'].comp_metrics = {}
 
-        self.reference_landscape = Reference_Landscape(LM_csv_filename=ref_LM_csv_filename,
-                                                       TS_csv_filename=ref_TS_csv_filename,
-                                                       IRC_csv_filename=ref_IRC_csv_filename,
-                                                       method=REFERENCE)
 
     # creates a list of structures grouped by skm
     def populate_skm_groupings(self, method):
@@ -756,6 +913,13 @@ class Compare_Methods():
                     structures.append(LM1)
                 if LM2.closest_skm == i:
                     structures.append(LM2)
+
+            for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
+                LM = self.Method_Pathways_dict[method].LM_csv_list[j]
+
+                if LM.closest_skm == i:
+                    structures.append(LM)
+
 
     def pathway_groupings_init(self):
         self.pathway_groupings = {}
@@ -813,15 +977,6 @@ class Compare_Methods():
 
         LM_list = self.Method_Pathways_dict[method].LM_csv_list
 
-    def dir_init(self):
-        self.MOL_DATA_DIR = make_dir(os.path.join(SV_DIR, self.molecule))
-        self.MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
-
-        self.IRC_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'IRC'))
-        self.LM_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'LM'))
-        self.TS_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'TS'))
-
-        self.IRC_DATA_dir_list = os.listdir(os.path.join(self.MOL_DATA_DIR, 'IRC'))
 
     def assign_skm_labels(self):
         for method in self.Method_Pathways_dict:
@@ -848,13 +1003,10 @@ class Compare_Methods():
                     print('function: assign_skm_labels')
                     print('method: ' + method)
 
-    def calc_gibbs_diff(self, method):
-        for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
-            for j in range(len(self.Method_Pathways_dict[method].skm_groupings[i]['structures'])):
-                structure = self.Method_Pathways_dict[method].skm_groupings[i]['structures'][j]
-                ref_structure_gibbs = self.Method_Pathways_dict[REFERENCE].skm_groupings[i]['weighted_gibbs']
-
-                structure.comp_metrics['gibbs'] = structure.gibbs - ref_structure_gibbs
+            for i in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
+                LM = self.Method_Pathways_dict[method].LM_csv_list[i]
+                LM.comp_metrics = {}
+                self.calc_closest_skm(LM)
 
     def calc_closest_skm(self, structure):
         min_dist = 100
@@ -877,6 +1029,15 @@ class Compare_Methods():
 
         structure.comp_metrics['arc'] = min_dist
         structure.closest_skm = skm_index
+
+    def calc_gibbs_diff(self, method):
+        for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
+            for j in range(len(self.Method_Pathways_dict[method].skm_groupings[i]['structures'])):
+                structure = self.Method_Pathways_dict[method].skm_groupings[i]['structures'][j]
+                ref_structure_gibbs = self.Method_Pathways_dict[REFERENCE].skm_groupings[i]['weighted_gibbs']
+
+                structure.comp_metrics['gibbs'] = structure.gibbs - ref_structure_gibbs
+
 
     def assign_met_colors_and_markers(self):
         cmap = plt.get_cmap('Vega20')
@@ -945,6 +1106,7 @@ class Compare_Methods():
         for j in range(len(self.Method_Pathways_dict[method].skm_groupings[i]['structures'])):
             structure = self.Method_Pathways_dict[method].skm_groupings[i]['structures'][j]
             e_val = structure.gibbs
+
             component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
             structure.ind_bolts = component
             total_boltz += component
@@ -1084,6 +1246,13 @@ class Compare_Methods():
             LM2_vert = [LM2.phi, LM2.theta]
             lm_phi_vals.append(LM2_vert[0])
             lm_theta_vals.append(LM2_vert[1])
+
+        for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
+            LM = self.Method_Pathways_dict[method].LM_csv_list[j]
+
+            LM_vert = [LM.phi, LM.theta]
+            lm_phi_vals.append(LM_vert[0])
+            lm_theta_vals.append(LM_vert[1])
 
         plot.ax_rect.scatter(ts_phi_vals, ts_theta_vals, c='',
                              edgecolor=self.met_colors_dict[method],
@@ -1395,7 +1564,7 @@ class Compare_Methods():
 
         return csv_dict
 
-    def format_gibbs_RMSD_dict_for_csv(self):
+    def format_RMSD_dict_for_csv(self, comp_key):
         csv_dict = {}
 
         csv_dict['method'] = []
@@ -1403,10 +1572,10 @@ class Compare_Methods():
         for method in self.Method_Pathways_dict:
             csv_dict['method'].append(method)
 
-        csv_dict['gibbs_RMSD'] = []
+        csv_dict[comp_key + '_RMSD'] = []
 
         for method in self.Method_Pathways_dict:
-            csv_dict['gibbs_RMSD'].append(self.Method_Pathways_dict[method].comp_metrics['gibbs_RMSD'])
+            csv_dict[comp_key + '_RMSD'].append(self.Method_Pathways_dict[method].comp_metrics[comp_key + '_RMSD'])
 
         return csv_dict
 
@@ -1423,10 +1592,10 @@ class Compare_Methods():
 
     def write_csvs(self):
         self.write_dict_to_csv(self.format_skm_dict_for_csv('gibbs_group_RMSD'), 'gibbs_group_RMSD')
-        self.write_dict_to_csv(self.format_gibbs_RMSD_dict_for_csv(), 'gibbs_RMSD')
+        self.write_dict_to_csv(self.format_RMSD_dict_for_csv('gibbs'), 'gibbs_RMSD')
 
         self.write_dict_to_csv(self.format_skm_dict_for_csv('arc_group_WRMSD'), 'arc_group_WRMSD')
-        self.write_dict_to_csv(self.format_skm_dict_for_csv('arc_norm_group_WRMSD'), 'arc_norm_group_WRMSD')
+        self.write_dict_to_csv(self.format_RMSD_dict_for_csv('arc'), 'arc_RMSD')
 
         self.write_dict_to_csv(self.format_skm_dict_for_csv('weighted_gibbs'), 'weighted_gibbs')
 
