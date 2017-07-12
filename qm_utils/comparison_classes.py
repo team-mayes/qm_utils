@@ -525,7 +525,10 @@ class Reference_Pathways():
 #endregion
 
 class Tessellation():
-    def __init__(self, centers, number_clusters, n_init, max_iter):
+    def __init__(self, centers, number_clusters, n_init, max_iter, type='both'):
+        self.skm_groupings = []
+        self.type = type
+
         # Uses packages to calculate the k-means spherical centers
         self.skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=n_init, max_iter=max_iter)
         self.skm.fit(centers)
@@ -587,47 +590,7 @@ class Reference_Landscape():
         self.assign_region_names()
         self.assign_skm_labels()
 
-        self.retessellate()
-
         self.Reference_Pathways.normalize_energies()
-
-    def retessellate(self):
-        centers = []
-        structures = []
-
-        for i in range(len(self.Tessellation.skm.cluster_centers_)):
-            region_structures = []
-
-            for j in range(len(self.Reference_Pathways.structure_list)):
-                structure = self.Reference_Pathways.structure_list[j]
-
-                if structure.closest_skm == i:
-                    region_structures.append(structure)
-
-            if len(region_structures) > 0:
-                avg_phi = 0
-                avg_theta = 0
-
-                for j in range(len(region_structures)):
-                    phi = region_structures[j].phi
-                    theta = region_structures[j].theta
-
-                    avg_phi += phi
-                    avg_theta += theta
-
-                avg_phi /= len(region_structures)
-                avg_theta /= len(region_structures)
-
-                centers.append(pol2cart([avg_phi, avg_theta]))
-                structures.append(Structure(phi=avg_phi, theta=avg_theta))
-
-        unbinned_cano_centers = self.get_unbinned_canos(structures)
-
-        final_centers = centers + unbinned_cano_centers
-
-        self.Tessellation = Tessellation(final_centers, 38, 1000, 1000)
-
-        pass
 
     def reorg_canonical(self):
         aux_list = []
@@ -713,7 +676,7 @@ class Reference_Landscape():
 
             centers.append(center)
 
-        self.LM_Tessellation = Tessellation(centers, number_clusters, n_init, max_iter)
+        self.LM_Tessellation = Tessellation(centers, number_clusters, n_init, max_iter, 'LM')
 
     def tessellate_TS(self, number_clusters=38, n_init=30, max_iter=300):
         centers = self.get_unbinned_canos(self.Reference_Pathways.TS_csv_list)
@@ -731,7 +694,7 @@ class Reference_Landscape():
 
             centers.append(center)
 
-        self.TS_Tessellation = Tessellation(centers, number_clusters, n_init, max_iter)
+        self.TS_Tessellation = Tessellation(centers, number_clusters, n_init, max_iter, 'TS')
 
 
     def check_for_dup_names(self, i):
@@ -801,104 +764,41 @@ class Reference_Landscape():
 
     # # # Plotting # # #
     #region
-    def plot_voronoi_regions(self, plot, plot_names=True):
+    def plot_voronoi_regions(self, plot, tessellation=None):
+        if tessellation is None:
+            tessellation = self.Tessellation
+
         color = 'lightgray'
 
-        for i in range(len(self.Tessellation.sv.regions)):
-            for j in range(len(self.Tessellation.sv.regions[i])):
-                if j == len(self.Tessellation.sv.regions[i]) - 1:
-                    index1 = self.Tessellation.sv.regions[i][j]
-                    index2 = self.Tessellation.sv.regions[i][0]
+        for i in range(len(tessellation.sv.regions)):
+            for j in range(len(tessellation.sv.regions[i])):
+                if j == len(tessellation.sv.regions[i]) - 1:
+                    index1 = tessellation.sv.regions[i][j]
+                    index2 = tessellation.sv.regions[i][0]
 
-                    vert1 = self.Tessellation.sv.vertices[index1]
-                    vert2 = self.Tessellation.sv.vertices[index2]
+                    vert1 = tessellation.sv.vertices[index1]
+                    vert2 = tessellation.sv.vertices[index2]
 
                     plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
                 else:
-                    index1 = self.Tessellation.sv.regions[i][j]
-                    index2 = self.Tessellation.sv.regions[i][j + 1]
+                    index1 = tessellation.sv.regions[i][j]
+                    index2 = tessellation.sv.regions[i][j + 1]
 
-                    vert1 = self.Tessellation.sv.vertices[index1]
-                    vert2 = self.Tessellation.sv.vertices[index2]
-
-                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
-
-        if plot_names:
-            self.plot_regions_names(plot)
-
-    def plot_voronoi_regions_LM(self, plot, plot_names=False):
-        color = 'lightgray'
-
-        for i in range(len(self.LM_Tessellation.sv.regions)):
-            for j in range(len(self.LM_Tessellation.sv.regions[i])):
-                if j == len(self.LM_Tessellation.sv.regions[i]) - 1:
-                    index1 = self.LM_Tessellation.sv.regions[i][j]
-                    index2 = self.LM_Tessellation.sv.regions[i][0]
-
-                    vert1 = self.LM_Tessellation.sv.vertices[index1]
-                    vert2 = self.LM_Tessellation.sv.vertices[index2]
-
-                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
-                else:
-                    index1 = self.LM_Tessellation.sv.regions[i][j]
-                    index2 = self.LM_Tessellation.sv.regions[i][j + 1]
-
-                    vert1 = self.LM_Tessellation.sv.vertices[index1]
-                    vert2 = self.LM_Tessellation.sv.vertices[index2]
+                    vert1 = tessellation.sv.vertices[index1]
+                    vert2 = tessellation.sv.vertices[index2]
 
                     plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
 
-        if plot_names:
-            self.plot_regions_names(plot)
+        #self.plot_regions_names(plot)
 
-    def plot_voronoi_regions_TS(self, plot, plot_names=False):
-        color = 'lightgray'
+    def plot_regions_names(self, plot, tessellation=None):
+        if tessellation is None:
+            tessellation = self.Tessellation
 
-        for i in range(len(self.TS_Tessellation.sv.regions)):
-            for j in range(len(self.TS_Tessellation.sv.regions[i])):
-                if j == len(self.TS_Tessellation.sv.regions[i]) - 1:
-                    index1 = self.TS_Tessellation.sv.regions[i][j]
-                    index2 = self.TS_Tessellation.sv.regions[i][0]
-
-                    vert1 = self.TS_Tessellation.sv.vertices[index1]
-                    vert2 = self.TS_Tessellation.sv.vertices[index2]
-
-                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
-                else:
-                    index1 = self.TS_Tessellation.sv.regions[i][j]
-                    index2 = self.TS_Tessellation.sv.regions[i][j + 1]
-
-                    vert1 = self.TS_Tessellation.sv.vertices[index1]
-                    vert2 = self.TS_Tessellation.sv.vertices[index2]
-
-                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
-
-        if plot_names:
-            self.plot_regions_names(plot)
-
-    # gets highest (lowest) theta of a region
-    def get_highest_theta(self, region):
-        theta_vals = []
-
-        for i in range(len(region)):
-            vert_index = region[i]
-            vert = cart2pol(self.sv.vertices[vert_index])
-
-            theta_vals.append(vert[1])
-
-        min_theta = 360
-
-        for i in range(len(theta_vals)):
-            if theta_vals[i] < min_theta:
-                min_theta = theta_vals[i]
-
-        return min_theta
-
-    def plot_regions_names(self, plot):
         for i in range(len(self.skm_name_list)):
             name = self.skm_name_list[i]
 
-            vert = cart2pol(self.Tessellation.skm.cluster_centers_[i])
+            vert = cart2pol(tessellation.skm.cluster_centers_[i])
 
             phi = vert[0]
             theta = vert[1] - 5
@@ -909,9 +809,12 @@ class Reference_Landscape():
 
             plot.ax_rect.annotate(name, xy=(phi, theta), xytext=(phi, theta),  ha="center", va="center", fontsize=8, zorder=100)
 
-    def plot_regions_coords(self, plot):
-        for i in range(len(self.Tessellation.skm.cluster_centers_)):
-            vert = cart2pol(self.Tessellation.skm.cluster_centers_[i])
+    def plot_regions_coords(self, plot, tessellation=None):
+        if tessellation is None:
+            tessellation=self.Tessellation
+
+        for i in range(len(tessellation.skm.cluster_centers_)):
+            vert = cart2pol(tessellation.skm.cluster_centers_[i])
 
             phi = vert[0]
             theta = vert[1] - 5
@@ -924,26 +827,18 @@ class Reference_Landscape():
                                   xy=(phi, theta), xytext=(phi, theta),
                                   ha="center", va="center", fontsize=5, zorder=100)
 
-    def plot_skm_centers(self, plot):
+    def plot_skm_centers(self, plot, tessellation=None):
+        if tessellation is None:
+            tessellation = self.Tessellation
+
         phi_vals = []
         theta_vals = []
 
-        for i in range(len(self.Pathways)):
-            TS_skm = self.Pathways[i].TS.closest_skm
-            LM1_skm = self.Pathways[i].LM1.closest_skm
-            LM2_skm = self.Pathways[i].LM2.closest_skm
+        for i in range(len(tessellation.skm.cluster_centers_)):
+            vert = cart2pol(tessellation.skm.cluster_centers_[i])
 
-            TS_vert = cart2pol(self.Tessellation.skm.cluster_centers_[TS_skm])
-            phi_vals.append(TS_vert[0])
-            theta_vals.append(TS_vert[1])
-
-            LM1_vert = cart2pol(self.Tessellation.skm.cluster_centers_[LM1_skm])
-            phi_vals.append(LM1_vert[0])
-            theta_vals.append(LM1_vert[1])
-
-            LM2_vert = cart2pol(self.Tessellation.skm.cluster_centers_[LM2_skm])
-            phi_vals.append(LM2_vert[0])
-            theta_vals.append(LM2_vert[1])
+            phi_vals.append(vert[0])
+            theta_vals.append(vert[1])
 
         plot.ax_rect.scatter(phi_vals, theta_vals, c='red', marker='x', s=60, zorder=10)
 
@@ -959,17 +854,14 @@ class Reference_Landscape():
 
         plot.ax_rect.scatter(phi_vals, theta_vals, c='black', marker='+', s=60, zorder=10)
 
-    def plot_tessellation(self, plot, number_clusters, n_init, max_iters):
-        self.tessellate(number_clusters, n_init, max_iters)
-        self.plot_voronoi_regions(plot, plot_names=False)
 
-    def plot_tessellation_LM(self, plot, number_clusters, n_init, max_iters):
-        self.tessellate_LM(number_clusters, n_init, max_iters)
-        self.plot_voronoi_regions_LM(plot, plot_names=False)
+    #broken
+    def plot_tessellation(self, plot, number_clusters, n_init, max_iters, tessellation=None):
+        if tessellation is None:
+            tessellation = self.Tessellation
 
-    def plot_tessellation_TS(self, plot, number_clusters, n_init, max_iters):
-        self.tessellate_TS(number_clusters, n_init, max_iters)
-        self.plot_voronoi_regions_TS(plot, plot_names=False)
+        self.tessellate(number_clusters, n_init, max_iters, tessellation)
+        self.plot_voronoi_regions(plot, plot_names=False, tessellation=tessellation)
 
     def save_tessellations(self):
         MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
@@ -1094,10 +986,16 @@ class Compare_Methods():
 
         self.pathway_groupings_init()
 
-        self.populate_skm_groupings(REFERENCE)
+        # REFERENCE data initialization
+        self.populate_ref_skm_groupings()
+        self.populate_ref_skm_groupings(self.reference_landscape.LM_Tessellation)
+        self.populate_ref_skm_groupings(self.reference_landscape.TS_Tessellation)
         self.populate_pathway_groupings(REFERENCE)
         self.populate_local_minima(REFERENCE)
-        #self.do_calcs(REFERENCE)
+        self.do_ref_calcs()
+        self.retessellate()
+        self.retessellate(self.reference_landscape.LM_Tessellation)
+        self.retessellate(self.reference_landscape.TS_Tessellation)
 
         for method in self.Method_Pathways_dict:
             self.populate_skm_groupings(method)
@@ -1108,6 +1006,72 @@ class Compare_Methods():
             #self.normalize_pathways(method)
 
         pass
+
+    # # # init # # #
+    #region
+    def retessellate(self, tessellation=None):
+        if tessellation is None:
+            tessellation = self.reference_landscape.Tessellation
+
+        centers = []
+        structures = []
+
+        for i in range(len(tessellation.skm.cluster_centers_)):
+            region_structures = []
+
+            if tessellation.type == 'both':
+                for j in range(len(self.reference_landscape.Reference_Pathways.structure_list)):
+                    structure = self.reference_landscape.Reference_Pathways.structure_list[j]
+
+                    if structure.closest_skm == i:
+                        region_structures.append(structure)
+            elif tessellation.type == 'LM':
+                for j in range(len(self.reference_landscape.Reference_Pathways.structure_list)):
+                    structure = self.reference_landscape.Reference_Pathways.structure_list[j]
+
+                    if structure.closest_skm == i and structure.type == 'LM':
+                        region_structures.append(structure)
+            elif tessellation.type == 'TS':
+                for j in range(len(self.reference_landscape.Reference_Pathways.structure_list)):
+                    structure = self.reference_landscape.Reference_Pathways.structure_list[j]
+
+                    if structure.closest_skm == i and structure.type == 'TS':
+                        region_structures.append(structure)
+
+            if len(region_structures) > 0:
+                avg_phi = 0
+                avg_theta = 0
+
+                for j in range(len(region_structures)):
+                    phi = region_structures[j].phi
+                    theta = region_structures[j].theta
+
+                    if tessellation.type == 'both':
+                        weighting = region_structures[j].weighting
+                    elif tessellation.type == 'LM':
+                        weighting = region_structures[j].LM_weighting
+                    elif tessellation.type == 'TS':
+                        weighting = region_structures[j].TS_weighting
+
+                    avg_phi += phi * weighting
+                    avg_theta += theta * weighting
+
+                centers.append(pol2cart([avg_phi, avg_theta]))
+                structures.append(Structure(phi=avg_phi, theta=avg_theta))
+
+        unbinned_cano_centers = self.reference_landscape.get_unbinned_canos(structures)
+
+        final_centers = centers + unbinned_cano_centers
+
+        number_clusters = 38
+
+        if tessellation.type == 'both':
+            self.reference_landscape.Tessellation = Tessellation(final_centers, number_clusters, 300, 300)
+        elif tessellation.type == 'LM':
+            self.reference_landscape.LM_Tessellation = Tessellation(final_centers, number_clusters, 300, 300)
+        elif tessellation.type == 'TS':
+            self.reference_landscape.TS_Tessellation = Tessellation(final_centers, number_clusters, 300, 300)
+
 
     def normalize_pathways(self, method):
         for key in self.Method_Pathways_dict[method].pathway_groupings:
@@ -1181,6 +1145,40 @@ class Compare_Methods():
         self.Method_Pathways_dict['REFERENCE'] = self.reference_landscape.Reference_Pathways
         self.Method_Pathways_dict['REFERENCE'].comp_metrics = {}
 
+    # creates a list of structures grouped by skm
+    def populate_ref_skm_groupings(self, tessellation=None):
+        if tessellation is None:
+            tessellation = self.reference_landscape.Tessellation
+
+        for i in range(len(tessellation.skm.cluster_centers_)):
+            tessellation.skm_groupings.append({})
+            tessellation.skm_groupings[i]['structures'] = []
+            structures = tessellation.skm_groupings[i]['structures']
+
+            if tessellation.type == 'both':
+                for j in range(len(self.reference_landscape.Reference_Pathways.LM_csv_list)):
+                    LM = self.reference_landscape.Reference_Pathways.LM_csv_list[j]
+
+                    if LM.closest_skm == i:
+                        structures.append(LM)
+
+                for j in range(len(self.reference_landscape.Reference_Pathways.TS_csv_list)):
+                    TS = self.reference_landscape.Reference_Pathways.TS_csv_list[j]
+
+                    if TS.closest_skm == i:
+                        structures.append(TS)
+            elif tessellation.type == 'LM':
+                for j in range(len(self.reference_landscape.Reference_Pathways.LM_csv_list)):
+                    LM = self.reference_landscape.Reference_Pathways.LM_csv_list[j]
+
+                    if LM.closest_skm == i:
+                        structures.append(LM)
+            elif tessellation.type == 'TS':
+                for j in range(len(self.reference_landscape.Reference_Pathways.TS_csv_list)):
+                    TS = self.reference_landscape.Reference_Pathways.TS_csv_list[j]
+
+                    if TS.closest_skm == i:
+                        structures.append(TS)
 
     # creates a list of structures grouped by skm
     def populate_skm_groupings(self, method):
@@ -1193,15 +1191,15 @@ class Compare_Methods():
 
             for j in range(len(self.Method_Pathways_dict[method].Pathways)):
                 TS = self.Method_Pathways_dict[method].Pathways[j].TS
-                LM1 = self.Method_Pathways_dict[method].Pathways[j].LM1
-                LM2 = self.Method_Pathways_dict[method].Pathways[j].LM2
+                #LM1 = self.Method_Pathways_dict[method].Pathways[j].LM1
+                #LM2 = self.Method_Pathways_dict[method].Pathways[j].LM2
 
                 if TS.closest_skm == i:
                     structures.append(TS)
-                if LM1.closest_skm == i:
-                    structures.append(LM1)
-                if LM2.closest_skm == i:
-                    structures.append(LM2)
+                # if LM1.closest_skm == i:
+                #     structures.append(LM1)
+                # if LM2.closest_skm == i:
+                #     structures.append(LM2)
 
             for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
                 LM = self.Method_Pathways_dict[method].LM_csv_list[j]
@@ -1329,10 +1327,111 @@ class Compare_Methods():
                     structure.comp_metrics['gibbs'] = None
                 else:
                     structure.comp_metrics['gibbs'] = structure.gibbs - ref_structure_gibbs
-
+    #endregion
 
     # # # do_calcs # # #
     # region
+    def do_ref_calcs(self):
+        for i in range(len(self.reference_landscape.Tessellation.skm_groupings)):
+            self.calc_both_weighting(i)
+
+        for i in range(len(self.reference_landscape.LM_Tessellation.skm_groupings)):
+            self.calc_LM_weighting(i)
+
+        for i in range(len(self.reference_landscape.TS_Tessellation.skm_groupings)):
+            self.calc_TS_weighting(i)
+
+    def calc_both_weighting(self, i):
+        tessellation = self.reference_landscape.Tessellation
+
+        total_boltz = 0
+
+        for j in range(len(tessellation.skm_groupings[i]['structures'])):
+            structure = tessellation.skm_groupings[i]['structures'][j]
+            e_val = structure.gibbs
+
+            component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+            structure.ind_bolts = component
+            total_boltz += component
+
+        wt_gibbs = 0
+
+        for j in range(len(tessellation.skm_groupings[i]['structures'])):
+            structure = tessellation.skm_groupings[i]['structures'][j]
+
+            if structure.ind_bolts == 0:
+                structure.weighting = 0
+                wt_gibbs += 0
+            else:
+                structure.weighting = structure.ind_bolts / total_boltz
+                wt_gibbs += structure.gibbs * structure.weighting
+
+        if len(tessellation.skm_groupings[i]['structures']) == 0:
+            tessellation.skm_groupings[i]['weighted_gibbs'] = None
+        else:
+            tessellation.skm_groupings[i]['weighted_gibbs'] = wt_gibbs
+
+    def calc_LM_weighting(self, i):
+        tessellation = self.reference_landscape.LM_Tessellation
+
+        total_boltz = 0
+
+        for j in range(len(tessellation.skm_groupings[i]['structures'])):
+            structure = tessellation.skm_groupings[i]['structures'][j]
+            e_val = structure.gibbs
+
+            component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+            structure.LM_ind_bolts = component
+            total_boltz += component
+
+        wt_gibbs = 0
+
+        for j in range(len(tessellation.skm_groupings[i]['structures'])):
+            structure = tessellation.skm_groupings[i]['structures'][j]
+
+            if structure.LM_ind_bolts == 0:
+                structure.LM_weighting = 0
+                wt_gibbs += 0
+            else:
+                structure.LM_weighting = structure.LM_ind_bolts / total_boltz
+                wt_gibbs += structure.gibbs * structure.LM_weighting
+
+        if len(tessellation.skm_groupings[i]['structures']) == 0:
+            tessellation.skm_groupings[i]['LM_weighted_gibbs'] = None
+        else:
+            tessellation.skm_groupings[i]['LM_weighted_gibbs'] = wt_gibbs
+
+    def calc_TS_weighting(self, i):
+        tessellation = self.reference_landscape.TS_Tessellation
+
+        total_boltz = 0
+
+        for j in range(len(tessellation.skm_groupings[i]['structures'])):
+            structure = tessellation.skm_groupings[i]['structures'][j]
+            e_val = structure.gibbs
+
+            component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+            structure.TS_ind_bolts = component
+            total_boltz += component
+
+        wt_gibbs = 0
+
+        for j in range(len(tessellation.skm_groupings[i]['structures'])):
+            structure = tessellation.skm_groupings[i]['structures'][j]
+
+            if structure.TS_ind_bolts == 0:
+                structure.TS_weighting = 0
+                wt_gibbs += 0
+            else:
+                structure.TS_weighting = structure.TS_ind_bolts / total_boltz
+                wt_gibbs += structure.gibbs * structure.TS_weighting
+
+        if len(tessellation.skm_groupings[i]['structures']) == 0:
+            tessellation.skm_groupings[i]['TS_weighted_gibbs'] = None
+        else:
+            tessellation.skm_groupings[i]['TS_weighted_gibbs'] = wt_gibbs
+
+
     def do_calcs(self, method):
         for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
             self.calc_weighting(method, i)
@@ -1518,7 +1617,10 @@ class Compare_Methods():
 
         return ts_artist, lm_artist
 
-    def plot_raw_data(self, plot, method, plot_IRC=True):
+    def plot_raw_data(self, plot, method, plot_IRC=True, tessellation=None):
+        if tessellation is None:
+            tessellation = self.reference_landscape.Tessellation
+
         size = 30
 
         ts_phi_vals = []
@@ -1572,10 +1674,7 @@ class Compare_Methods():
                                  marker=self.met_lm_markers_dict[method],
                                  s=size/2, zorder=10)
 
-    def save_raw_data(self, method='ALL', cluster=None, plot_IRC=True, tessellation=None):
-        if tessellation is None:
-            tessellation = self.Tessellation
-
+    def save_raw_data(self, method='ALL', cluster=None, plot_IRC=True):
         if cluster is not None:
             filename = self.molecule + '-' + method + '-raw_data-' + str(cluster)
         else:
@@ -1657,8 +1756,6 @@ class Compare_Methods():
         lm_phi_vals = []
         lm_theta_vals = []
 
-        pathways = self.Method_Pathways_dict[method].Pathways
-
         for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
             LM = self.Method_Pathways_dict[method].LM_csv_list[j]
 
@@ -1683,7 +1780,10 @@ class Compare_Methods():
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
 
-            self.reference_landscape.plot_voronoi_regions_LM(plot=plot)
+            self.reference_landscape.plot_voronoi_regions(plot=plot,
+                                                          tessellation=self.reference_landscape.LM_Tessellation)
+            self.reference_landscape.plot_skm_centers(plot=plot,
+                                                      tessellation=self.reference_landscape.LM_Tessellation)
             self.reference_landscape.plot_cano(plot=plot)
 
             artist_list = []
@@ -1770,7 +1870,10 @@ class Compare_Methods():
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
 
-            self.reference_landscape.plot_voronoi_regions_TS(plot=plot)
+            self.reference_landscape.plot_voronoi_regions(plot=plot,
+                                                          tessellation=self.reference_landscape.TS_Tessellation)
+            self.reference_landscape.plot_skm_centers(plot=plot,
+                                                      tessellation=self.reference_landscape.TS_Tessellation)
             self.reference_landscape.plot_cano(plot=plot)
 
             artist_list = []
@@ -2385,41 +2488,18 @@ class Compare_Methods():
             self.met_colors_dict[REFERENCE] = aux_color
 
 
-    def save_tessellation(self):
-        filename = self.molecule + '-tessellation'
+    def save_tessellation(self, tessellation=None):
+        if tessellation is None:
+            tessellation = self.reference_landscape.Tessellation
+
+        filename = self.molecule + '-tessellation-' + tessellation.type
         dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
 
-            self.reference_landscape.plot_voronoi_regions(plot=plot)
-            self.reference_landscape.plot_regions_names(plot=plot)
-            plot.ax_rect.set_ylim(185, -5)
-            plot.ax_rect.set_xlim(-5, 365)
-
-            plot.save(dir_=dir, filename=filename)
-
-    def save_tessellation_LM(self):
-        filename = self.molecule + '-tessellation_LM'
-        dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
-
-        if not os.path.exists(os.path.join(dir, filename + '.png')):
-            plot = Plots(rect_arg=True)
-
-            self.reference_landscape.plot_voronoi_regions_LM(plot=plot)
-            plot.ax_rect.set_ylim(185, -5)
-            plot.ax_rect.set_xlim(-5, 365)
-
-            plot.save(dir_=dir, filename=filename)
-
-    def save_tessellation_TS(self):
-        filename = self.molecule + '-tessellation_TS'
-        dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
-
-        if not os.path.exists(os.path.join(dir, filename + '.png')):
-            plot = Plots(rect_arg=True)
-
-            self.reference_landscape.plot_voronoi_regions_TS(plot=plot)
+            self.reference_landscape.plot_voronoi_regions(plot=plot, tessellation=tessellation)
+            self.reference_landscape.plot_regions_names(plot=plot, tessellation=tessellation)
             plot.ax_rect.set_ylim(185, -5)
             plot.ax_rect.set_xlim(-5, 365)
 
