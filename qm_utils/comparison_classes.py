@@ -19,9 +19,9 @@ from qm_utils.spherical_kmeans_voronoi import read_csv_to_dict, read_csv_canonic
                                                 pol2cart, cart2pol, plot_line, arc_length_calculator,\
                                                 split_in_two, is_end, get_pol_coords
 
-###################################### Directories ######################################
-#                                                                                       #
-#########################################################################################
+##################################################### Directories ######################################################
+#                                                                                                                      #
+##################################################### Directories ######################################################
 #region
 QM_1_DIR = os.path.dirname(__file__)
 
@@ -32,10 +32,13 @@ PROG_DATA_DIR = os.path.join(QM_0_DIR, 'pucker_prog_data')
 
 COMP_CLASSES_DIR = os.path.join(PROG_DATA_DIR, 'comparison_classes')
 SV_DIR = os.path.join(PROG_DATA_DIR, 'spherical_kmeans_voronoi')
+SV_MOL_DIR = os.path.join(SV_DIR, 'molecules')
 #endregion
 
-#check freq in parsing#
-
+###################################################### Constants #######################################################
+#                                                                                                                      #
+###################################################### Constants #######################################################
+#region
 NUM_CLUSTERS = 38
 REGION_THRESHOLD = 30
 DEFAULT_TEMPERATURE = 298.15
@@ -43,10 +46,11 @@ K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
 HART2KCAL = 627.509
 
 REFERENCE = 'REFERENCE'
+#endregion
 
-################################### Helper Functions#####################################
-#                                                                                       #
-#########################################################################################
+################################################### Helper Functions ###################################################
+#                                                                                                                      #
+################################################### Helper Functions ###################################################
 #region
 def is_south(pathway):
     theta_threshold = 180 - REGION_THRESHOLD
@@ -64,6 +68,12 @@ def is_north(pathway):
     lm2 = pathway.LM2.theta
 
     if pathway.TS.theta < theta_threshold or pathway.LM1.theta < theta_threshold or pathway.LM2.theta < theta_threshold:
+        return True
+    else:
+        return False
+
+def is_IRC(structure):
+    if structure.type == 'IRC':
         return True
     else:
         return False
@@ -208,27 +218,28 @@ class Plots():
     def show(self):
         plt.show()
 
-    def save(self, filename, dir_):
+    def save(self, filename, dir_, width=9, height=5):
         filename1 = create_out_fname(filename, base_dir=dir_, ext='.png')
-        self.fig.set_size_inches(9, 5)
+        self.fig.set_size_inches(width, height)
         self.fig.savefig(filename1, facecolor=self.fig.get_facecolor(), transparent=True, dpi=300, bbox_inches='tight')
 
 # # # Structures # # #
 #region
 class Structure():
-    def __init__(self, phi, theta, gibbs=None, name=None):
+    def __init__(self, phi, theta, gibbs=None, name=None, type=None):
         self.phi = phi
         self.theta = theta
         self.gibbs = gibbs
         self.name = name
+        self.type = type
 
 class Local_Minimum(Structure):
-    def __init__(self, phi, theta, gibbs=None, name=None):
-        Structure.__init__(self, phi, theta, gibbs, name)
+    def __init__(self, phi, theta, gibbs=None, name=None, type=None):
+        Structure.__init__(self, phi, theta, gibbs, name, type)
 
 class Transition_State(Structure):
-    def __init__(self, phi, theta, gibbs, name):
-        Structure.__init__(self, phi, theta, gibbs, name)
+    def __init__(self, phi, theta, gibbs, name, type=None):
+        Structure.__init__(self, phi, theta, gibbs, name, type)
 #endregion
 
 # # # Pathways # # #
@@ -240,8 +251,9 @@ class Pathway():
         self.LM2 = LM2
 
 class Method_Pathways():
-    def __init__(self, LM_csv_filename, TS_csv_filename, IRC_csv_filename, method):
+    def __init__(self, LM_csv_filename, TS_csv_filename, IRC_csv_filename, method, molecule):
         self.method = method
+        self.molecule = molecule
 
         self.parse_LM_csv(LM_csv_filename)
         self.parse_TS_csv(TS_csv_filename)
@@ -286,7 +298,7 @@ class Method_Pathways():
                 print('Local Minimum has a negative Freq 1')
                 exit(1)
 
-            self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name))
+            self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'LM'))
 
     def parse_TS_csv(self, TS_csv_filename):
         self.TS_csv_list = []
@@ -306,7 +318,7 @@ class Method_Pathways():
                 print('Transition State has a non-negative Freq 1')
                 exit(1)
 
-            self.TS_csv_list.append(Transition_State(phi, theta, gibbs, name))
+            self.TS_csv_list.append(Transition_State(phi, theta, gibbs, name, 'TS'))
 
     def parse_IRC_csv(self, IRC_csv_filename):
         self.IRC_csv_list = []
@@ -334,7 +346,16 @@ class Method_Pathways():
 
             name = pucker + '_' + direction
 
-            self.IRC_csv_list.append(Local_Minimum(phi, theta, gibbs, name))
+            self.IRC_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'IRC'))
+
+        try:
+            assert (len(self.IRC_csv_list) == len(self.TS_csv_list) * 2)
+        except AssertionError:
+            print('ERROR parsing ' + self.method + ' in ' + self.molecule)
+            print('Unmatching number of IRC to TS (2 IRCs to 1 TS)')
+            print('IRCs: ' + str(len(self.IRC_csv_list)))
+            print('TSs: ' + str(len(self.TS_csv_list)))
+            exit(1)
 
     def create_structure_list(self):
         self.structure_list = []
@@ -342,17 +363,17 @@ class Method_Pathways():
         for i in range(len(self.TS_csv_list)):
             self.structure_list.append(self.TS_csv_list[i])
 
-        for i in range(len(self.IRC_csv_list)):
-            self.structure_list.append(self.IRC_csv_list[i])
-
         for i in range(len(self.LM_csv_list)):
             self.structure_list.append(self.LM_csv_list[i])
 
     def normalize_energies(self):
-        self.min_gibbs = self.structure_list[0].gibbs
+        self.min_gibbs = 100
 
         for i in range(len(self.structure_list)):
-            curr_gibbs = self.structure_list[i].gibbs
+            if not is_IRC(self.structure_list[i]):
+                curr_gibbs = self.structure_list[i].gibbs
+            else:
+                curr_gibbs = 100
 
             if curr_gibbs < self.min_gibbs:
                 self.min_gibbs = curr_gibbs
@@ -360,6 +381,17 @@ class Method_Pathways():
         for i in range(len(self.structure_list)):
             self.structure_list[i].gibbs -= self.min_gibbs
             self.structure_list[i].gibbs *= HART2KCAL
+
+        self.max_gibbs = self.min_gibbs
+
+        for i in range(len(self.structure_list)):
+            if not is_IRC(self.structure_list[i]):
+                curr_gibbs = self.structure_list[i].gibbs
+            else:
+                curr_gibbs = 0
+
+            if curr_gibbs > self.max_gibbs:
+                self.max_gibbs = curr_gibbs
 
     def create_Pathways(self):
         self.Pathways = []
@@ -390,6 +422,7 @@ class Reference_Pathways():
 
         self.create_structure_list()
 
+    # outdated
     def check_energies(self):
         for i in range(len(self.Pathways)):
             TS_gibbs = self.Pathways[i].TS.gibbs
@@ -400,9 +433,9 @@ class Reference_Pathways():
                 assert(TS_gibbs > LM1_gibbs and TS_gibbs > LM2_gibbs)
             except AssertionError:
                 print('TS energy not greater than both LMs')
-                print('TS.gibbs = ' + TS_gibbs)
-                print('LM1.gibbs = ' + LM1_gibbs)
-                print('LM2.gibbs = ' + LM2_gibbs)
+                print('TS.gibbs = ' + str(TS_gibbs))
+                print('LM1.gibbs = ' + str(LM1_gibbs))
+                print('LM2.gibbs = ' + str(LM2_gibbs))
         pass
 
     def parse_LM_csv(self, LM_csv_filename):
@@ -417,10 +450,11 @@ class Reference_Pathways():
             gibbs = float(info['G298 (Hartrees)'])
             name = info['Pucker']
 
-            self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name))
+            self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'LM'))
 
     def parse_TS_csv(self, TS_csv_filename):
         TS_csv_dict = read_csv_to_dict(TS_csv_filename, mode='r')
+        self.TS_csv_list = []
 
         self.Pathways = []
 
@@ -442,12 +476,15 @@ class Reference_Pathways():
                 print('Transition State has a non-negative Freq 1')
                 exit(1)
 
-            TS = Transition_State(phi, theta, gibbs, name)
+            TS = Transition_State(phi, theta, gibbs, name, 'TS')
             LM1 = Local_Minimum(phi=phi_lm1,
-                                theta=theta_lm1)
+                                theta=theta_lm1,
+                                type='IRC')
             LM2 = Local_Minimum(phi=phi_lm2,
-                                theta=theta_lm2)
+                                theta=theta_lm2,
+                                type='IRC')
 
+            self.TS_csv_list.append(TS)
             self.Pathways.append(Pathway(TS, LM1, LM2))
 
     def create_structure_list(self):
@@ -474,126 +511,23 @@ class Reference_Pathways():
 
         for i in range(len(self.Pathways)):
             TS = self.Pathways[i].TS
-            LM1 = self.Pathways[i].LM1
-            LM2 = self.Pathways[i].LM2
 
             TS.gibbs -= self.min_gibbs
             TS.gibbs *= HART2KCAL
 
-            LM1.gibbs -= self.min_gibbs
-            LM1.gibbs *= HART2KCAL
+        self.max_gibbs = self.min_gibbs
 
-            LM2.gibbs -= self.min_gibbs
-            LM2.gibbs *= HART2KCAL
+        for i in range(len(self.structure_list)):
+            curr_gibbs = self.structure_list[i].gibbs
+
+            if curr_gibbs > self.max_gibbs:
+                self.max_gibbs = curr_gibbs
 #endregion
 
-class Reference_Landscape():
-    # # # Init # # #
-    #region
-    def __init__(self, LM_csv_filename, TS_csv_filename):
-        self.method = 'REFERENCE'
-
-        self.Reference_Pathways = Reference_Pathways(LM_csv_filename, TS_csv_filename)
-
-        self.Pathways = self.Reference_Pathways.Pathways
-        self.Local_Minima = self.Reference_Pathways.LM_csv_list
-        self.Reference_Structures = self.get_Reference_Structures()
-
-        self.canonical_designations = read_csv_canonical_designations('CP_params.csv', SV_DIR)
-        self.reorg_canonical()
-        self.populate_unbinned_canos()
-
-        self.tessellate(NUM_CLUSTERS)
-        self.assign_region_names()
-        self.assign_skm_labels()
-
-        self.placeholder_IRC_energies()
-        self.Reference_Pathways.normalize_energies()
-        self.Reference_Pathways.check_energies()
-
-    def get_avg_LM_energy(self, LM):
-        energy = 0
-        num_points = 0
-
-        for j in range(len(self.Local_Minima)):
-            if self.Local_Minima[j].closest_skm == LM.closest_skm:
-                energy += self.Local_Minima[j].gibbs
-                num_points += 1
-
-        avg_energy = energy / num_points
-
-        LM.gibbs = avg_energy
-
-    def placeholder_IRC_energies(self):
-        for i in range(len(self.Reference_Pathways.Pathways)):
-            LM1 = self.Reference_Pathways.Pathways[i].LM1
-            LM2 = self.Reference_Pathways.Pathways[i].LM2
-
-            self.get_avg_LM_energy(LM1)
-            self.get_avg_LM_energy(LM2)
-
-
-    def get_Reference_Structures(self):
-        structures_list = []
-
-        for i in range(len(self.Pathways)):
-            structures_list.append(self.Pathways[i].TS)
-            structures_list.append(self.Pathways[i].LM1)
-            structures_list.append(self.Pathways[i].LM2)
-
-        for i in range(len(self.Local_Minima)):
-            structures_list.append(self.Local_Minima[i])
-
-        return structures_list
-
-    def reorg_canonical(self):
-        aux_list = []
-
-        for i in range(len(self.canonical_designations['pucker'])):
-            name = self.canonical_designations['pucker'][i]
-            phi = float(self.canonical_designations['phi_cano'][i])
-            theta = float(self.canonical_designations['theta_cano'][i])
-
-            aux_list.append(Structure(phi=phi,
-                                      theta=theta,
-                                      name=name))
-
-        self.canonical_designations = aux_list
-
-    def populate_unbinned_canos(self):
-        self.unbinned_canos = []
-
-        for i in range(len(self.canonical_designations)):
-            unbinned = True
-
-            for j in range(len(self.Reference_Structures)):
-                structure = self.Reference_Structures[j]
-
-                if self.get_closest_cano(structure.phi, structure.theta) == self.canonical_designations[i].name:
-                    unbinned = False
-
-            if unbinned:
-                self.unbinned_canos.append(self.canonical_designations[i])
-
-    def tessellate(self, number_clusters):
-        centers = []
-
-        # populate all centers to be used in voronoi tessellation
-        for i in range(len(self.Reference_Structures)):
-            structure = self.Reference_Structures[i]
-            center = pol2cart([structure.phi, structure.theta])
-
-            centers.append(center)
-
-        for i in range(len(self.unbinned_canos)):
-            structure = self.unbinned_canos[i]
-
-            center = pol2cart([float(structure.phi), float(structure.theta)])
-
-            centers.append(center)
-
+class Tessellation():
+    def __init__(self, centers, number_clusters, n_init, max_iter):
         # Uses packages to calculate the k-means spherical centers
-        self.skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=30)
+        self.skm = SphericalKMeans(n_clusters=number_clusters, init='k-means++', n_init=n_init, max_iter=max_iter)
         self.skm.fit(centers)
         skm_centers = self.skm.cluster_centers_
 
@@ -630,6 +564,85 @@ class Reference_Landscape():
 
             passnum = passnum - 1
 
+
+class Reference_Landscape():
+    # # # Init # # #
+    #region
+    def __init__(self, LM_csv_filename, TS_csv_filename, molecule, skm_params):
+        self.method = 'REFERENCE'
+        self.molecule = molecule
+
+        self.Reference_Pathways = Reference_Pathways(LM_csv_filename, TS_csv_filename)
+
+        self.Pathways = self.Reference_Pathways.Pathways
+        self.Local_Minima = self.Reference_Pathways.LM_csv_list
+
+        self.canonical_designations = read_csv_canonical_designations('CP_params.csv', SV_DIR)
+        self.reorg_canonical()
+
+        self.tessellate(skm_params[0], skm_params[1], skm_params[2])
+        self.tessellate_LM(skm_params[0], skm_params[1], skm_params[2])
+        self.tessellate_TS(skm_params[0], skm_params[1], skm_params[2])
+
+        self.assign_region_names()
+        self.assign_skm_labels()
+
+        self.retessellate()
+
+        self.Reference_Pathways.normalize_energies()
+
+    def retessellate(self):
+        centers = []
+        structures = []
+
+        for i in range(len(self.Tessellation.skm.cluster_centers_)):
+            region_structures = []
+
+            for j in range(len(self.Reference_Pathways.structure_list)):
+                structure = self.Reference_Pathways.structure_list[j]
+
+                if structure.closest_skm == i:
+                    region_structures.append(structure)
+
+            if len(region_structures) > 0:
+                avg_phi = 0
+                avg_theta = 0
+
+                for j in range(len(region_structures)):
+                    phi = region_structures[j].phi
+                    theta = region_structures[j].theta
+
+                    avg_phi += phi
+                    avg_theta += theta
+
+                avg_phi /= len(region_structures)
+                avg_theta /= len(region_structures)
+
+                centers.append(pol2cart([avg_phi, avg_theta]))
+                structures.append(Structure(phi=avg_phi, theta=avg_theta))
+
+        unbinned_cano_centers = self.get_unbinned_canos(structures)
+
+        final_centers = centers + unbinned_cano_centers
+
+        self.Tessellation = Tessellation(final_centers, 38, 1000, 1000)
+
+        pass
+
+    def reorg_canonical(self):
+        aux_list = []
+
+        for i in range(len(self.canonical_designations['pucker'])):
+            name = self.canonical_designations['pucker'][i]
+            phi = float(self.canonical_designations['phi_cano'][i])
+            theta = float(self.canonical_designations['theta_cano'][i])
+
+            aux_list.append(Structure(phi=phi,
+                                      theta=theta,
+                                      name=name))
+
+        self.canonical_designations = aux_list
+
     def get_closest_cano(self, phi, theta):
         min_dist = 100
 
@@ -646,11 +659,100 @@ class Reference_Landscape():
 
         return name
 
+    def get_unbinned_canos(self, structures=None):
+        if structures == None:
+            structures = self.Reference_Pathways.structure_list
+
+        unbinned_canos = []
+
+        for i in range(len(self.canonical_designations)):
+            unbinned = True
+
+            for j in range(len(structures)):
+                structure = structures[j]
+
+                if self.get_closest_cano(structure.phi, structure.theta) == self.canonical_designations[i].name:
+                    unbinned = False
+
+            if unbinned:
+                unbinned_canos.append(pol2cart([self.canonical_designations[i].phi, self.canonical_designations[i].theta]))
+
+        return unbinned_canos
+
+    def tessellate(self, number_clusters=38, n_init=30, max_iter=300):
+        centers = self.get_unbinned_canos()
+
+        centers = []
+        for i in range(len(self.canonical_designations)):
+            phi = self.canonical_designations[i].phi
+            theta = self.canonical_designations[i].theta
+            centers.append(pol2cart([phi, theta]))
+
+        # populate all centers to be used in voronoi tessellation
+        for i in range(len(self.Reference_Pathways.structure_list)):
+            structure = self.Reference_Pathways.structure_list[i]
+            center = pol2cart([structure.phi, structure.theta])
+
+            centers.append(center)
+
+        self.Tessellation = Tessellation(centers, number_clusters, n_init, max_iter)
+
+    def tessellate_LM(self, number_clusters=38, n_init=30, max_iter=300):
+        centers = self.get_unbinned_canos(self.Reference_Pathways.LM_csv_list)
+
+        centers = []
+        for i in range(len(self.canonical_designations)):
+            phi = self.canonical_designations[i].phi
+            theta = self.canonical_designations[i].theta
+            centers.append(pol2cart([phi, theta]))
+
+        # populate all centers to be used in voronoi tessellation
+        for i in range(len(self.Reference_Pathways.LM_csv_list)):
+            structure = self.Reference_Pathways.LM_csv_list[i]
+            center = pol2cart([structure.phi, structure.theta])
+
+            centers.append(center)
+
+        self.LM_Tessellation = Tessellation(centers, number_clusters, n_init, max_iter)
+
+    def tessellate_TS(self, number_clusters=38, n_init=30, max_iter=300):
+        centers = self.get_unbinned_canos(self.Reference_Pathways.TS_csv_list)
+
+        centers = []
+        for i in range(len(self.canonical_designations)):
+            phi = self.canonical_designations[i].phi
+            theta = self.canonical_designations[i].theta
+            centers.append(pol2cart([phi, theta]))
+
+        # populate all centers to be used in voronoi tessellation
+        for i in range(len(self.Reference_Pathways.TS_csv_list)):
+            structure = self.Reference_Pathways.TS_csv_list[i]
+            center = pol2cart([structure.phi, structure.theta])
+
+            centers.append(center)
+
+        self.TS_Tessellation = Tessellation(centers, number_clusters, n_init, max_iter)
+
+
+    def check_for_dup_names(self, i):
+        name = self.skm_name_list[i]
+        name_list = [i]
+
+        for j in range(len(self.skm_name_list)):
+            curr_name = self.skm_name_list[j]
+
+            if curr_name == name and i != j:
+                name_list.append(j)
+
+        if len(name_list) > 1:
+            for j in range(len(name_list)):
+                self.skm_name_list[name_list[j]] = name + '_' + str(j)
+
     def assign_region_names(self):
         self.skm_name_list = []
 
-        for i in range(len(self.skm.cluster_centers_)):
-            vert = cart2pol(self.skm.cluster_centers_[i])
+        for i in range(len(self.Tessellation.skm.cluster_centers_)):
+            vert = cart2pol(self.Tessellation.skm.cluster_centers_[i])
 
             phi = vert[0]
             theta = vert[1]
@@ -658,6 +760,9 @@ class Reference_Landscape():
             name = self.get_closest_cano(phi, theta)
 
             self.skm_name_list.append(name)
+
+        for i in range(len(self.skm_name_list)):
+            self.check_for_dup_names(i)
 
     def assign_skm_labels(self):
         for i in range(len(self.Pathways)):
@@ -678,8 +783,8 @@ class Reference_Landscape():
         phi1 = structure.phi
         theta1 = structure.theta
 
-        for i in range(len(self.skm.cluster_centers_)):
-            center = cart2pol(self.skm.cluster_centers_[i])
+        for i in range(len(self.Tessellation.skm.cluster_centers_)):
+            center = cart2pol(self.Tessellation.skm.cluster_centers_[i])
 
             phi2 = center[0]
             theta2 = center[1]
@@ -696,29 +801,80 @@ class Reference_Landscape():
 
     # # # Plotting # # #
     #region
-    def plot_voronoi_regions(self, plot):
+    def plot_voronoi_regions(self, plot, plot_names=True):
         color = 'lightgray'
 
-        for i in range(len(self.sv.regions)):
-            for j in range(len(self.sv.regions[i])):
-                if j == len(self.sv.regions[i]) - 1:
-                    index1 = self.sv.regions[i][j]
-                    index2 = self.sv.regions[i][0]
+        for i in range(len(self.Tessellation.sv.regions)):
+            for j in range(len(self.Tessellation.sv.regions[i])):
+                if j == len(self.Tessellation.sv.regions[i]) - 1:
+                    index1 = self.Tessellation.sv.regions[i][j]
+                    index2 = self.Tessellation.sv.regions[i][0]
 
-                    vert1 = self.sv.vertices[index1]
-                    vert2 = self.sv.vertices[index2]
+                    vert1 = self.Tessellation.sv.vertices[index1]
+                    vert2 = self.Tessellation.sv.vertices[index2]
 
-                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color)
+                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
                 else:
-                    index1 = self.sv.regions[i][j]
-                    index2 = self.sv.regions[i][j + 1]
+                    index1 = self.Tessellation.sv.regions[i][j]
+                    index2 = self.Tessellation.sv.regions[i][j + 1]
 
-                    vert1 = self.sv.vertices[index1]
-                    vert2 = self.sv.vertices[index2]
+                    vert1 = self.Tessellation.sv.vertices[index1]
+                    vert2 = self.Tessellation.sv.vertices[index2]
 
-                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color)
+                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
 
-        self.plot_regions_names(plot)
+        if plot_names:
+            self.plot_regions_names(plot)
+
+    def plot_voronoi_regions_LM(self, plot, plot_names=False):
+        color = 'lightgray'
+
+        for i in range(len(self.LM_Tessellation.sv.regions)):
+            for j in range(len(self.LM_Tessellation.sv.regions[i])):
+                if j == len(self.LM_Tessellation.sv.regions[i]) - 1:
+                    index1 = self.LM_Tessellation.sv.regions[i][j]
+                    index2 = self.LM_Tessellation.sv.regions[i][0]
+
+                    vert1 = self.LM_Tessellation.sv.vertices[index1]
+                    vert2 = self.LM_Tessellation.sv.vertices[index2]
+
+                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
+                else:
+                    index1 = self.LM_Tessellation.sv.regions[i][j]
+                    index2 = self.LM_Tessellation.sv.regions[i][j + 1]
+
+                    vert1 = self.LM_Tessellation.sv.vertices[index1]
+                    vert2 = self.LM_Tessellation.sv.vertices[index2]
+
+                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
+
+        if plot_names:
+            self.plot_regions_names(plot)
+
+    def plot_voronoi_regions_TS(self, plot, plot_names=False):
+        color = 'lightgray'
+
+        for i in range(len(self.TS_Tessellation.sv.regions)):
+            for j in range(len(self.TS_Tessellation.sv.regions[i])):
+                if j == len(self.TS_Tessellation.sv.regions[i]) - 1:
+                    index1 = self.TS_Tessellation.sv.regions[i][j]
+                    index2 = self.TS_Tessellation.sv.regions[i][0]
+
+                    vert1 = self.TS_Tessellation.sv.vertices[index1]
+                    vert2 = self.TS_Tessellation.sv.vertices[index2]
+
+                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
+                else:
+                    index1 = self.TS_Tessellation.sv.regions[i][j]
+                    index2 = self.TS_Tessellation.sv.regions[i][j + 1]
+
+                    vert1 = self.TS_Tessellation.sv.vertices[index1]
+                    vert2 = self.TS_Tessellation.sv.vertices[index2]
+
+                    plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
+
+        if plot_names:
+            self.plot_regions_names(plot)
 
     # gets highest (lowest) theta of a region
     def get_highest_theta(self, region):
@@ -742,16 +898,31 @@ class Reference_Landscape():
         for i in range(len(self.skm_name_list)):
             name = self.skm_name_list[i]
 
-            region = self.sv.regions[i]
+            vert = cart2pol(self.Tessellation.skm.cluster_centers_[i])
 
-            theta = self.get_highest_theta(region) + 7
-            phi = cart2pol(self.skm.cluster_centers_[i])[0] - 5
+            phi = vert[0]
+            theta = vert[1] - 5
 
             if i == 0:
                 theta = 20
                 phi = 180
 
-            plot.ax_rect.annotate(name, xy=(phi, theta), xytext=(phi, theta), fontsize=8)
+            plot.ax_rect.annotate(name, xy=(phi, theta), xytext=(phi, theta),  ha="center", va="center", fontsize=8, zorder=100)
+
+    def plot_regions_coords(self, plot):
+        for i in range(len(self.Tessellation.skm.cluster_centers_)):
+            vert = cart2pol(self.Tessellation.skm.cluster_centers_[i])
+
+            phi = vert[0]
+            theta = vert[1] - 5
+
+            if i == 0:
+                theta = 20
+                phi = 180
+
+            plot.ax_rect.annotate(str(round(phi,1)) + '\n' + str(round(theta,1)),
+                                  xy=(phi, theta), xytext=(phi, theta),
+                                  ha="center", va="center", fontsize=5, zorder=100)
 
     def plot_skm_centers(self, plot):
         phi_vals = []
@@ -762,19 +933,19 @@ class Reference_Landscape():
             LM1_skm = self.Pathways[i].LM1.closest_skm
             LM2_skm = self.Pathways[i].LM2.closest_skm
 
-            TS_vert = cart2pol(self.skm.cluster_centers_[TS_skm])
+            TS_vert = cart2pol(self.Tessellation.skm.cluster_centers_[TS_skm])
             phi_vals.append(TS_vert[0])
             theta_vals.append(TS_vert[1])
 
-            LM1_vert = cart2pol(self.skm.cluster_centers_[LM1_skm])
+            LM1_vert = cart2pol(self.Tessellation.skm.cluster_centers_[LM1_skm])
             phi_vals.append(LM1_vert[0])
             theta_vals.append(LM1_vert[1])
 
-            LM2_vert = cart2pol(self.skm.cluster_centers_[LM2_skm])
+            LM2_vert = cart2pol(self.Tessellation.skm.cluster_centers_[LM2_skm])
             phi_vals.append(LM2_vert[0])
             theta_vals.append(LM2_vert[1])
 
-        plot.ax_rect.scatter(phi_vals, theta_vals, c='red', marker='x', s=60)
+        plot.ax_rect.scatter(phi_vals, theta_vals, c='red', marker='x', s=60, zorder=10)
 
     def plot_cano(self, plot):
         phi_vals = []
@@ -786,7 +957,111 @@ class Reference_Landscape():
             phi_vals.append(cano.phi)
             theta_vals.append(cano.theta)
 
-        plot.ax_rect.scatter(phi_vals, theta_vals, c='black', marker='+', s=60)
+        plot.ax_rect.scatter(phi_vals, theta_vals, c='black', marker='+', s=60, zorder=10)
+
+    def plot_tessellation(self, plot, number_clusters, n_init, max_iters):
+        self.tessellate(number_clusters, n_init, max_iters)
+        self.plot_voronoi_regions(plot, plot_names=False)
+
+    def plot_tessellation_LM(self, plot, number_clusters, n_init, max_iters):
+        self.tessellate_LM(number_clusters, n_init, max_iters)
+        self.plot_voronoi_regions_LM(plot, plot_names=False)
+
+    def plot_tessellation_TS(self, plot, number_clusters, n_init, max_iters):
+        self.tessellate_TS(number_clusters, n_init, max_iters)
+        self.plot_voronoi_regions_TS(plot, plot_names=False)
+
+    def save_tessellations(self):
+        MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
+        dir = make_dir(os.path.join(MOL_SAVE_DIR, 'clustering'))
+        number_clusters = 38
+
+        n_init = 2000
+        max_iters = 2000
+
+        for i in range(10):
+            filename = str(number_clusters) + 'c' + str(n_init) + 's' + str(max_iters) + 'i'
+
+            if not os.path.exists(os.path.join(dir, filename + '.png')):
+                plot = Plots(rect_arg=True)
+
+                self.plot_tessellation(plot=plot,
+                                       number_clusters=number_clusters,
+                                       n_init=n_init,
+                                       max_iters=max_iters)
+
+                plot.ax_rect.set_ylim(185, -5)
+                plot.ax_rect.set_xlim(-5, 365)
+                plot.ax_rect.set_title(str(number_clusters) + ' clusters, '  + str(n_init) + ' seeds, ' + str(max_iters) + ' iterations',
+                                       loc='left', fontsize=12)
+
+                plot.ax_rect.set_xlabel('Phi (degrees)')
+                plot.ax_rect.set_ylabel('Theta (degrees)')
+                plot.save(dir_=dir, filename=filename)
+
+            n_init += 200
+
+    def save_tessellations_LM(self):
+        MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
+        dir = make_dir(os.path.join(MOL_SAVE_DIR, 'clustering'))
+        number_clusters = 35
+
+        n_init = 1200
+        max_iters = 300
+
+        for i in range(10):
+            filename = str(number_clusters) + 'c' + str(n_init) + 's' + str(max_iters) + 'i-' + str(i) + '-LM'
+
+            if not os.path.exists(os.path.join(dir, filename + '.png')):
+                plot = Plots(rect_arg=True)
+
+                self.plot_tessellation_LM(plot=plot,
+                                       number_clusters=number_clusters,
+                                       n_init=n_init,
+                                       max_iters=max_iters)
+
+                plot.ax_rect.set_ylim(185, -5)
+                plot.ax_rect.set_xlim(-5, 365)
+                plot.ax_rect.set_title(
+                    str(number_clusters) + ' clusters, ' + str(n_init) + ' seeds, ' + str(max_iters) + ' iterations',
+                    loc='left', fontsize=12)
+
+                plot.ax_rect.set_xlabel('Phi (degrees)')
+                plot.ax_rect.set_ylabel('Theta (degrees)')
+                plot.save(dir_=dir, filename=filename)
+
+            number_clusters += 1
+
+    def save_tessellations_TS(self):
+        MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
+        dir = make_dir(os.path.join(MOL_SAVE_DIR, 'clustering'))
+        number_clusters = 35
+
+        n_init = 1200
+        max_iters = 300
+
+        for i in range(10):
+            filename = str(number_clusters) + 'c' + str(n_init) + 's' + str(max_iters) + 'i-' + str(i) + '-TS'
+
+            if not os.path.exists(os.path.join(dir, filename + '.png')):
+                plot = Plots(rect_arg=True)
+
+                self.plot_tessellation_TS(plot=plot,
+                                          number_clusters=number_clusters,
+                                          n_init=n_init,
+                                          max_iters=max_iters)
+
+                plot.ax_rect.set_ylim(185, -5)
+                plot.ax_rect.set_xlim(-5, 365)
+                plot.ax_rect.set_title(
+                    str(number_clusters) + ' clusters, ' + str(n_init) + ' seeds, ' + str(max_iters) + ' iterations',
+                    loc='left', fontsize=12)
+
+                plot.ax_rect.set_xlabel('Phi (degrees)')
+                plot.ax_rect.set_ylabel('Theta (degrees)')
+                plot.save(dir_=dir, filename=filename)
+
+            number_clusters += 1
     #endregion
 
     pass
@@ -794,18 +1069,27 @@ class Reference_Landscape():
 class Compare_Methods():
     # # # Init # # #
     #region
-    def __init__(self, molecule):
+    def __init__(self,
+                 molecule,
+                 skm_params,
+                 met_colors_dict,
+                 met_ts_markers_dict,
+                 met_lm_markers_dict):
+
         self.molecule = molecule
         self.dir_init()
 
-        self.reference_landscape_init()
+        self.reference_landscape_init(skm_params)
 
         self.Method_Pathways_dict = {}
         self.Method_Pathways_init()
 
         self.assign_structure_names()
 
-        self.assign_met_colors_and_markers()
+        self.met_colors_dict = met_colors_dict
+        self.met_ts_markers_dict = met_ts_markers_dict
+        self.met_lm_markers_dict = met_lm_markers_dict
+
         self.assign_skm_labels()
 
         self.pathway_groupings_init()
@@ -813,41 +1097,43 @@ class Compare_Methods():
         self.populate_skm_groupings(REFERENCE)
         self.populate_pathway_groupings(REFERENCE)
         self.populate_local_minima(REFERENCE)
-        self.do_calcs(REFERENCE)
+        #self.do_calcs(REFERENCE)
 
         for method in self.Method_Pathways_dict:
             self.populate_skm_groupings(method)
             self.populate_pathway_groupings(method)
             self.populate_local_minima(method)
-            self.do_calcs(method)
+            #self.do_calcs(method)
 
-            self.normalize_pathways(method)
+            #self.normalize_pathways(method)
 
         pass
 
     def normalize_pathways(self, method):
         for key in self.Method_Pathways_dict[method].pathway_groupings:
-            ref_pathways = len(self.Method_Pathways_dict[REFERENCE].pathway_groupings[key]['pathways'])
             met_pathways = len(self.Method_Pathways_dict[method].pathway_groupings[key]['pathways'])
 
-            self.Method_Pathways_dict[method].pathway_groupings[key]['norm_pathways'] = np.abs(met_pathways - ref_pathways)
+            if met_pathways > 0:
+                self.Method_Pathways_dict[method].pathway_groupings[key]['norm_pathways'] = 1
+            else:
+                self.Method_Pathways_dict[method].pathway_groupings[key]['norm_pathways'] = 0
 
     def normalize_comp_metrics(self, method, comp_key):
         for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
             ref_metric = self.Method_Pathways_dict[REFERENCE].skm_groupings[i][comp_key + '_group_WRMSD']
             met_metric = self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_group_WRMSD']
 
-            if ref_metric != 'n/a' and met_metric != 'n/a':
+            if ref_metric != None and met_metric != None:
                 if ref_metric == 0:
                     self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_norm_group_WRMSD'] = met_metric
                 else:
                     self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_norm_group_WRMSD'] = met_metric / ref_metric
             else:
-                self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_norm_group_WRMSD'] = 'n/a'
+                self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_norm_group_WRMSD'] = None
 
 
     def dir_init(self):
-        self.MOL_DATA_DIR = make_dir(os.path.join(SV_DIR, self.molecule))
+        self.MOL_DATA_DIR = make_dir(os.path.join(SV_MOL_DIR, self.molecule))
         self.MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
 
         self.IRC_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'IRC'))
@@ -856,12 +1142,14 @@ class Compare_Methods():
 
         self.IRC_DATA_dir_list = os.listdir(os.path.join(self.MOL_DATA_DIR, 'IRC'))
 
-    def reference_landscape_init(self):
-        ref_LM_csv_filename = os.path.join(self.MOL_DATA_DIR, 'z_oxane_LM-b3lyp_howsugarspucker.csv')
-        ref_TS_csv_filename = os.path.join(self.MOL_DATA_DIR, 'z_oxane_TS-b3lyp_howsugarspucker.csv')
+    def reference_landscape_init(self, skm_params):
+        ref_LM_csv_filename = os.path.join(self.MOL_DATA_DIR, 'z_' + self.molecule + '_LM-b3lyp_howsugarspucker.csv')
+        ref_TS_csv_filename = os.path.join(self.MOL_DATA_DIR, 'z_' + self.molecule + '_TS-b3lyp_howsugarspucker.csv')
 
         self.reference_landscape = Reference_Landscape(LM_csv_filename=ref_LM_csv_filename,
-                                                       TS_csv_filename=ref_TS_csv_filename)
+                                                       TS_csv_filename=ref_TS_csv_filename,
+                                                       molecule=self.molecule,
+                                                       skm_params=skm_params)
 
     def assign_structure_names(self):
         for method in self.Method_Pathways_dict:
@@ -878,14 +1166,15 @@ class Compare_Methods():
         for i in range(len(self.IRC_DATA_dir_list)):
             method = self.IRC_DATA_dir_list[i].split('-')[3].split('.')[0]
 
-            IRC_csv_filename = os.path.join(self.IRC_DATA_DIR, 'z_dataset-oxane-IRC-' + method + '.csv')
-            LM_csv_filename = os.path.join(self.LM_DATA_DIR, 'z_dataset-oxane-LM-' + method + '.csv')
-            TS_csv_filename = os.path.join(self.TS_DATA_DIR, 'z_dataset-oxane-TS-' + method + '.csv')
+            IRC_csv_filename = os.path.join(self.IRC_DATA_DIR, 'z_dataset-' + self.molecule + '-IRC-' + method + '.csv')
+            LM_csv_filename = os.path.join(self.LM_DATA_DIR, 'z_dataset-' + self.molecule + '-LM-' + method + '.csv')
+            TS_csv_filename = os.path.join(self.TS_DATA_DIR, 'z_dataset-' + self.molecule + '-TS-' + method + '.csv')
 
             self.Method_Pathways_dict[method] = (Method_Pathways(LM_csv_filename=LM_csv_filename,
-                                                             TS_csv_filename=TS_csv_filename,
-                                                             IRC_csv_filename=IRC_csv_filename,
-                                                             method=method.upper()))
+                                                                 TS_csv_filename=TS_csv_filename,
+                                                                 IRC_csv_filename=IRC_csv_filename,
+                                                                 method=method.upper(),
+                                                                 molecule=self.molecule))
 
             self.Method_Pathways_dict[method].comp_metrics = {}
 
@@ -897,7 +1186,7 @@ class Compare_Methods():
     def populate_skm_groupings(self, method):
         self.Method_Pathways_dict[method].skm_groupings = []
 
-        for i in range(len(self.reference_landscape.skm.cluster_centers_)):
+        for i in range(len(self.reference_landscape.Tessellation.skm.cluster_centers_)):
             self.Method_Pathways_dict[method].skm_groupings.append({})
             self.Method_Pathways_dict[method].skm_groupings[i]['structures'] = []
             structures = self.Method_Pathways_dict[method].skm_groupings[i]['structures']
@@ -1014,8 +1303,8 @@ class Compare_Methods():
         phi1 = structure.phi
         theta1 = structure.theta
 
-        for i in range(len(self.reference_landscape.skm.cluster_centers_)):
-            center = cart2pol(self.reference_landscape.skm.cluster_centers_[i])
+        for i in range(len(self.reference_landscape.Tessellation.skm.cluster_centers_)):
+            center = cart2pol(self.reference_landscape.Tessellation.skm.cluster_centers_[i])
 
             phi2 = center[0]
             theta2 = center[1]
@@ -1036,33 +1325,13 @@ class Compare_Methods():
                 structure = self.Method_Pathways_dict[method].skm_groupings[i]['structures'][j]
                 ref_structure_gibbs = self.Method_Pathways_dict[REFERENCE].skm_groupings[i]['weighted_gibbs']
 
-                structure.comp_metrics['gibbs'] = structure.gibbs - ref_structure_gibbs
+                if ref_structure_gibbs == None:
+                    structure.comp_metrics['gibbs'] = None
+                else:
+                    structure.comp_metrics['gibbs'] = structure.gibbs - ref_structure_gibbs
 
 
-    def assign_met_colors_and_markers(self):
-        cmap = plt.get_cmap('Vega20')
-        # allows for incrementing over 20 colors
-        increment = 0.0524
-        seed_num = 0
-        i = 0
-
-        self.met_colors_dict = {}
-        self.met_ts_markers_dict = {}
-        self.met_lm_markers_dict = {}
-
-        for method in self.Method_Pathways_dict:
-            color = cmap(seed_num)
-            seed_num += increment
-            self.met_colors_dict[method] = color
-
-            ts_marker = mpl.markers.MarkerStyle.filled_markers[i]
-            lm_marker = mpl.markers.MarkerStyle.filled_markers[i]
-            i += 1
-            self.met_ts_markers_dict[method] = ts_marker
-            self.met_lm_markers_dict[method] = lm_marker
-
-
-    # # # do_calc # # #
+    # # # do_calcs # # #
     # region
     def do_calcs(self, method):
         for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
@@ -1123,7 +1392,10 @@ class Compare_Methods():
                 structure.weighting = structure.ind_bolts / total_boltz
                 wt_gibbs += structure.gibbs * structure.weighting
 
-        self.Method_Pathways_dict[method].skm_groupings[i]['weighted_gibbs'] = wt_gibbs
+        if len(self.Method_Pathways_dict[method].skm_groupings[i]['structures']) == 0:
+            self.Method_Pathways_dict[method].skm_groupings[i]['weighted_gibbs'] = None
+        else:
+            self.Method_Pathways_dict[method].skm_groupings[i]['weighted_gibbs'] = wt_gibbs
 
     def calc_WSS(self, method, i, comp_key):
         WSS = 0
@@ -1132,15 +1404,19 @@ class Compare_Methods():
             structure = self.Method_Pathways_dict[method].skm_groupings[i]['structures'][j]
 
             comp_val = structure.comp_metrics[comp_key]
-            WSS += comp_val ** 2
+            if comp_val is not None:
+                WSS += comp_val ** 2
 
-        self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WSS'] = round(WSS, 5)
+        if len(self.Method_Pathways_dict[method].skm_groupings[i]['structures']) == 0:
+            self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WSS'] = None
+        else:
+            self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WSS'] = round(WSS, 5)
 
     def calc_group_RMSD(self, method, i, comp_key):
         size = len(self.Method_Pathways_dict[method].skm_groupings[i]['structures'])
 
         if (size == 0):
-            RMSD = 'n/a'
+            RMSD = None
             self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_group_RMSD'] = RMSD
         else:
             RMSD = (self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WSS'] / size) ** 0.5
@@ -1149,10 +1425,17 @@ class Compare_Methods():
     def calc_SSE(self, method, comp_key):
         SSE = 0
 
-        for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
-            SSE += self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WSS']
+        unphys = True
 
-        self.Method_Pathways_dict[method].comp_metrics[comp_key + '_SSE'] = round(SSE, 5)
+        for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
+            if self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WSS'] is not None:
+                unphys = False
+                SSE += self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WSS']
+
+        if unphys:
+            self.Method_Pathways_dict[method].comp_metrics[comp_key + '_SSE'] = None
+        else:
+            self.Method_Pathways_dict[method].comp_metrics[comp_key + '_SSE'] = round(SSE, 5)
 
     def calc_RMSD(self, method, comp_key):
         size = 0
@@ -1160,6 +1443,9 @@ class Compare_Methods():
         for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
             for j in range(len(self.Method_Pathways_dict[method].skm_groupings[i]['structures'])):
                 size += 1
+
+        if self.Method_Pathways_dict[method].comp_metrics[comp_key + '_SSE'] is None:
+            self.Method_Pathways_dict[method].comp_metrics[comp_key + '_RMSD'] = None
 
         RMSD = (self.Method_Pathways_dict[method].comp_metrics[comp_key + '_SSE'] / size) ** 0.5
         self.Method_Pathways_dict[method].comp_metrics[comp_key + '_RMSD'] = round(RMSD, 5)
@@ -1173,16 +1459,19 @@ class Compare_Methods():
 
             comp_val = structure.comp_metrics[comp_key]
             weighting = structure.weighting
+            if comp_val is not None:
+                WWSS += (comp_val ** 2) * weighting
 
-            WWSS += (comp_val ** 2) * weighting
-
-        self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WWSS'] = round(WWSS, 5)
+        if len(self.Method_Pathways_dict[method].skm_groupings[i]['structures']) == 0:
+            self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WWSS'] = None
+        else:
+            self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WWSS'] = round(WWSS, 5)
 
     def calc_group_WRMSD(self, method, i, comp_key):
         size = len(self.Method_Pathways_dict[method].skm_groupings[i]['structures'])
 
         if (size == 0):
-            WRMSD = 'n/a'
+            WRMSD = None
             self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_group_WRMSD'] = WRMSD
         else:
             WRMSD = (self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WWSS'] / size) ** 0.5
@@ -1191,10 +1480,17 @@ class Compare_Methods():
     def calc_WSSE(self, method, comp_key):
         WSSE = 0
 
+        unphys = True
+
         for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
+            if self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WWSS'] is not None:
+                unphys = False
                 WSSE += self.Method_Pathways_dict[method].skm_groupings[i][comp_key + '_WWSS']
 
-        self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WSSE'] = round(WSSE, 5)
+        if unphys:
+            self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WSSE'] = None
+        else:
+            self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WSSE'] = round(WSSE, 5)
 
     def calc_WRMSD(self, method, comp_key):
         size = 0
@@ -1202,6 +1498,9 @@ class Compare_Methods():
         for i in range(len(self.Method_Pathways_dict[method].skm_groupings)):
             for j in range(len(self.Method_Pathways_dict[method].skm_groupings[i]['structures'])):
                 size += 1
+
+        if self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WSSE'] is None:
+            self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WRMSD'] = None
 
         WRMSD = (self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WSSE'] / size) ** 0.5
         self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WRMSD'] = round(WRMSD, 5)
@@ -1219,7 +1518,7 @@ class Compare_Methods():
 
         return ts_artist, lm_artist
 
-    def plot_raw_data(self, plot, method):
+    def plot_raw_data(self, plot, method, plot_IRC=True):
         size = 30
 
         ts_phi_vals = []
@@ -1228,7 +1527,315 @@ class Compare_Methods():
         lm_phi_vals = []
         lm_theta_vals = []
 
+        irc_phi_vals = []
+        irc_theta_vals = []
+
         pathways = self.Method_Pathways_dict[method].Pathways
+
+        for j in range(len(pathways)):
+            TS = pathways[j].TS
+
+            TS_vert = [TS.phi, TS.theta]
+            ts_phi_vals.append(TS_vert[0])
+            ts_theta_vals.append(TS_vert[1])
+
+            LM1 = pathways[j].LM1
+
+            LM1_vert = [LM1.phi, LM1.theta]
+            irc_phi_vals.append(LM1_vert[0])
+            irc_theta_vals.append(LM1_vert[1])
+
+            LM2 = pathways[j].LM2
+
+            LM2_vert = [LM2.phi, LM2.theta]
+            irc_phi_vals.append(LM2_vert[0])
+            irc_theta_vals.append(LM2_vert[1])
+
+        for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
+            LM = self.Method_Pathways_dict[method].LM_csv_list[j]
+
+            LM_vert = [LM.phi, LM.theta]
+            lm_phi_vals.append(LM_vert[0])
+            lm_theta_vals.append(LM_vert[1])
+
+        plot.ax_rect.scatter(ts_phi_vals, ts_theta_vals, c='white',
+                             edgecolor=self.met_colors_dict[method],
+                             marker=self.met_ts_markers_dict[method],
+                             s=size, zorder=10)
+        plot.ax_rect.scatter(lm_phi_vals, lm_theta_vals, c=self.met_colors_dict[method],
+                             edgecolor=self.met_colors_dict[method],
+                             marker=self.met_lm_markers_dict[method],
+                             s=size, zorder=10)
+        if plot_IRC:
+            plot.ax_rect.scatter(irc_phi_vals, irc_theta_vals, c=self.met_colors_dict[method],
+                                 edgecolor='black',
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=size/2, zorder=10)
+
+    def save_raw_data(self, method='ALL', cluster=None, plot_IRC=True, tessellation=None):
+        if tessellation is None:
+            tessellation = self.Tessellation
+
+        if cluster is not None:
+            filename = self.molecule + '-' + method + '-raw_data-' + str(cluster)
+        else:
+            filename = self.molecule + '-' + method + '-raw_data'
+
+        dir1 = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+        dir = make_dir(os.path.join(dir1, 'raw_data'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions(plot=plot)
+            self.reference_landscape.plot_skm_centers(plot=plot)
+            self.reference_landscape.plot_cano(plot=plot)
+
+            artist_list = []
+            label_list = []
+
+            if method == 'ALL':
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+
+                for method in self.Method_Pathways_dict:
+                    self.plot_raw_data(plot=plot, method=method, plot_IRC=plot_IRC)
+
+                    ts_artist, lm_artist = self.get_artist(method)
+
+                    artist_list.append(ts_artist)
+                    artist_list.append(lm_artist)
+
+                    label_list.append('TS ' + method)
+                    label_list.append('LM ' + method)
+
+                    plot.ax_rect.legend(artist_list,
+                                        label_list,
+                                        scatterpoints=1, fontsize=8, frameon=True,
+                                        framealpha=0.75,
+                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
+                                        ncol=1).set_zorder(100)
+            else:
+                # changing color for visibility purposes
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+                self.met_colors_dict[REFERENCE] = 'gray'
+                self.plot_raw_data(plot=plot, method=REFERENCE, plot_IRC=plot_IRC)
+                self.met_colors_dict[REFERENCE] = aux_color
+
+                self.plot_raw_data(plot=plot, method=method, plot_IRC=plot_IRC)
+
+                ts_artist, lm_artist = self.get_artist(method)
+                self.met_colors_dict[REFERENCE] = 'gray'
+                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
+
+                artist_list.append(ts_artist)
+                artist_list.append(lm_artist)
+                artist_list.append(ref_ts_artist)
+                artist_list.append(ref_lm_artist)
+
+                label_list.append('TS ' + method)
+                label_list.append('LM ' + method)
+                label_list.append('TS ' + REFERENCE)
+                label_list.append('LM ' + REFERENCE)
+
+                plot.ax_rect.legend(artist_list,
+                                     label_list,
+                                     scatterpoints=1, fontsize=8, frameon=False,
+                                     framealpha=0.75,
+                                     bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                     ncol=len(self.met_colors_dict)).set_zorder(100)
+
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            plot.save(dir_=dir, filename=filename)
+            self.met_colors_dict[REFERENCE] = aux_color
+
+
+    def plot_raw_data_LM(self, plot, method):
+        size = 30
+
+        lm_phi_vals = []
+        lm_theta_vals = []
+
+        pathways = self.Method_Pathways_dict[method].Pathways
+
+        for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
+            LM = self.Method_Pathways_dict[method].LM_csv_list[j]
+
+            LM_vert = [LM.phi, LM.theta]
+            lm_phi_vals.append(LM_vert[0])
+            lm_theta_vals.append(LM_vert[1])
+
+        plot.ax_rect.scatter(lm_phi_vals, lm_theta_vals, c=self.met_colors_dict[method],
+                             edgecolor=self.met_colors_dict[method],
+                             marker=self.met_lm_markers_dict[method],
+                             s=size, zorder=10)
+
+    def save_raw_data_LM(self, method='ALL', cluster=None):
+        if cluster is not None:
+            filename = self.molecule + '-' + method + '-raw_data_LM-' + str(cluster)
+        else:
+            filename = self.molecule + '-' + method + '-raw_data_LM'
+
+        dir1 = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+        dir = make_dir(os.path.join(dir1, 'raw_data'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions_LM(plot=plot)
+            self.reference_landscape.plot_cano(plot=plot)
+
+            artist_list = []
+            label_list = []
+
+            if method == 'ALL':
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+
+                for method in self.Method_Pathways_dict:
+                    self.plot_raw_data_LM(plot=plot, method=method)
+
+                    ts_artist, lm_artist = self.get_artist(method)
+
+                    artist_list.append(lm_artist)
+                    label_list.append('LM ' + method)
+
+                    plot.ax_rect.legend(artist_list,
+                                        label_list,
+                                        scatterpoints=1, fontsize=8, frameon=True,
+                                        framealpha=0.75,
+                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
+                                        ncol=1).set_zorder(100)
+            else:
+                # changing color for visibility purposes
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+                self.met_colors_dict[REFERENCE] = 'gray'
+                self.plot_raw_data_LM(plot=plot, method=REFERENCE)
+                self.met_colors_dict[REFERENCE] = aux_color
+
+                self.plot_raw_data_LM(plot=plot, method=method)
+
+                ts_artist, lm_artist = self.get_artist(method)
+                self.met_colors_dict[REFERENCE] = 'gray'
+                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
+
+                artist_list.append(lm_artist)
+                artist_list.append(ref_lm_artist)
+
+                label_list.append('LM ' + method)
+                label_list.append('LM ' + REFERENCE)
+
+                plot.ax_rect.legend(artist_list,
+                                     label_list,
+                                     scatterpoints=1, fontsize=8, frameon=False,
+                                     framealpha=0.75,
+                                     bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                     ncol=len(self.met_colors_dict)).set_zorder(100)
+
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            plot.save(dir_=dir, filename=filename)
+            self.met_colors_dict[REFERENCE] = aux_color
+
+    def plot_raw_data_TS(self, plot, method):
+        size = 30
+
+        ts_phi_vals = []
+        ts_theta_vals = []
+
+        pathways = self.Method_Pathways_dict[method].Pathways
+
+        for j in range(len(pathways)):
+            TS = pathways[j].TS
+
+            TS_vert = [TS.phi, TS.theta]
+            ts_phi_vals.append(TS_vert[0])
+            ts_theta_vals.append(TS_vert[1])
+
+        plot.ax_rect.scatter(ts_phi_vals, ts_theta_vals, c='white',
+                             edgecolor=self.met_colors_dict[method],
+                             marker=self.met_ts_markers_dict[method],
+                             s=size, zorder=10)
+
+    def save_raw_data_TS(self, method='ALL', cluster=None):
+        if cluster is not None:
+            filename = self.molecule + '-' + method + '-raw_data_TS-' + str(cluster)
+        else:
+            filename = self.molecule + '-' + method + '-raw_data_TS'
+
+        dir1 = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+        dir = make_dir(os.path.join(dir1, 'raw_data'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions_TS(plot=plot)
+            self.reference_landscape.plot_cano(plot=plot)
+
+            artist_list = []
+            label_list = []
+
+            if method == 'ALL':
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+
+                for method in self.Method_Pathways_dict:
+                    self.plot_raw_data_TS(plot=plot, method=method)
+
+                    ts_artist, lm_artist = self.get_artist(method)
+
+                    artist_list.append(ts_artist)
+                    label_list.append('TS ' + method)
+
+                    plot.ax_rect.legend(artist_list,
+                                        label_list,
+                                        scatterpoints=1, fontsize=8, frameon=True,
+                                        framealpha=0.75,
+                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
+                                        ncol=1).set_zorder(100)
+            else:
+                # changing color for visibility purposes
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+                self.met_colors_dict[REFERENCE] = 'gray'
+                self.plot_raw_data_TS(plot=plot, method=REFERENCE)
+                self.met_colors_dict[REFERENCE] = aux_color
+
+                self.plot_raw_data_TS(plot=plot, method=method)
+
+                ts_artist, lm_artist = self.get_artist(method)
+                self.met_colors_dict[REFERENCE] = 'gray'
+                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
+
+                artist_list.append(ts_artist)
+                artist_list.append(ref_ts_artist)
+
+                label_list.append('TS ' + method)
+                label_list.append('TS ' + REFERENCE)
+
+                plot.ax_rect.legend(artist_list,
+                                     label_list,
+                                     scatterpoints=1, fontsize=8, frameon=False,
+                                     framealpha=0.75,
+                                     bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                     ncol=len(self.met_colors_dict)).set_zorder(100)
+
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            plot.save(dir_=dir, filename=filename)
+            self.met_colors_dict[REFERENCE] = aux_color
+
+
+    def plot_raw_data_norm(self, plot, method, plot_IRC=True):
+        ts_phi_vals = []
+        ts_theta_vals = []
+
+        lm_phi_vals = []
+        lm_theta_vals = []
+
+        pathways = self.Method_Pathways_dict[method].Pathways
+
+        amt = 0.5
 
         for j in range(len(pathways)):
             TS = pathways[j].TS
@@ -1247,6 +1854,57 @@ class Compare_Methods():
             lm_phi_vals.append(LM2_vert[0])
             lm_theta_vals.append(LM2_vert[1])
 
+            if TS.gibbs > amt:
+                TS_size = TS.gibbs
+            else:
+                TS_size = amt
+
+            if LM1.gibbs > amt:
+                LM1_size = LM1.gibbs
+            else:
+                LM1_size = amt
+
+            if LM2.gibbs > amt:
+                LM2_size = LM2.gibbs
+            else:
+                LM2_size = amt
+
+            plot.ax_rect.scatter(TS.phi, TS.theta, c='white',
+                                 edgecolor=self.met_colors_dict[method],
+                                 marker=self.met_ts_markers_dict[method],
+                                 s=TS_size, zorder=10)
+            plot.ax_rect.annotate(str(round(TS.gibbs, 1)),
+                                  xy=(TS.phi, TS.theta), xytext=(TS.phi, TS.theta),
+                                  ha="center", va="center", fontsize=3, zorder=100)
+
+            if is_IRC(LM1):
+                color_LM1 = 'green'
+            else:
+                color_LM1 = self.met_colors_dict[method]
+
+            plot.ax_rect.scatter(LM1.phi, LM1.theta, c=color_LM1,
+                                 edgecolor=color_LM1,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=LM1_size, zorder=10)
+            if not plot_IRC and not is_IRC(LM1) or plot_IRC:
+                plot.ax_rect.annotate(str(round(LM1.gibbs, 1)),
+                                      xy=(LM1.phi, LM1.theta), xytext=(LM1.phi, LM1.theta),
+                                      ha="center", va="center", fontsize=3, zorder=100)
+
+            if is_IRC(LM2):
+                color_LM2 = 'green'
+            else:
+                color_LM2 = self.met_colors_dict[method]
+
+            plot.ax_rect.scatter(LM2.phi, LM2.theta, c=color_LM2,
+                                 edgecolor=color_LM2,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=LM2_size, zorder=10)
+            if not plot_IRC and not is_IRC(LM2) or plot_IRC:
+                plot.ax_rect.annotate(str(round(LM2.gibbs, 1)),
+                                      xy=(LM2.phi, LM2.theta), xytext=(LM2.phi, LM2.theta),
+                                      ha="center", va="center", fontsize=3, zorder=100)
+
         for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
             LM = self.Method_Pathways_dict[method].LM_csv_list[j]
 
@@ -1254,78 +1912,31 @@ class Compare_Methods():
             lm_phi_vals.append(LM_vert[0])
             lm_theta_vals.append(LM_vert[1])
 
-        plot.ax_rect.scatter(ts_phi_vals, ts_theta_vals, c='',
-                             edgecolor=self.met_colors_dict[method],
-                             marker=self.met_ts_markers_dict[method],
-                             s=size)
-        plot.ax_rect.scatter(lm_phi_vals, lm_theta_vals, c=self.met_colors_dict[method],
-                             edgecolor=self.met_colors_dict[method],
-                             marker=self.met_lm_markers_dict[method],
-                             s=size)
+            if LM.gibbs > amt:
+                LM_size = LM.gibbs
+            else:
+                LM_size = amt
 
-        # # if input plot is twoD
-        # if plot.ax_circ_south is not None:
-        #     ts_phi_north_vals = []
-        #     ts_theta_north_vals = []
-        #
-        #     lm_phi_north_vals = []
-        #     lm_theta_north_vals = []
-        #
-        #     ts_phi_south_vals = []
-        #     ts_theta_south_vals = []
-        #
-        #     lm_phi_south_vals = []
-        #     lm_theta_south_vals = []
-        #
-        #     for j in range(len(pathways)):
-        #         TS = pathways[j].TS
-        #         LM1 = pathways[j].LM1
-        #         LM2 = pathways[j].LM2
-        #
-        #         TS_vert = [TS.phi, TS.theta]
-        #         LM1_vert = [LM1.phi, LM1.theta]
-        #         LM2_vert = [LM2.phi, LM2.theta]
-        #
-        #         if is_north(pathways[j]):
-        #             ts_phi_north_vals.append(TS_vert[0])
-        #             ts_theta_north_vals.append(abs(math.sin(np.radians(TS_vert[1]))))
-        #
-        #             lm_phi_north_vals.append(LM1_vert[0])
-        #             lm_theta_north_vals.append(abs(math.sin(np.radians(LM1_vert[1]))))
-        #
-        #             lm_phi_north_vals.append(LM2_vert[0])
-        #             lm_theta_north_vals.append(abs(math.sin(np.radians(LM2_vert[1]))))
-        #         elif is_south(pathways[j]):
-        #             ts_phi_south_vals.append(TS_vert[0])
-        #             ts_theta_south_vals.append(abs(math.sin(np.radians(TS_vert[1]))))
-        #
-        #             lm_phi_south_vals.append(LM1_vert[0])
-        #             lm_theta_south_vals.append(abs(math.sin(np.radians(LM1_vert[1]))))
-        #
-        #             lm_phi_south_vals.append(LM2_vert[0])
-        #             lm_theta_south_vals.append(abs(math.sin(np.radians(LM2_vert[1]))))
-        #
-        #     plot.ax_circ_north.scatter(ts_phi_north_vals, ts_theta_north_vals, c='',
-        #                                edgecolor=self.met_colors_dict[method],
-        #                                marker=self.met_ts_markers_dict[method],
-        #                                s=size)
-        #     plot.ax_circ_north.scatter(lm_phi_north_vals, lm_theta_north_vals, c=self.met_colors_dict[method],
-        #                                edgecolor=self.met_colors_dict[method],
-        #                                marker=self.met_lm_markers_dict[method],
-        #                                s=size)
-        #     plot.ax_circ_south.scatter(ts_phi_south_vals, ts_theta_south_vals, c='',
-        #                                edgecolor=self.met_colors_dict[method],
-        #                                marker=self.met_ts_markers_dict[method],
-        #                                s=size)
-        #     plot.ax_circ_south.scatter(lm_phi_south_vals, lm_theta_south_vals, c=self.met_colors_dict[method],
-        #                                edgecolor=self.met_colors_dict[method],
-        #                                marker=self.met_lm_markers_dict[method],
-        #                                s=size)
-        #
-        #     pass
+            if is_IRC(LM):
+                color_LM = 'green'
+            else:
+                color_LM = self.met_colors_dict[method]
 
-    def save_raw_data(self, method='ALL'):
-        filename = self.molecule + '-' + method + '-raw_data'
+            plot.ax_rect.scatter(LM.phi, LM.theta, c=color_LM,
+                                 edgecolor=color_LM,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=LM_size, zorder=10)
+            if not plot_IRC and not is_IRC(LM) or plot_IRC:
+                plot.ax_rect.annotate(str(round(LM.gibbs, 1)),
+                                      xy=(LM.phi, LM.theta), xytext=(LM.phi, LM.theta),
+                                      ha="center", va="center", fontsize=3, zorder=100)
+
+    def save_raw_data_norm(self, method='ALL', cluster=None, plot_ref=True, plot_IRC=True):
+        if cluster is not None:
+            filename = self.molecule + '-' + method + '-raw_data_norm-' + str(cluster) + str(plot_IRC)
+        else:
+            filename = self.molecule + '-' + method + '-raw_data_norm-' + str(plot_IRC)
+
         dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
@@ -1339,8 +1950,10 @@ class Compare_Methods():
             label_list = []
 
             if method == 'ALL':
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+
                 for method in self.Method_Pathways_dict:
-                    self.plot_raw_data(plot=plot, method=method)
+                    self.plot_raw_data_norm(plot=plot, method=method, plot_IRC=plot_IRC)
 
                     ts_artist, lm_artist = self.get_artist(method)
 
@@ -1357,29 +1970,296 @@ class Compare_Methods():
                                         bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
                                         ncol=1).set_zorder(100)
             else:
-                self.plot_raw_data(plot=plot, method=method)
+                # changing color for visibility purposes
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+                self.met_colors_dict[REFERENCE] = 'gray'
+                if plot_ref:
+                    self.plot_raw_data(plot=plot, method=REFERENCE)
+                self.met_colors_dict[REFERENCE] = aux_color
+
+                self.plot_raw_data_norm(plot=plot, method=method, plot_IRC=plot_IRC)
 
                 ts_artist, lm_artist = self.get_artist(method)
+                self.met_colors_dict[REFERENCE] = 'gray'
+                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
 
                 artist_list.append(ts_artist)
                 artist_list.append(lm_artist)
+                if plot_ref:
+                    artist_list.append(ref_ts_artist)
+                    artist_list.append(ref_lm_artist)
 
                 label_list.append('TS ' + method)
                 label_list.append('LM ' + method)
+                if plot_ref:
+                    label_list.append('TS ' + REFERENCE)
+                    label_list.append('LM ' + REFERENCE)
 
                 plot.ax_rect.legend(artist_list,
-                                     label_list,
-                                     scatterpoints=1, fontsize=8, frameon=False,
-                                     framealpha=0.75,
-                                     bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
-                                     ncol=len(self.met_colors_dict)).set_zorder(100)
+                                    label_list,
+                                    scatterpoints=1, fontsize=8, frameon=False,
+                                    framealpha=0.75,
+                                    bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                    ncol=len(self.met_colors_dict)).set_zorder(100)
 
             plot.ax_rect.set_ylim(185, -5)
             plot.ax_rect.set_xlim(-5, 365)
 
-            plot.save(dir_=dir, filename=filename)
+            plot.save(dir_=dir, filename=filename, width=18, height=10)
+            self.met_colors_dict[REFERENCE] = aux_color
 
-    def plot_line(self, plot, TS_vert, LM_vert, method, zorder=10):
+    def plot_raw_data_norm_LM(self, plot, method, plot_IRC=True):
+        lm_phi_vals = []
+        lm_theta_vals = []
+
+        pathways = self.Method_Pathways_dict[method].Pathways
+
+        amt = 0.5
+
+        for j in range(len(pathways)):
+            LM1 = pathways[j].LM1
+            LM2 = pathways[j].LM2
+
+            LM1_vert = [LM1.phi, LM1.theta]
+            lm_phi_vals.append(LM1_vert[0])
+            lm_theta_vals.append(LM1_vert[1])
+
+            LM2_vert = [LM2.phi, LM2.theta]
+            lm_phi_vals.append(LM2_vert[0])
+            lm_theta_vals.append(LM2_vert[1])
+
+            if LM1.gibbs > amt:
+                LM1_size = LM1.gibbs
+            else:
+                LM1_size = amt
+
+            if LM2.gibbs > amt:
+                LM2_size = LM2.gibbs
+            else:
+                LM2_size = amt
+
+            if is_IRC(LM1):
+                color_LM1 = 'green'
+            else:
+                color_LM1 = self.met_colors_dict[method]
+
+            plot.ax_rect.scatter(LM1.phi, LM1.theta, c=color_LM1,
+                                 edgecolor=color_LM1,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=LM1_size, zorder=10)
+            if not plot_IRC and not is_IRC(LM1) or plot_IRC:
+                plot.ax_rect.annotate(str(round(LM1.gibbs, 1)),
+                                      xy=(LM1.phi, LM1.theta), xytext=(LM1.phi, LM1.theta),
+                                      ha="center", va="center", fontsize=3, zorder=100)
+
+            if is_IRC(LM2):
+                color_LM2 = 'green'
+            else:
+                color_LM2 = self.met_colors_dict[method]
+
+            plot.ax_rect.scatter(LM2.phi, LM2.theta, c=color_LM2,
+                                 edgecolor=color_LM2,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=LM2_size, zorder=10)
+            if not plot_IRC and not is_IRC(LM2) or plot_IRC:
+                plot.ax_rect.annotate(str(round(LM2.gibbs, 1)),
+                                      xy=(LM2.phi, LM2.theta), xytext=(LM2.phi, LM2.theta),
+                                      ha="center", va="center", fontsize=3, zorder=100)
+
+        for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
+            LM = self.Method_Pathways_dict[method].LM_csv_list[j]
+
+            LM_vert = [LM.phi, LM.theta]
+            lm_phi_vals.append(LM_vert[0])
+            lm_theta_vals.append(LM_vert[1])
+
+            if LM.gibbs > amt:
+                LM_size = LM.gibbs
+            else:
+                LM_size = amt
+
+            if is_IRC(LM):
+                color_LM = 'green'
+            else:
+                color_LM = self.met_colors_dict[method]
+
+            plot.ax_rect.scatter(LM.phi, LM.theta, c=color_LM,
+                                 edgecolor=color_LM,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=LM_size, zorder=10)
+            if not plot_IRC and not is_IRC(LM) or plot_IRC:
+                plot.ax_rect.annotate(str(round(LM.gibbs, 1)),
+                                      xy=(LM.phi, LM.theta), xytext=(LM.phi, LM.theta),
+                                      ha="center", va="center", fontsize=3, zorder=100)
+
+    def save_raw_data_norm_LM(self, method='ALL', cluster=None, plot_ref=True, plot_IRC=True):
+        if cluster is not None:
+            filename = self.molecule + '-' + method + '-raw_data_norm_LM-' + str(cluster) + str(plot_IRC)
+        else:
+            filename = self.molecule + '-' + method + '-raw_data_norm_LM-' + str(plot_IRC)
+
+        dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions_LM(plot=plot)
+            self.reference_landscape.plot_cano(plot=plot)
+
+            artist_list = []
+            label_list = []
+
+            if method == 'ALL':
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+
+                for method in self.Method_Pathways_dict:
+                    self.plot_raw_data_norm_LM(plot=plot, method=method, plot_IRC=plot_IRC)
+
+                    ts_artist, lm_artist = self.get_artist(method)
+
+                    artist_list.append(lm_artist)
+                    label_list.append('LM ' + method)
+
+                    plot.ax_rect.legend(artist_list,
+                                        label_list,
+                                        scatterpoints=1, fontsize=8, frameon=True,
+                                        framealpha=0.75,
+                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
+                                        ncol=1).set_zorder(100)
+            else:
+                # changing color for visibility purposes
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+                self.met_colors_dict[REFERENCE] = 'gray'
+                if plot_ref:
+                    self.plot_raw_data_LM(plot=plot, method=REFERENCE)
+                self.met_colors_dict[REFERENCE] = aux_color
+
+                self.plot_raw_data_norm_LM(plot=plot, method=method, plot_IRC=plot_IRC)
+
+                ts_artist, lm_artist = self.get_artist(method)
+                self.met_colors_dict[REFERENCE] = 'gray'
+                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
+
+                artist_list.append(lm_artist)
+                if plot_ref:
+                    artist_list.append(ref_lm_artist)
+
+                label_list.append('LM ' + method)
+                if plot_ref:
+                    label_list.append('LM ' + REFERENCE)
+
+                plot.ax_rect.legend(artist_list,
+                                    label_list,
+                                    scatterpoints=1, fontsize=8, frameon=False,
+                                    framealpha=0.75,
+                                    bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                    ncol=len(self.met_colors_dict)).set_zorder(100)
+
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            plot.save(dir_=dir, filename=filename, width=18, height=10)
+            self.met_colors_dict[REFERENCE] = aux_color
+
+    def plot_raw_data_norm_TS(self, plot, method):
+        ts_phi_vals = []
+        ts_theta_vals = []
+
+        pathways = self.Method_Pathways_dict[method].Pathways
+
+        amt = 0.5
+
+        for j in range(len(pathways)):
+            TS = pathways[j].TS
+
+            TS_vert = [TS.phi, TS.theta]
+            ts_phi_vals.append(TS_vert[0])
+            ts_theta_vals.append(TS_vert[1])
+
+            if TS.gibbs > amt:
+                TS_size = TS.gibbs
+            else:
+                TS_size = amt
+
+            plot.ax_rect.scatter(TS.phi, TS.theta, c='white',
+                                 edgecolor=self.met_colors_dict[method],
+                                 marker=self.met_ts_markers_dict[method],
+                                 s=TS_size, zorder=10)
+            plot.ax_rect.annotate(str(round(TS.gibbs, 1)),
+                                  xy=(TS.phi, TS.theta), xytext=(TS.phi, TS.theta),
+                                  ha="center", va="center", fontsize=3, zorder=100)
+
+    def save_raw_data_norm_TS(self, method='ALL', cluster=None, plot_ref=True):
+        if cluster is not None:
+            filename = self.molecule + '-' + method + '-raw_data_norm_TS-' + str(cluster)
+        else:
+            filename = self.molecule + '-' + method + '-raw_data_norm_TS'
+
+        dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions_TS(plot=plot)
+            self.reference_landscape.plot_cano(plot=plot)
+
+            artist_list = []
+            label_list = []
+
+            if method == 'ALL':
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+
+                for method in self.Method_Pathways_dict:
+                    self.plot_raw_data_norm_TS(plot=plot, method=method)
+
+                    ts_artist, lm_artist = self.get_artist(method)
+
+                    artist_list.append(ts_artist)
+                    label_list.append('TS ' + method)
+
+                    plot.ax_rect.legend(artist_list,
+                                        label_list,
+                                        scatterpoints=1, fontsize=8, frameon=True,
+                                        framealpha=0.75,
+                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
+                                        ncol=1).set_zorder(100)
+            else:
+                # changing color for visibility purposes
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+                self.met_colors_dict[REFERENCE] = 'gray'
+                if plot_ref:
+                    self.plot_raw_data_TS(plot=plot, method=REFERENCE)
+                self.met_colors_dict[REFERENCE] = aux_color
+
+                self.plot_raw_data_norm_TS(plot=plot, method=method)
+
+                ts_artist, lm_artist = self.get_artist(method)
+                self.met_colors_dict[REFERENCE] = 'gray'
+                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
+
+                artist_list.append(ts_artist)
+                if plot_ref:
+                    artist_list.append(ref_ts_artist)
+
+                label_list.append('TS ' + method)
+                if plot_ref:
+                    label_list.append('TS ' + REFERENCE)
+
+                plot.ax_rect.legend(artist_list,
+                                    label_list,
+                                    scatterpoints=1, fontsize=8, frameon=False,
+                                    framealpha=0.75,
+                                    bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                    ncol=len(self.met_colors_dict)).set_zorder(100)
+
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            plot.save(dir_=dir, filename=filename, width=18, height=10)
+            self.met_colors_dict[REFERENCE] = aux_color
+
+
+    def plot_line(self, plot, TS_vert, LM_vert, method, zorder=10, line_style='-'):
         size = 30
         color = self.met_colors_dict[method]
 
@@ -1388,10 +2268,10 @@ class Compare_Methods():
         if (is_end(line)):
             two_edges = split_in_two(line)
 
-            plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color=color, linestyle='-', zorder=1)
-            plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color=color, linestyle='-', zorder=1)
+            plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color=color, linestyle=line_style, zorder=1)
+            plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color=color, linestyle=line_style, zorder=1)
         else:
-            plot.ax_rect.plot(line[0], line[1], color=color, linestyle='-')
+            plot.ax_rect.plot(line[0], line[1], color=color, linestyle=line_style)
 
         plot.ax_rect.scatter(TS_vert[0], TS_vert[1], c='white',
                              edgecolor=color,
@@ -1410,16 +2290,33 @@ class Compare_Methods():
             LM1 = pathways[j].LM1
             LM2 = pathways[j].LM2
 
+            if LM1.closest_skm < LM2.closest_skm:
+                lm_grouping = str(LM1.closest_skm) + '_' + str(LM2.closest_skm)
+            else:
+                lm_grouping = str(LM2.closest_skm) + '_' + str(LM1.closest_skm)
+
+            key = lm_grouping + '-' + str(TS.closest_skm)
+
+            # if self.Method_Pathways_dict[method].pathway_groupings[key]['norm_pathways']\
+            #     == self.Method_Pathways_dict[REFERENCE].pathway_groupings[key]['norm_pathways']:
+            #
+            #     linestyle = '-'
+            # else:
+            #     linestyle = '--'
+
+            linestyle = '-'
+
             TS_vert = [TS.phi, TS.theta]
             LM1_vert = [LM1.phi, LM1.theta]
             LM2_vert = [LM2.phi, LM2.theta]
 
-            self.plot_line(plot, TS_vert, LM1_vert, method)
-            self.plot_line(plot, TS_vert, LM2_vert, method)
+            self.plot_line(plot, TS_vert, LM1_vert, method, line_style=linestyle)
+            self.plot_line(plot, TS_vert, LM2_vert, method, line_style=linestyle)
 
     def save_connectivity(self, method='ALL'):
         filename = self.molecule + '-' + method + '-connectivity'
-        dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+        dir1 = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+        dir = make_dir(os.path.join(dir1, 'connectivity'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
@@ -1432,6 +2329,8 @@ class Compare_Methods():
             label_list = []
 
             if method == 'ALL':
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+
                 for method in self.Method_Pathways_dict:
                     self.plot_connectivity(plot=plot, method=method)
 
@@ -1450,15 +2349,27 @@ class Compare_Methods():
                                         bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
                                         ncol=1).set_zorder(100)
             else:
+                # changing color for visibility purposes
+                aux_color = copy.deepcopy(self.met_colors_dict[REFERENCE])
+                self.met_colors_dict[REFERENCE] = 'gray'
+                self.plot_connectivity(plot=plot, method=REFERENCE)
+                self.met_colors_dict[REFERENCE] = aux_color
+
                 self.plot_connectivity(plot=plot, method=method)
 
                 ts_artist, lm_artist = self.get_artist(method)
+                self.met_colors_dict[REFERENCE] = 'gray'
+                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
 
                 artist_list.append(ts_artist)
                 artist_list.append(lm_artist)
+                artist_list.append(ref_ts_artist)
+                artist_list.append(ref_lm_artist)
 
                 label_list.append('TS ' + method)
                 label_list.append('LM ' + method)
+                label_list.append('TS ' + REFERENCE)
+                label_list.append('LM ' + REFERENCE)
 
                 plot.ax_rect.legend(artist_list,
                                      label_list,
@@ -1471,6 +2382,7 @@ class Compare_Methods():
             plot.ax_rect.set_ylim(185, -5)
 
             plot.save(dir_=dir, filename=filename)
+            self.met_colors_dict[REFERENCE] = aux_color
 
 
     def save_tessellation(self):
@@ -1482,6 +2394,32 @@ class Compare_Methods():
 
             self.reference_landscape.plot_voronoi_regions(plot=plot)
             self.reference_landscape.plot_regions_names(plot=plot)
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            plot.save(dir_=dir, filename=filename)
+
+    def save_tessellation_LM(self):
+        filename = self.molecule + '-tessellation_LM'
+        dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions_LM(plot=plot)
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            plot.save(dir_=dir, filename=filename)
+
+    def save_tessellation_TS(self):
+        filename = self.molecule + '-tessellation_TS'
+        dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions_TS(plot=plot)
             plot.ax_rect.set_ylim(185, -5)
             plot.ax_rect.set_xlim(-5, 365)
 
@@ -1579,6 +2517,20 @@ class Compare_Methods():
 
         return csv_dict
 
+    def format_WRMSD_dict_for_csv(self, comp_key):
+        csv_dict = {}
+
+        csv_dict['method'] = []
+
+        for method in self.Method_Pathways_dict:
+            csv_dict['method'].append(method)
+
+        csv_dict[comp_key + '_WRMSD'] = []
+
+        for method in self.Method_Pathways_dict:
+            csv_dict[comp_key + '_WRMSD'].append(self.Method_Pathways_dict[method].comp_metrics[comp_key + '_WRMSD'])
+
+        return csv_dict
 
     def write_dict_to_csv(self, dict, name):
         csv_filename = self.molecule + '-' + name + '.csv'
@@ -1595,7 +2547,7 @@ class Compare_Methods():
         self.write_dict_to_csv(self.format_RMSD_dict_for_csv('gibbs'), 'gibbs_RMSD')
 
         self.write_dict_to_csv(self.format_skm_dict_for_csv('arc_group_WRMSD'), 'arc_group_WRMSD')
-        self.write_dict_to_csv(self.format_RMSD_dict_for_csv('arc'), 'arc_RMSD')
+        self.write_dict_to_csv(self.format_WRMSD_dict_for_csv('arc'), 'arc_WRMSD')
 
         self.write_dict_to_csv(self.format_skm_dict_for_csv('weighted_gibbs'), 'weighted_gibbs')
 
