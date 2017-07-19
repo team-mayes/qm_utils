@@ -269,10 +269,10 @@ def main():
             comp_lm_dir = os.path.join(comp_mol_dir, 'local_minimum')
 
             # checks if directory exists, and creates it if not
-            if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
-                os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
+            if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-TS')):
+                os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-TS'))
 
-            lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
+            lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
             #endregion
 
             # # # transition states directory init # # #
@@ -325,7 +325,7 @@ def main():
                     lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, filename), mode='r')
                     method = (filename.split('-', 3)[3]).split('.')[0]
 
-                    ref_lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-REFERENCE.csv'), mode='r')
+                    ref_lm_hartree = read_csv_to_dict(os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-TS-REFERENCE.csv'), mode='r')
 
                     ref_lm_comp_class = Local_Minima_Compare(molecule, 'REFERENCE', ref_lm_hartree, lm_class, comp_lm_dir)
                     lm_comp_class = Local_Minima_Compare(molecule, method, lm_hartree, lm_class, comp_lm_dir, ref_lm_comp_class)
@@ -418,10 +418,10 @@ def main():
     #         comp_ts_dir = os.path.join(comp_mol_dir, 'transitions_state_added')
     #
     #         # checks if directory exists, and creates it if not
-    #         if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-LM')):
-    #             os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-LM'))
+    #         if not os.path.exists(os.path.join(sv_mol_dir, 'z_datasets-TS')):
+    #             os.makedirs(os.path.join(sv_mol_dir, 'z_datasets-TS'))
     #
-    #         lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-LM')
+    #         lm_data_dir = os.path.join(sv_mol_dir, 'z_datasets-TS')
     #         # # # calcs # # #
     #         # region
     #         # # # comparison data initialization # # #
@@ -450,7 +450,7 @@ def main():
     #                 method = (filename.split('-', 3)[3]).split('.')[0]
     #
     #                 ref_lm_hartree = read_csv_to_dict(
-    #                     os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-LM-REFERENCE.csv'), mode='r')
+    #                     os.path.join(lm_data_dir, 'z_dataset-' + molecule + '-TS-REFERENCE.csv'), mode='r')
     #
     #                 ref_lm_comp_class = Local_Minima_Compare(molecule, 'REFERENCE', ref_lm_hartree, lm_class,
     #                                                          comp_lm_dir)

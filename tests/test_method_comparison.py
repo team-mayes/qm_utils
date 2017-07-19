@@ -30,7 +30,7 @@ SUB_DATA_DIR = os.path.join(DATA_DIR, 'method_comparison')
 
 # # # Input files # # #
 LIST_OF_DATASET_FILES_BXYL = os.path.join(SUB_DATA_DIR, "a_list_dataset_bxyl.txt")
-DATASET_FILE_LM_AM1 = os.path.join(SUB_DATA_DIR, 'z_dataset-bxyl-LM-am1.csv')
+DATASET_FILE_LM_AM1 = os.path.join(SUB_DATA_DIR, 'z_dataset-bxyl-TS-am1.csv')
 HSP_LOCAL_MIN = 'z_bxyl_lm-b3lyp_howsugarspucker.csv'
 
 

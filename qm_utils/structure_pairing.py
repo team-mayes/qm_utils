@@ -77,8 +77,8 @@ LMIRC_t1 = 'lm irc theta1'
 LMIRC_p2 = 'lm irc phi2'
 LMIRC_t2 = 'lm irc theta2'
 
-HSP_LM1 = 'HSP LM ref group 1'
-HSP_LM2 = 'HSP LM ref group 2'
+HSP_LM1 = 'HSP TS ref group 1'
+HSP_LM2 = 'HSP TS ref group 2'
 HSP_TS = 'HSP TS ref'
 
 HSP_LM_ID = 'LM_compare_values'
@@ -413,17 +413,17 @@ def comparing_TS_pathways(ts_dict, lm_dict, reference_ts, reference_lm):
     criteria:
     (1) For a particular TS, which HSP REFERENCE TS are within a predetermined arc length tolerance. All REFERENCE TSs
     that meet this criteria are kept.
-    (2) Now, the LM associated with each HSP REFERENCE TS and the LM associated with a particular TS are compared.
-    Again, arc length calculations are computed and compared to the respective LM. If both LM are within a certain
+    (2) Now, the TS associated with each HSP REFERENCE TS and the TS associated with a particular TS are compared.
+    Again, arc length calculations are computed and compared to the respective TS. If both TS are within a certain
     arc length tolerance, then the HSP REFERENCE group is assigned as a match for the particular TS. This process is
     repeated for all TS.
     (3) If there exist multiple matches (a particular TS has multiple HSP REFERENCE TS), then the pathway with the
     smaller arc length value is selected.
 
     :param ts_dict: the TS dict associated for a particular method
-    :param lm_dict: the LM dict assiciated for a particular method
+    :param lm_dict: the TS dict assiciated for a particular method
     :param reference_ts: the HSP REFERENCE TS dict
-    :param reference_lm: the HSP REFERENCE LM dict
+    :param reference_lm: the HSP REFERENCE TS dict
     :return: overall_ts_dict (all information), matching_ts_dict (matching only), missing_ts_dict (missing only) ...
     (note that the all of these dicts are updated with new information pertaining to their pathways and such).
     """
@@ -765,7 +765,7 @@ def comparing_LM_structures_arc_length(lm_dict, reference_lm):
     for row in new_lm_dict:
         row_filename = row[FILE_NAME]
         if float(row[FREQ]) < 0:
-            print('ERROR - a LM Freq is less than 0.')
+            print('ERROR - a TS Freq is less than 0.')
         elif float(row[FREQ]) > 0:
             lm_dict.append(row)
             if float(row[GIBBS]) < low_energy_value:
@@ -955,7 +955,7 @@ def rmsd_calculator(rmsd_dict, lm_dict, ts_dict):
     Performs all of the RMSD between HSP REFERENCE grouping and the method in question.
 
     :param rmsd_dict: the dict containing all of the relative Gibbs free energies for the group
-    :param lm_dict: the REFERENCE HSP LM group
+    :param lm_dict: the REFERENCE HSP TS group
     :param ts_dict: the REFERENCE HSP TS group
     :return: the RMSD information for each method-job type combination
     """
@@ -970,7 +970,7 @@ def rmsd_calculator(rmsd_dict, lm_dict, ts_dict):
         diff_squared = 0
         ind_dict = {}
         max_diff = -10
-        if rmsd_info[0] in 'LM':
+        if rmsd_info[0] in 'TS':
             for rmsd_key, rmsd_energy in rmsd_data.items():
                 for hsp_key in lm_dict.keys():
                     if rmsd_key == hsp_key:
@@ -1047,7 +1047,7 @@ def writer_rmsd_information(overall_dict, dir_data):
                 if data_key.split('-')[1] == method_eval and data_key.split('-')[0] not in job_complete:
                     job_complete.append(data_key.split('-')[0])
 
-                    if data_key.split('-')[0] == 'LM':
+                    if data_key.split('-')[0] == 'TS':
                         rmsd_lm = data_val['RMSD val']
                         total_diff += data_val['diff_squared']
                         match_count += data_val['match number']
@@ -1318,7 +1318,7 @@ def main(argv=None):
 
                 if job_type == 'TS':
 
-                    # splits the information based on LM and TS structures
+                    # splits the information based on TS and TS structures
                     lm_irc_dict, ts_dict = separating_TS_and_IRC_information(method_dict)
 
                     # compares all of the TS structures (contains the HSP reference TS that is within tolerance values)
@@ -1339,7 +1339,7 @@ def main(argv=None):
                     output_filename_pathway = create_out_fname('igor_info_' + job_type + '_' + str(method), base_dir=args.dir_hartree, ext='.csv')
                     write_file_data_dict(data_dict, output_filename_pathway)
 
-                if job_type == 'LM':
+                if job_type == 'TS':
 
                     # assigns the local min groups for each of the unique local min structures
                     new_lm_dict, hsp_puckering = comparing_LM_structures_arc_length(method_dict, HSP_LM_REFERENCE)

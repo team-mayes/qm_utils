@@ -94,10 +94,18 @@ def save_plots():
             comp_met.save_raw_data_norm_LM(method, False, True)
             comp_met.save_raw_data_norm_TS(method, False, True)
 
+            comp_met.save_raw_data_norm_LM(method, False, True, plot_criteria=True)
+            comp_met.save_raw_data_norm_TS(method, False, True, plot_criteria=True)
+
         comp_met.save_raw_data_LM()
         comp_met.save_raw_data_TS()
-
         comp_met.save_connectivity()
+
+        comp_met.save_raw_data_norm_LM('ALL', False, True)
+        comp_met.save_raw_data_norm_TS('ALL', False, True)
+
+        comp_met.save_raw_data_norm_LM('ALL', False, True, plot_criteria=True)
+        comp_met.save_raw_data_norm_TS('ALL', False, True, plot_criteria=True)
 
 def do_main():
     methods_list = []

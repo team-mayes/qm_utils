@@ -526,7 +526,7 @@ class Reference_Pathways():
 
 class Tessellation():
     def __init__(self, centers, number_clusters, n_init, max_iter, type):
-        self.skm_groupings = []
+        self.methods = {}
         self.type = type
 
         # Uses packages to calculate the k-means spherical centers
@@ -774,10 +774,24 @@ class Reference_Landscape():
                                               phi2=phi2, theta2=theta2)
 
             if curr_dist < min_dist:
-                next_skm_index = skm_index
-
                 min_dist = curr_dist
                 skm_index = i
+
+        next_min_dist = 100
+        next_skm_index = 0
+
+        for i in range(len(tessellation.skm.cluster_centers_)):
+            center = cart2pol(tessellation.skm.cluster_centers_[i])
+
+            phi2 = center[0]
+            theta2 = center[1]
+
+            curr_dist = arc_length_calculator(phi1=phi1, theta1=theta1,
+                                              phi2=phi2, theta2=theta2)
+
+            if curr_dist < next_min_dist and curr_dist > min_dist:
+                next_skm_index = i
+                next_min_dist = curr_dist
 
         structure.closest_skm = skm_index
         structure.next_closest_skm = next_skm_index
@@ -808,7 +822,7 @@ class Reference_Landscape():
                     plot_line(plot.ax_rect, [vert1, color, 0], [vert2, color, 0], color, zorder=0)
 
     def plot_regions_names(self, plot, tessellation):
-        if tessellation.type == 'LM':
+        if tessellation.type == 'TS':
             self.skm_name_list = self.LM_skm_name_list
         else:
             self.skm_name_list = self.TS_skm_name_list
@@ -843,17 +857,16 @@ class Reference_Landscape():
                                   ha="center", va="center", fontsize=5, zorder=100)
 
     def plot_skm_centers(self, plot, tessellation):
-        phi_vals = []
-        theta_vals = []
-
         for i in range(len(tessellation.skm.cluster_centers_)):
             vert = cart2pol(tessellation.skm.cluster_centers_[i])
 
-            phi_vals.append(vert[0])
-            theta_vals.append(vert[1])
+            phi = vert[0]
+            theta = vert[1]
 
-        plot.ax_rect.scatter(phi_vals, theta_vals, c='red', marker='x', s=60, zorder=10)
-
+            if len(tessellation.methods[REFERENCE]['skm_groupings'][i]['structures']) > 0:
+                plot.ax_rect.scatter(phi, theta, c='green', marker='x', s=60, zorder=10)
+            else:
+                plot.ax_rect.scatter(phi, theta, c='red', marker='x', s=60, zorder=10)
 
     def plot_cano(self, plot):
         phi_vals = []
@@ -941,34 +954,62 @@ class Compare_Methods():
         self.pathway_groupings_init()
 
         # REFERENCE data initialization
-        self.populate_ref_skm_groupings(self.reference_landscape.LM_Tessellation)
-        self.populate_ref_skm_groupings(self.reference_landscape.TS_Tessellation)
+        self.populate_skm_groupings(self.reference_landscape.LM_Tessellation,
+                                    REFERENCE,
+                                    self.reference_landscape.Reference_Pathways.LM_csv_list)
+        self.populate_skm_groupings(self.reference_landscape.TS_Tessellation,
+                                    REFERENCE,
+                                    self.reference_landscape.Reference_Pathways.TS_csv_list)
+
         self.populate_pathway_groupings(REFERENCE)
         self.populate_local_minima(REFERENCE)
-        self.do_ref_calcs()
+        self.do_init_calcs(REFERENCE)
 
         if not self.reference_landscape.LM_input:
             self.retessellate(self.reference_landscape.LM_Tessellation)
-        if not self.reference_landscape.LM_input:
+        if not self.reference_landscape.TS_input:
             self.retessellate(self.reference_landscape.TS_Tessellation)
 
-        self.recalc_skms(self.reference_landscape.LM_Tessellation)
-        self.recalc_skms(self.reference_landscape.TS_Tessellation)
+        self.recalc_skms(self.reference_landscape.LM_Tessellation, REFERENCE)
+        self.recalc_skms(self.reference_landscape.TS_Tessellation, REFERENCE)
 
         self.assign_skm_labels()
 
-        self.populate_ref_skm_again(self.reference_landscape.LM_Tessellation)
-        self.populate_ref_skm_again(self.reference_landscape.TS_Tessellation)
+        self.populate_skm_again(self.reference_landscape.LM_Tessellation,
+                                REFERENCE,
+                                self.reference_landscape.Reference_Pathways.LM_csv_list)
+        self.populate_skm_again(self.reference_landscape.TS_Tessellation,
+                                REFERENCE,
+                                self.reference_landscape.Reference_Pathways.TS_csv_list)
 
-        self.do_ref_calcs()
+        self.do_init_calcs(REFERENCE)
 
         for method in self.Method_Pathways_dict:
-            self.populate_skm_groupings(method)
+            self.populate_skm_groupings(self.reference_landscape.LM_Tessellation,
+                                        method,
+                                        self.Method_Pathways_dict[method].LM_csv_list)
+            self.populate_skm_groupings(self.reference_landscape.TS_Tessellation,
+                                        method,
+                                        self.Method_Pathways_dict[method].TS_csv_list)
+
+            self.populate_pathway_groupings(method)
+            self.populate_local_minima(method)
+            self.do_init_calcs(method)
+
+            self.assign_skm_labels()
+
+            self.populate_skm_again(self.reference_landscape.LM_Tessellation,
+                                    method,
+                                    self.Method_Pathways_dict[method].LM_csv_list)
+            self.populate_skm_again(self.reference_landscape.TS_Tessellation,
+                                    method,
+                                    self.Method_Pathways_dict[method].TS_csv_list)
+
+            self.do_init_calcs(method)
+
             self.populate_pathway_groupings(method)
             self.populate_local_minima(method)
             #self.do_calcs(method)
-
-            #self.normalize_pathways(method)
 
         pass
 
@@ -1044,12 +1085,12 @@ class Compare_Methods():
 
         return has_0 and has_360
 
-    def recalc_skms(self, tessellation):
+    def recalc_skms(self, tessellation, method):
         for i in range(len(tessellation.skm.cluster_centers_)):
             if tessellation.type == 'LM':
-                skm_grouping = self.reference_landscape.LM_Tessellation.skm_groupings[i]
+                skm_grouping = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][i]
             elif tessellation.type == 'TS':
-                skm_grouping = self.reference_landscape.TS_Tessellation.skm_groupings[i]
+                skm_grouping = self.reference_landscape.TS_Tessellation.methods[method]['skm_groupings'][i]
 
             if len(skm_grouping['structures']) > 0:
                 avg_phi = 0
@@ -1116,56 +1157,102 @@ class Compare_Methods():
         else:
             return False
 
+    def weighting_is_significant(self, tessellation, structure, i, method):
+        wt_tol = 0.1
+
+        structures = tessellation.methods[method]['skm_groupings'][i]['structures']
+        weighting = self.calc_weighting_added(structures, structure)
+
+        if weighting > wt_tol and weighting < 1 - wt_tol / 2:
+            return True
+        else:
+            return False
+
+    def calc_weighting_added(self, structures, structure):
+        total_boltz = 0
+
+        for j in range(len(structures)):
+            if len(structures[j].type.split('_')) == 1:
+                e_val = structures[j].gibbs
+
+                component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+                total_boltz += component
+
+        e_val = structure.gibbs
+
+        component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+        ind_boltz = component
+        total_boltz += component
+
+        weighting = ind_boltz / total_boltz
+
+        return weighting
+
+    def get_max_raw_dist(self, tessellation, method, i):
+        structures = tessellation.methods[method]['skm_groupings'][i]['structures']
+        skm_vert = cart2pol(tessellation.skm.cluster_centers_[i])
+
+        max_dist = 0
+
+        for j in range(len(structures)):
+            curr_dist = arc_length_calculator(structures[j].phi, structures[j].theta, skm_vert[0], skm_vert[1])
+
+            if curr_dist > max_dist:
+                max_dist = curr_dist
+
+        return max_dist
+
     # creates a list of structures grouped by skm
-    def populate_ref_skm_again(self, tessellation):
-        for i in range(len(tessellation.skm.cluster_centers_)):
-            tessellation.skm_groupings[i]['canos'] = []
-
-        for i in range(len(self.reference_landscape.canonical_designations)):
-            cano = self.reference_landscape.canonical_designations[i]
-
-            self.reference_landscape.calc_closest_skm(cano, tessellation)
-
-            tessellation.skm_groupings[cano.closest_skm]['canos'].append(cano)
+    def populate_skm_again(self, tessellation, method, structure_list):
+        gibbs_diff_tol = 1
 
         for i in range(len(tessellation.skm.cluster_centers_)):
-            structures = tessellation.skm_groupings[i]['structures']
+            if tessellation.methods[REFERENCE]['skm_groupings'][i][tessellation.type + '_weighted_gibbs'] is not None:
+                structures = tessellation.methods[method]['skm_groupings'][i]['structures']
 
-            if tessellation.type == 'LM':
-                structure_list = self.reference_landscape.Reference_Pathways.LM_csv_list
-            elif tessellation.type == 'TS':
-                structure_list = self.reference_landscape.Reference_Pathways.TS_csv_list
+                for j in range(len(structure_list)):
+                    structure = structure_list[j]
 
-            for j in range(len(structure_list)):
-                structure = structure_list[j]
+                    if structure.next_closest_skm == i:
+                        skm_1 = cart2pol(tessellation.skm.cluster_centers_[i])
+                        skm_2 = cart2pol(tessellation.skm.cluster_centers_[structure.closest_skm])
 
-                if structure.next_closest_skm == i:
-                    min_cano_dist = 100
+                        skm_dist = arc_length_calculator(skm_1[0], skm_1[1], skm_2[0], skm_2[1])
 
-                    for k in range(len(tessellation.skm_groupings[i]['canos'])):
-                        cano_1 = tessellation.skm_groupings[i]['canos'][k]
+                        arc = structure.comp_metrics['arc']
+                        next_arc = structure.comp_metrics['next_arc']
 
-                        for m in range(len(tessellation.skm_groupings[structure.closest_skm]['canos'])):
-                            cano_2 = tessellation.skm_groupings[structure.closest_skm]['canos'][m]
+                        dist_tol = 1.2
 
-                            curr_dist = self.get_dist_between_structures(cano_1, cano_2)
+                        if arc == 0:
+                            dist_ratio = dist_tol
+                        else:
+                            dist_ratio = next_arc / arc
 
-                            if curr_dist < min_cano_dist:
-                                min_cano_dist = curr_dist
+                        if len(structures) == 0:
+                            max_raw_dist = skm_dist * 0.75 / 3
+                        else:
+                            max_raw_dist = self.get_max_raw_dist(tessellation, method, i)
 
-                    if structure.comp_metrics['next_arc'] < min_cano_dist * 0.75:
-                        if self.energy_is_close(tessellation, structure, i):
-                            structure_copy = Structure(structure.phi,
-                                                       structure.theta,
-                                                       structure.gibbs,
-                                                       structure.name,
-                                                       structure.type + '_added')
+                        if structure.comp_metrics['next_arc'] < max_raw_dist * 3:
+                            if structure.comp_metrics['next_arc'] < skm_dist * 0.75 or dist_ratio < dist_tol:
+                                if structure.gibbs is not None and tessellation.methods[method]['skm_groupings'][i][tessellation.type + '_weighted_gibbs'] is None\
+                                    or abs(structure.gibbs - tessellation.methods[method]['skm_groupings'][i][tessellation.type + '_weighted_gibbs']) < gibbs_diff_tol\
+                                    or self.weighting_is_significant(tessellation, structure, i, method):
 
-                            structure_copy.closest_skm = structure.next_closest_skm
-                            structure_copy.comp_metrics = {}
-                            structure_copy.comp_metrics['arc'] = structure.comp_metrics['next_arc']
+                                    structure_copy = Structure(structure.phi,
+                                                               structure.theta,
+                                                               structure.gibbs,
+                                                               structure.name,
+                                                               structure.type + '_added')
 
-                            structures.append(structure_copy)
+                                    structure_copy.closest_skm = structure.next_closest_skm
+                                    structure_copy.next_closest_skm = structure.closest_skm
+                                    structure_copy.comp_metrics = {}
+                                    structure_copy.comp_metrics['arc'] = structure.comp_metrics['next_arc']
+                                    structure_copy.comp_metrics['next_arc'] = structure.comp_metrics['arc']
+
+                                    structures.append(structure_copy)
 
 
     def normalize_pathways(self, method):
@@ -1272,51 +1359,20 @@ class Compare_Methods():
         self.Method_Pathways_dict['REFERENCE'].comp_metrics = {}
 
     # creates a list of structures grouped by skm
-    def populate_ref_skm_groupings(self, tessellation):
+    def populate_skm_groupings(self, tessellation, method, structure_list):
+        tessellation.methods[method] = {}
+        tessellation.methods[method]['skm_groupings'] = []
+
         for i in range(len(tessellation.skm.cluster_centers_)):
-            tessellation.skm_groupings.append({})
-            tessellation.skm_groupings[i]['structures'] = []
-            structures = tessellation.skm_groupings[i]['structures']
+            tessellation.methods[method]['skm_groupings'].append({})
+            tessellation.methods[method]['skm_groupings'][i]['structures'] = []
+            structures = tessellation.methods[method]['skm_groupings'][i]['structures']
 
-            if tessellation.type == 'LM':
-                for j in range(len(self.reference_landscape.Reference_Pathways.LM_csv_list)):
-                    LM = self.reference_landscape.Reference_Pathways.LM_csv_list[j]
+            for j in range(len(structure_list)):
+                structure = structure_list[j]
 
-                    if LM.closest_skm == i:
-                        structures.append(LM)
-            elif tessellation.type == 'TS':
-                for j in range(len(self.reference_landscape.Reference_Pathways.TS_csv_list)):
-                    TS = self.reference_landscape.Reference_Pathways.TS_csv_list[j]
-
-                    if TS.closest_skm == i:
-                        structures.append(TS)
-
-    # creates a list of structures grouped by skm
-    def populate_skm_groupings(self, method):
-        self.Method_Pathways_dict[method].LM_skm_groupings = []
-        self.Method_Pathways_dict[method].TS_skm_groupings = []
-
-        for i in range(len(self.reference_landscape.LM_Tessellation.skm.cluster_centers_)):
-            self.Method_Pathways_dict[method].LM_skm_groupings.append({})
-            self.Method_Pathways_dict[method].LM_skm_groupings[i]['structures'] = []
-            structures = self.Method_Pathways_dict[method].LM_skm_groupings[i]['structures']
-
-            for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
-                LM = self.Method_Pathways_dict[method].LM_csv_list[j]
-
-                if LM.closest_skm == i:
-                    structures.append(LM)
-
-        for i in range(len(self.reference_landscape.TS_Tessellation.skm.cluster_centers_)):
-            self.Method_Pathways_dict[method].TS_skm_groupings.append({})
-            self.Method_Pathways_dict[method].TS_skm_groupings[i]['structures'] = []
-            structures = self.Method_Pathways_dict[method].TS_skm_groupings[i]['structures']
-
-            for j in range(len(self.Method_Pathways_dict[method].Pathways)):
-                TS = self.Method_Pathways_dict[method].Pathways[j].TS
-
-                if TS.closest_skm == i:
-                    structures.append(TS)
+                if structure.closest_skm == i:
+                    structures.append(structure)
 
     def pathway_groupings_init(self):
         self.pathway_groupings = {}
@@ -1422,11 +1478,24 @@ class Compare_Methods():
                                               phi2=phi2, theta2=theta2)
 
             if curr_dist < min_dist:
-                next_skm_index = skm_index
-                next_min_dist = min_dist
-
                 min_dist = curr_dist
                 skm_index = i
+
+        next_min_dist = 100
+        next_skm_index = 0
+
+        for i in range(len(self.reference_landscape.LM_Tessellation.skm.cluster_centers_)):
+            center = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[i])
+
+            phi2 = center[0]
+            theta2 = center[1]
+
+            curr_dist = arc_length_calculator(phi1=phi1, theta1=theta1,
+                                              phi2=phi2, theta2=theta2)
+
+            if curr_dist < next_min_dist and curr_dist > min_dist:
+                next_skm_index = i
+                next_min_dist = curr_dist
 
         structure.comp_metrics['arc'] = min_dist
         structure.closest_skm = skm_index
@@ -1451,11 +1520,24 @@ class Compare_Methods():
                                               phi2=phi2, theta2=theta2)
 
             if curr_dist < min_dist:
-                next_skm_index = skm_index
-                next_min_dist = min_dist
-
                 min_dist = curr_dist
                 skm_index = i
+
+        next_min_dist = 100
+        next_skm_index = 0
+
+        for i in range(len(self.reference_landscape.TS_Tessellation.skm.cluster_centers_)):
+            center = cart2pol(self.reference_landscape.TS_Tessellation.skm.cluster_centers_[i])
+
+            phi2 = center[0]
+            theta2 = center[1]
+
+            curr_dist = arc_length_calculator(phi1=phi1, theta1=theta1,
+                                              phi2=phi2, theta2=theta2)
+
+            if curr_dist < next_min_dist and curr_dist > min_dist:
+                next_skm_index = i
+                next_min_dist = curr_dist
 
         structure.comp_metrics['arc'] = min_dist
         structure.closest_skm = skm_index
@@ -1477,20 +1559,20 @@ class Compare_Methods():
 
     # # # do_calcs # # #
     # region
-    def do_ref_calcs(self):
-        for i in range(len(self.reference_landscape.LM_Tessellation.skm_groupings)):
-            self.calc_LM_weighting(i)
+    def do_init_calcs(self, method):
+        for i in range(len(self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'])):
+            self.calc_LM_weighting(i, method)
 
-        for i in range(len(self.reference_landscape.TS_Tessellation.skm_groupings)):
-            self.calc_TS_weighting(i)
+        for i in range(len(self.reference_landscape.TS_Tessellation.methods[method]['skm_groupings'])):
+            self.calc_TS_weighting(i, method)
 
-    def calc_LM_weighting(self, i):
+    def calc_LM_weighting(self, i, method):
         tessellation = self.reference_landscape.LM_Tessellation
 
         total_boltz = 0
 
-        for j in range(len(tessellation.skm_groupings[i]['structures'])):
-            structure = tessellation.skm_groupings[i]['structures'][j]
+        for j in range(len(tessellation.methods[method]['skm_groupings'][i]['structures'])):
+            structure = tessellation.methods[method]['skm_groupings'][i]['structures'][j]
             e_val = structure.gibbs
 
             component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
@@ -1499,8 +1581,8 @@ class Compare_Methods():
 
         wt_gibbs = 0
 
-        for j in range(len(tessellation.skm_groupings[i]['structures'])):
-            structure = tessellation.skm_groupings[i]['structures'][j]
+        for j in range(len(tessellation.methods[method]['skm_groupings'][i]['structures'])):
+            structure = tessellation.methods[method]['skm_groupings'][i]['structures'][j]
 
             if structure.LM_ind_bolts == 0:
                 structure.LM_weighting = 0
@@ -1509,18 +1591,18 @@ class Compare_Methods():
                 structure.LM_weighting = structure.LM_ind_bolts / total_boltz
                 wt_gibbs += structure.gibbs * structure.LM_weighting
 
-        if len(tessellation.skm_groupings[i]['structures']) == 0:
-            tessellation.skm_groupings[i]['LM_weighted_gibbs'] = None
+        if len(tessellation.methods[method]['skm_groupings'][i]['structures']) == 0:
+            tessellation.methods[method]['skm_groupings'][i]['LM_weighted_gibbs'] = None
         else:
-            tessellation.skm_groupings[i]['LM_weighted_gibbs'] = wt_gibbs
+            tessellation.methods[method]['skm_groupings'][i]['LM_weighted_gibbs'] = wt_gibbs
 
-    def calc_TS_weighting(self, i):
+    def calc_TS_weighting(self, i, method):
         tessellation = self.reference_landscape.TS_Tessellation
 
         total_boltz = 0
 
-        for j in range(len(tessellation.skm_groupings[i]['structures'])):
-            structure = tessellation.skm_groupings[i]['structures'][j]
+        for j in range(len(tessellation.methods[method]['skm_groupings'][i]['structures'])):
+            structure = tessellation.methods[method]['skm_groupings'][i]['structures'][j]
             e_val = structure.gibbs
 
             component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
@@ -1529,8 +1611,8 @@ class Compare_Methods():
 
         wt_gibbs = 0
 
-        for j in range(len(tessellation.skm_groupings[i]['structures'])):
-            structure = tessellation.skm_groupings[i]['structures'][j]
+        for j in range(len(tessellation.methods[method]['skm_groupings'][i]['structures'])):
+            structure = tessellation.methods[method]['skm_groupings'][i]['structures'][j]
 
             if structure.TS_ind_bolts == 0:
                 structure.TS_weighting = 0
@@ -1539,10 +1621,10 @@ class Compare_Methods():
                 structure.TS_weighting = structure.TS_ind_bolts / total_boltz
                 wt_gibbs += structure.gibbs * structure.TS_weighting
 
-        if len(tessellation.skm_groupings[i]['structures']) == 0:
-            tessellation.skm_groupings[i]['TS_weighted_gibbs'] = None
+        if len(tessellation.methods[method]['skm_groupings'][i]['structures']) == 0:
+            tessellation.methods[method]['skm_groupings'][i]['TS_weighted_gibbs'] = None
         else:
-            tessellation.skm_groupings[i]['TS_weighted_gibbs'] = wt_gibbs
+            tessellation.methods[method]['skm_groupings'][i]['TS_weighted_gibbs'] = wt_gibbs
 
 
     def do_calcs(self, method):
@@ -1798,7 +1880,7 @@ class Compare_Methods():
                     ts_artist, lm_artist = self.get_artist(method)
 
                     artist_list.append(lm_artist)
-                    label_list.append('LM ' + method)
+                    label_list.append('TS ' + method)
 
                     plot.ax_rect.legend(artist_list,
                                         label_list,
@@ -1815,8 +1897,8 @@ class Compare_Methods():
 
                 artist_list.append(lm_artist)
                 artist_list.append(ref_lm_artist)
-                label_list.append('LM ' + method)
-                label_list.append('LM ' + REFERENCE)
+                label_list.append('TS ' + method)
+                label_list.append('TS ' + REFERENCE)
 
                 plot.ax_rect.legend(artist_list,
                                      label_list,
@@ -1909,8 +1991,8 @@ class Compare_Methods():
 
     # # # norm plotting # # #
     #region
-    def plot_raw_data_norm_LM(self, plot, method, connect_to_skm=False):
-        skm_groupings = self.reference_landscape.LM_Tessellation.skm_groupings
+    def plot_raw_data_norm_LM(self, plot, method, connect_to_skm=False, plot_criteria=False):
+        skm_groupings = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings']
 
         amt = 0.5
         scaling = 1
@@ -1933,19 +2015,87 @@ class Compare_Methods():
                     else:
                         linestyle = '-'
 
-                    self.plot_line(plot, LM_vert, skm_vert, method, line_style=linestyle)
+                    self.plot_line(plot, LM_vert, skm_vert, method, line_style=linestyle, plot_TS_vert=False, plot_LM_vert=False)
+
+                if plot_criteria:
+                    tessellation = self.reference_landscape.LM_Tessellation
+                    structure = LM
+
+                    skm_1 = cart2pol(tessellation.skm.cluster_centers_[i])
+                    skm_2 = cart2pol(tessellation.skm.cluster_centers_[structure.next_closest_skm])
+
+                    skm_dist = arc_length_calculator(skm_1[0], skm_1[1], skm_2[0], skm_2[1])
+
+                    arc = structure.comp_metrics['arc']
+                    next_arc = structure.comp_metrics['next_arc']
+
+                    dist_tol = 1.2
+                    gibbs_diff_tol = 1
+
+                    if arc == 0:
+                        dist_ratio = dist_tol
+                    else:
+                        dist_ratio = next_arc / arc
+
+                    self.plot_line(plot, [structure.phi, structure.theta],
+                                   cart2pol(tessellation.skm.cluster_centers_[structure.next_closest_skm]), method,
+                                   line_style=':',
+                                   plot_LM_vert=False, plot_TS_vert=False)
+
+                    if LM.type != 'LM_added':
+                        amt = 10
+                        width = 2
+
+                        if structure.comp_metrics['next_arc'] < skm_dist * 0.75 or dist_ratio < dist_tol:
+                            if len(tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm]['structures']) > 0:
+                                if structure.comp_metrics['next_arc'] < skm_dist * 0.75:
+                                    plot.ax_rect.scatter(LM.phi, LM.theta, c='',
+                                                         edgecolor='black',
+                                                         marker=self.met_lm_markers_dict[method],
+                                                         s=LM_size * (amt + width), zorder=10)
+
+                                if dist_ratio < dist_tol:
+                                    plot.ax_rect.scatter(LM.phi, LM.theta, c='',
+                                                         edgecolor='red',
+                                                         marker=self.met_lm_markers_dict[method],
+                                                         s=LM_size * amt, zorder=10)
+
+                                if structure.gibbs is not None and tessellation.methods[method]['skm_groupings'][structure.next_closest_skm][
+                                    tessellation.type + '_weighted_gibbs'] is None and\
+                                    tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm][tessellation.type + '_weighted_gibbs'] is not None:
+
+                                    plot.ax_rect.scatter(LM.phi, LM.theta, c='',
+                                                         edgecolor='orange',
+                                                         marker=self.met_lm_markers_dict[method],
+                                                         s=LM_size * (amt - 1 * width), zorder=10)
+                                elif abs(structure.gibbs - tessellation.methods[method]['skm_groupings'][structure.next_closest_skm][
+                                        tessellation.type + '_weighted_gibbs']) < gibbs_diff_tol:
+                                    plot.ax_rect.scatter(LM.phi, LM.theta, c='',
+                                                         edgecolor='yellow',
+                                                         marker=self.met_lm_markers_dict[method],
+                                                         s=LM_size * (amt - 2 * width), zorder=10)
+
+                                if self.weighting_is_significant(tessellation, structure, structure.next_closest_skm, method):
+                                    plot.ax_rect.scatter(LM.phi, LM.theta, c='',
+                                                         edgecolor='green',
+                                                         marker=self.met_lm_markers_dict[method],
+                                                         s=LM_size * (amt - 3 * width), zorder=10)
 
                 plot.ax_rect.scatter(LM.phi, LM.theta, c='white',
                                      edgecolor=self.met_colors_dict[method],
-                                     marker=self.met_ts_markers_dict[method],
+                                     marker=self.met_lm_markers_dict[method],
                                      s=LM_size, zorder=10)
                 plot.ax_rect.annotate(str(round(LM.gibbs, 1)),
                                       xy=(LM.phi, LM.theta), xytext=(LM.phi, LM.theta),
                                       ha="center", va="center", fontsize=3 * scaling, zorder=100)
 
-    def save_raw_data_norm_LM(self, method='ALL', plot_ref=True, connect_to_skm=False):
+    def save_raw_data_norm_LM(self, method='ALL', plot_ref=True, connect_to_skm=False, plot_criteria=False):
         filename = self.molecule + '-' + method + '-raw_data_norm_LM'
-        dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'raw_data_norm'))
+        dir1 = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'raw_data_norm'))
+        dir = make_dir(os.path.join(dir1, 'LM'))
+
+        if plot_criteria:
+            dir = make_dir(os.path.join(dir, 'plot_criteria'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
@@ -1959,7 +2109,7 @@ class Compare_Methods():
 
             if method == 'ALL':
                 for method in self.Method_Pathways_dict:
-                    self.plot_raw_data_norm_LM(plot=plot, method=method, connect_to_skm=connect_to_skm)
+                    self.plot_raw_data_norm_LM(plot=plot, method=method, connect_to_skm=connect_to_skm, plot_criteria=plot_criteria)
 
                     ts_artist, lm_artist = self.get_artist(method)
 
@@ -1976,7 +2126,7 @@ class Compare_Methods():
                 if plot_ref:
                     self.plot_raw_data_LM(plot=plot, method=REFERENCE)
 
-                self.plot_raw_data_norm_LM(plot=plot, method=method, connect_to_skm=connect_to_skm)
+                self.plot_raw_data_norm_LM(plot=plot, method=method, connect_to_skm=connect_to_skm, plot_criteria=plot_criteria)
 
                 ts_artist, lm_artist = self.get_artist(method)
                 ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
@@ -2001,8 +2151,8 @@ class Compare_Methods():
 
             plot.save(dir_=dir, filename=filename, width=18, height=10)
 
-    def plot_raw_data_norm_TS(self, plot, method, connect_to_skm=False):
-        skm_groupings = self.reference_landscape.TS_Tessellation.skm_groupings
+    def plot_raw_data_norm_TS(self, plot, method, connect_to_skm=False, plot_criteria=False):
+        skm_groupings = self.reference_landscape.TS_Tessellation.methods[method]['skm_groupings']
 
         amt = 0.5
         scaling = 1
@@ -2025,7 +2175,80 @@ class Compare_Methods():
                     else:
                         linestyle = '-'
 
-                    self.plot_line(plot, TS_vert, skm_vert, method, line_style=linestyle)
+                    self.plot_line(plot, TS_vert, skm_vert, method, line_style=linestyle, plot_TS_vert=False,  plot_LM_vert=False)
+
+                if plot_criteria:
+                    tessellation = self.reference_landscape.TS_Tessellation
+                    structure = TS
+
+                    skm_1 = cart2pol(tessellation.skm.cluster_centers_[i])
+                    skm_2 = cart2pol(tessellation.skm.cluster_centers_[structure.next_closest_skm])
+
+                    skm_dist = arc_length_calculator(skm_1[0], skm_1[1], skm_2[0], skm_2[1])
+
+                    arc = structure.comp_metrics['arc']
+                    next_arc = structure.comp_metrics['next_arc']
+
+                    dist_tol = 1.2
+                    gibbs_diff_tol = 1
+
+                    if arc == 0:
+                        dist_ratio = dist_tol
+                    else:
+                        dist_ratio = next_arc / arc
+
+                    self.plot_line(plot, [structure.phi, structure.theta],
+                                   cart2pol(tessellation.skm.cluster_centers_[structure.next_closest_skm]), method,
+                                   line_style=':',
+                                   plot_LM_vert=False, plot_TS_vert=False)
+
+                    if TS.type != 'TS_added':
+                        amt = 10
+                        width = 2
+
+                        max_raw_dist = self.get_max_raw_dist(tessellation, method, i)
+
+                        if structure.comp_metrics['next_arc'] < max_raw_dist*3:
+                            plot.ax_rect.scatter(TS.phi, TS.theta, c='',
+                                                 edgecolor='gray',
+                                                 marker=self.met_ts_markers_dict[method],
+                                                 s=TS_size * (amt + 2*width), zorder=10)
+
+                            if structure.comp_metrics['next_arc'] < skm_dist * 0.75 or dist_ratio < dist_tol:
+                                if len(tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm]['structures']) > 0:
+                                    if structure.comp_metrics['next_arc'] < skm_dist * 0.75:
+                                        plot.ax_rect.scatter(TS.phi, TS.theta, c='',
+                                                             edgecolor='black',
+                                                             marker=self.met_ts_markers_dict[method],
+                                                             s=TS_size * (amt + width), zorder=10)
+
+                                    if dist_ratio < dist_tol:
+                                        plot.ax_rect.scatter(TS.phi, TS.theta, c='',
+                                                             edgecolor='red',
+                                                             marker=self.met_ts_markers_dict[method],
+                                                             s=TS_size * amt, zorder=10)
+
+                                    if structure.gibbs is not None and tessellation.methods[method]['skm_groupings'][structure.next_closest_skm][
+                                        tessellation.type + '_weighted_gibbs'] is None and\
+                                        tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm][tessellation.type + '_weighted_gibbs'] is not None:
+
+                                        plot.ax_rect.scatter(TS.phi, TS.theta, c='',
+                                                             edgecolor='orange',
+                                                             marker=self.met_ts_markers_dict[method],
+                                                             s=TS_size * (amt - 1 * width), zorder=10)
+
+                                    if abs(structure.gibbs - tessellation.methods[method]['skm_groupings'][structure.next_closest_skm][
+                                            tessellation.type + '_weighted_gibbs']) < gibbs_diff_tol:
+                                        plot.ax_rect.scatter(TS.phi, TS.theta, c='',
+                                                             edgecolor='yellow',
+                                                             marker=self.met_ts_markers_dict[method],
+                                                             s=TS_size * (amt - 2 * width), zorder=10)
+
+                                    if self.weighting_is_significant(tessellation, structure, structure.next_closest_skm, method):
+                                        plot.ax_rect.scatter(TS.phi, TS.theta, c='',
+                                                             edgecolor='green',
+                                                             marker=self.met_ts_markers_dict[method],
+                                                             s=TS_size * (amt - 3 * width), zorder=10)
 
                 plot.ax_rect.scatter(TS.phi, TS.theta, c='white',
                                      edgecolor=self.met_colors_dict[method],
@@ -2035,9 +2258,13 @@ class Compare_Methods():
                                       xy=(TS.phi, TS.theta), xytext=(TS.phi, TS.theta),
                                       ha="center", va="center", fontsize=3 * scaling, zorder=100)
 
-    def save_raw_data_norm_TS(self, method='ALL', plot_ref=True, connect_to_skm=False):
+    def save_raw_data_norm_TS(self, method='ALL', plot_ref=True, connect_to_skm=False, plot_criteria=False):
         filename = self.molecule + '-' + method + '-raw_data_norm_TS'
-        dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'raw_data_norm'))
+        dir1 = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'raw_data_norm'))
+        dir = make_dir(os.path.join(dir1, 'TS'))
+
+        if plot_criteria:
+            dir = make_dir(os.path.join(dir, 'plot_criteria'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
@@ -2052,7 +2279,7 @@ class Compare_Methods():
 
             if method == 'ALL':
                 for method in self.Method_Pathways_dict:
-                    self.plot_raw_data_norm_TS(plot=plot, method=method, connect_to_skm=connect_to_skm)
+                    self.plot_raw_data_norm_TS(plot=plot, method=method, connect_to_skm=connect_to_skm, plot_criteria=plot_criteria)
 
                     ts_artist, lm_artist = self.get_artist(method)
 
@@ -2069,7 +2296,7 @@ class Compare_Methods():
                 if plot_ref:
                     self.plot_raw_data_TS(plot=plot, method=REFERENCE)
 
-                self.plot_raw_data_norm_TS(plot=plot, method=method, connect_to_skm=connect_to_skm)
+                self.plot_raw_data_norm_TS(plot=plot, method=method, connect_to_skm=connect_to_skm, plot_criteria=plot_criteria)
 
                 ts_artist, lm_artist = self.get_artist(method)
                 ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
@@ -2095,7 +2322,7 @@ class Compare_Methods():
             plot.save(dir_=dir, filename=filename, width=18, height=10)
     #endregion
 
-    def plot_line(self, plot, TS_vert, LM_vert, method, zorder=10, line_style='-'):
+    def plot_line(self, plot, TS_vert, LM_vert, method, zorder=10, line_style='-', plot_TS_vert=True, plot_LM_vert=True):
         size = 30
         color = self.met_colors_dict[method]
 
@@ -2109,14 +2336,17 @@ class Compare_Methods():
         else:
             plot.ax_rect.plot(line[0], line[1], color=color, linestyle=line_style)
 
-        plot.ax_rect.scatter(TS_vert[0], TS_vert[1], c='white',
-                             edgecolor=color,
-                             marker=self.met_ts_markers_dict[method],
-                             s=size, zorder=zorder)
-        plot.ax_rect.scatter(LM_vert[0], LM_vert[1], c=color,
-                             edgecolor=color,
-                             marker=self.met_lm_markers_dict[method],
-                             s=size, zorder=zorder)
+        if plot_TS_vert:
+            plot.ax_rect.scatter(TS_vert[0], TS_vert[1], c='white',
+                                 edgecolor=color,
+                                 marker=self.met_ts_markers_dict[method],
+                                 s=size, zorder=zorder)
+
+        if plot_LM_vert:
+            plot.ax_rect.scatter(LM_vert[0], LM_vert[1], c=color,
+                                 edgecolor=color,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=size, zorder=zorder)
 
     def plot_connectivity(self, plot, method):
         pathways = self.Method_Pathways_dict[method].Pathways
@@ -2175,7 +2405,7 @@ class Compare_Methods():
                     artist_list.append(lm_artist)
 
                     label_list.append('TS ' + method)
-                    label_list.append('LM ' + method)
+                    label_list.append('TS ' + method)
 
                     plot.ax_rect.legend(artist_list,
                                         label_list,
@@ -2196,9 +2426,9 @@ class Compare_Methods():
                 artist_list.append(ref_lm_artist)
 
                 label_list.append('TS ' + method)
-                label_list.append('LM ' + method)
+                label_list.append('TS ' + method)
                 label_list.append('TS ' + REFERENCE)
-                label_list.append('LM ' + REFERENCE)
+                label_list.append('TS ' + REFERENCE)
 
                 plot.ax_rect.legend(artist_list,
                                      label_list,

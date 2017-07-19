@@ -836,9 +836,9 @@ class Local_Minima_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
-        label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
+        label_list = ['TS Kmeans Center', self.method + ' TS', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-" + self.molecule + "-LM-" + self.method
+        base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
         # if file either doesn't exist or needs to be overwritten
         if not os.path.exists(os.path.join(self.overall_dir, base_name + '-all_groupings' + '.png')) or overwrite:
@@ -871,9 +871,9 @@ class Local_Minima_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
-        label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
+        label_list = ['TS Kmeans Center', self.method + ' TS', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-" + self.molecule + "-LM-" + self.method
+        base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
         # if file either doesn't exist or needs to be overwritten
         if not os.path.exists(os.path.join(self.lm_overall_dir, base_name + '-all_groupings' + '.png')) or overwrite:
@@ -895,9 +895,9 @@ class Local_Minima_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='green')
 
         artist_list = [raw_ref_lm_Artist, met_lm_Artist, path_Artist, cano_lm_Artist]
-        label_list = ['LM Kmeans Center', self.method + ' LM', 'Voronoi Edge', 'Canonical Designation']
+        label_list = ['TS Kmeans Center', self.method + ' TS', 'Voronoi Edge', 'Canonical Designation']
 
-        base_name = "z_dataset-" + self.molecule + "-LM-" + self.method
+        base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
         if not os.path.exists(os.path.join(self.overall_dir, base_name + '-all_method_raw_data' + '.png')) or overwrite:
             # saves plot of all groupings with the raw group data
@@ -923,7 +923,7 @@ class Local_Minima_Compare():
                                     edgecolor='black')
 
         artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
+        label_list = ['No TS found', 'Canonical Designation', 'TS Kmeans Center', self.method + ' TS',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-heatmap-" + self.method
@@ -952,7 +952,7 @@ class Local_Minima_Compare():
                                     edgecolor='black')
 
         artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
+        label_list = ['No TS found', 'Canonical Designation', 'TS Kmeans Center', self.method + ' TS',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-RMSD-heatmap-" + self.method
@@ -981,7 +981,7 @@ class Local_Minima_Compare():
                                     edgecolor='black')
 
         artist_list = [no_lm_Artist, cano_lm_Artist, uncomp_lm_Artist, comp_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'uncomparable LM', 'comparable LM',
+        label_list = ['No TS found', 'Canonical Designation', 'uncomparable TS', 'comparable TS',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-comp-" + self.method
@@ -1010,7 +1010,7 @@ class Local_Minima_Compare():
                                     edgecolor='black')
 
         artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
+        label_list = ['No TS found', 'Canonical Designation', 'TS Kmeans Center', self.method + ' TS',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-heatmap-" + self.method
@@ -1039,7 +1039,7 @@ class Local_Minima_Compare():
                                     edgecolor='black')
 
         artist_list = [ref_lm_Artist, cano_lm_Artist, full_lm_Artist, met_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'LM Kmeans Center', self.method + ' LM',
+        label_list = ['No TS found', 'Canonical Designation', 'TS Kmeans Center', self.method + ' TS',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-RMSD-heatmap-" + self.method
@@ -1068,7 +1068,7 @@ class Local_Minima_Compare():
                                    edgecolor='black')
 
         artist_list = [no_lm_Artist, cano_lm_Artist, uncomp_lm_Artist, comp_lm_Artist, path_Artist]
-        label_list = ['No LM found', 'Canonical Designation', 'uncomparable LM', 'comparable LM',
+        label_list = ['No TS found', 'Canonical Designation', 'uncomparable TS', 'comparable TS',
                       'Voronoi Tessellation']
 
         base_name = "z_dataset-" + self.molecule + "-lm-WRMSD-comp-" + self.method
@@ -2423,7 +2423,7 @@ class Transition_State_Compare():
         path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='red')
 
         artist_list = [met_lm_Artist, met_ts_Artist, path_Artist, cano_lm_Artist]
-        label_list = [self.method + ' LM', self.method + ' TS', 'Pathway', 'Canonical Designation']
+        label_list = [self.method + ' TS', self.method + ' TS', 'Pathway', 'Canonical Designation']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
@@ -2451,7 +2451,7 @@ class Transition_State_Compare():
         ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
 
         artist_list = [ref_path_Artist, cano_lm_Artist, met_lm_Artist, met_ts_Artist, path_Artist]
-        label_list = ['REFERENCE pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
+        label_list = ['REFERENCE pathway', 'Canonical Designation', 'TS Kmeans Center', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
@@ -2481,7 +2481,7 @@ class Transition_State_Compare():
         ref_path_Artist = plt.Line2D((5000, 5000), (4999, 4999), c='gray', marker='s', linestyle='-.')
 
         artist_list = [ref_path_Artist, cano_lm_Artist, met_lm_Artist, met_ts_Artist, path_Artist]
-        label_list = ['REFERENCE pathway', 'Canonical Designation', 'LM Kmeans Center', self.method + ' TS', 'Pathway']
+        label_list = ['REFERENCE pathway', 'Canonical Designation', 'TS Kmeans Center', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + self.method
 
@@ -2518,7 +2518,7 @@ class Transition_State_Compare():
 
         artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist),
                        (path_Artist, met_ts_Artist)]
-        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE pathway',
+        label_list = ['no pathway', 'Canonical Designation', 'TS Kmeans Center', 'REFERENCE pathway',
                       self.method + ' pathway']
 
         for path_group in self.ref_path_group_data:
@@ -2556,7 +2556,7 @@ class Transition_State_Compare():
                                     edgecolor='gray')
 
         artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist), (path_Artist, met_ts_Artist)]
-        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE pathway', self.method + ' pathway']
+        label_list = ['no pathway', 'Canonical Designation', 'TS Kmeans Center', 'REFERENCE pathway', self.method + ' pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-" + "-all_groups_comp-" + self.method
 
@@ -2590,7 +2590,7 @@ class Transition_State_Compare():
                                     edgecolor='black')
 
         artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist, (uncomp_ts_Artist, uncomp_path_Artist), (path_Artist, met_ts_Artist)]
-        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'uncomparable pathway', 'comparable pathway']
+        label_list = ['no pathway', 'Canonical Designation', 'TS Kmeans Center', 'uncomparable pathway', 'comparable pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-comp-" + self.method
 
@@ -2620,7 +2620,7 @@ class Transition_State_Compare():
                                     edgecolor='black')
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist, met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS', self.method + ' TS', 'Pathway']
+        label_list = ['No pathway found', 'Canonical Designation', 'TS Kmeans Center', 'REFERENCE TS', self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
 
@@ -2651,7 +2651,7 @@ class Transition_State_Compare():
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
                        met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS',
+        label_list = ['No pathway found', 'Canonical Designation', 'TS Kmeans Center', 'REFERENCE TS',
                       self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
@@ -2684,7 +2684,7 @@ class Transition_State_Compare():
 
         artist_list = [(no_path_Artist, no_ts_Artist), cano_lm_Artist, met_lm_Artist,
                        (uncomp_ts_Artist, uncomp_path_Artist), (path_Artist, met_ts_Artist)]
-        label_list = ['no pathway', 'Canonical Designation', 'LM Kmeans Center', 'uncomparable pathway',
+        label_list = ['no pathway', 'Canonical Designation', 'TS Kmeans Center', 'uncomparable pathway',
                       'comparable pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-comp-" + self.method
@@ -2716,7 +2716,7 @@ class Transition_State_Compare():
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
                        met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS',
+        label_list = ['No pathway found', 'Canonical Designation', 'TS Kmeans Center', 'REFERENCE TS',
                       self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-WRMSD-heatmap-" + self.method
@@ -2748,7 +2748,7 @@ class Transition_State_Compare():
 
         artist_list = [(ref_path_Artist, ref_ts_Artist), cano_lm_Artist, met_lm_Artist, ref_met_ts_Artist,
                        met_ts_Artist, path_Artist]
-        label_list = ['No pathway found', 'Canonical Designation', 'LM Kmeans Center', 'REFERENCE TS',
+        label_list = ['No pathway found', 'Canonical Designation', 'TS Kmeans Center', 'REFERENCE TS',
                       self.method + ' TS', 'Pathway']
 
         base_name = "z_dataset-" + self.molecule + "-TS-RMSD-heatmap-" + self.method
@@ -3628,7 +3628,7 @@ class Compare_All_Methods:
         for key, val in artist_dict.items():
             artist_list.append(val)
 
-        label_list = ['Canonical Designation', 'LM Kmeans Center',
+        label_list = ['Canonical Designation', 'TS Kmeans Center',
                       'REFERENCE Kmeans Centers (curr lm group)',
                       'REFERENCE Kmeans Centers']
 
@@ -3792,7 +3792,7 @@ class Compare_All_Methods:
                                     edgecolor='black')
 
         artist_list = [cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist)]
-        label_list = ['Canonical Designation', 'LM Kmeans Center', 'pathway']
+        label_list = ['Canonical Designation', 'TS Kmeans Center', 'pathway']
 
         if not os.path.exists(os.path.join(self.tables_dir, data_key)):
             os.makedirs(os.path.join(self.tables_dir, data_key))
@@ -4017,7 +4017,7 @@ class Compare_All_Methods:
                                     edgecolor='black')
 
         artist_list = [cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist)]
-        label_list = ['Canonical Designation', 'LM Kmeans Center', 'pathway']
+        label_list = ['Canonical Designation', 'TS Kmeans Center', 'pathway']
 
         base_name = "z_dataset-" + self.methods_ts_data[0].molecule + "-TS-all-groups-" + data_key + "-table"
 
@@ -4155,7 +4155,7 @@ class Compare_All_Methods:
                                     edgecolor='blue')
 
         artist_list = [cano_lm_Artist, met_lm_Artist, (ref_path_Artist, ref_ts_Artist)]
-        label_list = ['Canonical Designation', 'LM Kmeans Center', 'pathway']
+        label_list = ['Canonical Designation', 'TS Kmeans Center', 'pathway']
 
         base_name = "z_dataset-" + self.methods_ts_data[0].molecule + "-TS-num-comp-table"
 
