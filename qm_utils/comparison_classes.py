@@ -2206,7 +2206,10 @@ class Compare_Methods():
                         amt = 10
                         width = 2
 
-                        max_raw_dist = self.get_max_raw_dist(tessellation, method, i)
+                        if len(tessellation.methods[method]['skm_groupings'][i]['structures']) == 0:
+                            max_raw_dist = skm_dist * 0.75 / 3
+                        else:
+                            max_raw_dist = self.get_max_raw_dist(tessellation, method, i)
 
                         if structure.comp_metrics['next_arc'] < max_raw_dist*3:
                             plot.ax_rect.scatter(TS.phi, TS.theta, c='',
