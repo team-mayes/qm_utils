@@ -20,8 +20,7 @@ import qm_utils.comparison_classes as cc
 
 def main():
     #cluster()
-    save_plots()
-    #do_main()
+    do_main()
     #save_ref_plots()
 
     return 0
@@ -32,7 +31,7 @@ def cluster():
     comp_met.reference_landscape.save_tessellations_LM()
     comp_met.reference_landscape.save_tessellations_TS()
 
-def save_plots():
+def do_main():
     methods_list = []
 
     methods_list.append('REFERENCE')
@@ -80,16 +79,19 @@ def save_plots():
                                       met_ts_markers_dict,
                                       met_lm_markers_dict)
 
-        comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
-        comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
-
-        comp_met.reference_landscape.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
-        comp_met.reference_landscape.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
-
         for method in comp_met.Method_Pathways_dict:
-            comp_met.save_raw_data_LM(method)
-            comp_met.save_raw_data_TS(method)
-            comp_met.save_connectivity(method)
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                       method=method,
+                                       type='raw')
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                       method=method,
+                                       type='raw')
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                       method=method,
+                                       type='skm')
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                       method=method,
+                                       type='skm')
 
             comp_met.save_raw_data_norm_LM(method, False, True)
             comp_met.save_raw_data_norm_TS(method, False, True)
@@ -97,9 +99,31 @@ def save_plots():
             comp_met.save_raw_data_norm_LM(method, False, True, plot_criteria=True)
             comp_met.save_raw_data_norm_TS(method, False, True, plot_criteria=True)
 
-        comp_met.save_raw_data_LM()
-        comp_met.save_raw_data_TS()
-        comp_met.save_connectivity()
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='ALL',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='ALL',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='ALL',
+                                   type='skm')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='ALL',
+                                   type='skm')
+
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='DFT',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='DFT',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='DFT',
+                                   type='skm')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='DFT',
+                                   type='skm')
 
         comp_met.save_raw_data_norm_LM('ALL', False, True)
         comp_met.save_raw_data_norm_TS('ALL', False, True)
@@ -107,79 +131,16 @@ def save_plots():
         comp_met.save_raw_data_norm_LM('ALL', False, True, plot_criteria=True)
         comp_met.save_raw_data_norm_TS('ALL', False, True, plot_criteria=True)
 
-def do_main():
-    methods_list = []
+        comp_met.save_raw_data_norm_LM('DFT', False, True)
+        comp_met.save_raw_data_norm_TS('DFT', False, True)
 
-    methods_list.append('REFERENCE')
-    methods_list.append('B3LYP')
-    methods_list.append('APFD')
-    methods_list.append('BMK')
-    methods_list.append('M06L')
-    methods_list.append('PBEPBE')
-    methods_list.append('DFTB')
-    methods_list.append('AM1')
-    methods_list.append('PM3')
-    methods_list.append('PM3MM')
-    methods_list.append('PM6')
+        comp_met.save_raw_data_norm_LM('DFT', False, True, plot_criteria=True)
+        comp_met.save_raw_data_norm_TS('DFT', False, True, plot_criteria=True)
 
-    cmap = plt.get_cmap('Vega20')
-    # allows for incrementing over 20 colors
-    increment = 0.0524
-    seed_num = 0
-    i = 0
+        comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
+        comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
 
-    met_colors_dict = {}
-    met_ts_markers_dict = {}
-    met_lm_markers_dict = {}
-
-    for method in list(methods_list):
-        color = cmap(seed_num)
-        seed_num += increment
-        met_colors_dict[method] = color
-
-        ts_marker = mpl.markers.MarkerStyle.filled_markers[i]
-        lm_marker = mpl.markers.MarkerStyle.filled_markers[i]
-        i += 1
-        met_ts_markers_dict[method] = ts_marker
-        met_lm_markers_dict[method] = lm_marker
-
-    mol_list = ['bglc', 'bxyl', 'oxane']
-
-    # [c, s, i]
-    skm_params = [[40, 900, 900], [40, 1200, 300], [38, 100, 200]]
-    LM_clusters = [13, 9, 8]
-    TS_clusters = [20, 20, 20]
-
-    for i in range(len(mol_list)):
-        comp_met = cc.Compare_Methods(mol_list[i],
-                                      skm_params[i],
-                                      met_colors_dict,
-                                      met_ts_markers_dict,
-                                      met_lm_markers_dict,
-                                      LM_clusters[i],
-                                      TS_clusters[i])
-
-        comp_met.save_raw_data_norm('REFERENCE', plot_ref=False, plot_IRC=True)
-        comp_met.save_raw_data_norm('REFERENCE', plot_ref=False, plot_IRC=False)
-
-        comp_met.save_raw_data_norm_LM('REFERENCE', plot_ref=False, plot_IRC=True)
-        comp_met.save_raw_data_norm_LM('REFERENCE', plot_ref=False, plot_IRC=False)
-
-        comp_met.save_raw_data_norm_TS('REFERENCE', plot_ref=False)
-
-        for method in comp_met.Method_Pathways_dict:
-            comp_met.save_raw_data(method)
-            comp_met.save_connectivity(method)
-
-            comp_met.save_raw_data_LM(method)
-            comp_met.save_raw_data_TS(method)
-
-        comp_met.save_raw_data_LM()
-        comp_met.save_raw_data_TS()
-
-        comp_met.save_connectivity()
-
-        #comp_met.write_csvs()
+        comp_met.write_csvs()
 
 def save_ref_plots():
     met_colors_dict = {}
