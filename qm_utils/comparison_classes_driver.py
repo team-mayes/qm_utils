@@ -79,6 +79,8 @@ def do_main():
                                       met_ts_markers_dict,
                                       met_lm_markers_dict)
 
+        comp_met.write_csvs()
+
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
                                        method=method,
@@ -139,8 +141,6 @@ def do_main():
 
         comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
         comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
-
-        comp_met.write_csvs()
 
 def save_ref_plots():
     met_colors_dict = {}

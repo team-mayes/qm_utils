@@ -273,6 +273,10 @@ class Method_Pathways():
 
     def check_energies(self):
         for i in range(len(self.Pathways)):
+            TS = self.Pathways[i].TS
+            LM1 = self.Pathways[i].LM1
+            LM2 = self.Pathways[i].LM2
+
             TS_gibbs = self.Pathways[i].TS.gibbs
             LM1_gibbs = self.Pathways[i].LM1.gibbs
             LM2_gibbs = self.Pathways[i].LM2.gibbs
@@ -284,6 +288,10 @@ class Method_Pathways():
                 print('TS.gibbs = ' + str(TS_gibbs))
                 print('LM1.gibbs = ' + str(LM1_gibbs))
                 print('LM2.gibbs = ' + str(LM2_gibbs))
+
+                print('TS filename: ' + TS.filename)
+                print('LM1 filename: ' + LM1.filename)
+                print('LM2 filename: ' + LM2.filename)
         pass
 
     def parse_LM_csv(self, LM_csv_filename):
@@ -302,6 +310,7 @@ class Method_Pathways():
                 assert(float(info['Freq 1']) > 0)
             except AssertionError:
                 print('Local Minimum has a negative Freq 1')
+                print(LM_csv_filename)
                 exit(1)
 
             self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'LM'))
@@ -324,7 +333,10 @@ class Method_Pathways():
                 print('Transition State has a non-negative Freq 1')
                 exit(1)
 
-            self.TS_csv_list.append(Transition_State(phi, theta, gibbs, name, 'TS'))
+            TS = Transition_State(phi, theta, gibbs, name, 'TS')
+            TS.filename = info['File Name']
+
+            self.TS_csv_list.append(TS)
 
     def parse_IRC_csv(self, IRC_csv_filename):
         self.IRC_csv_list = []
@@ -352,7 +364,10 @@ class Method_Pathways():
 
             name = pucker + '_' + direction
 
-            self.IRC_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'IRC'))
+            IRC = Local_Minimum(phi, theta, gibbs, name, 'IRC')
+            IRC.filename = info['File Name']
+
+            self.IRC_csv_list.append(IRC)
 
         try:
             assert (len(self.IRC_csv_list) == len(self.TS_csv_list) * 2)
@@ -413,13 +428,19 @@ class Method_Pathways():
 
             j = 0
             while LM1 is None or LM2 is None:
-                if TS.name in self.IRC_csv_list[j].name:
+                if self.IRC_csv_list[j].name.split('_')[0] == TS.name:
                     if 'ircf' in self.IRC_csv_list[j].name:
                         LM1 = self.IRC_csv_list[j]
                     elif 'ircr' in self.IRC_csv_list[j].name:
                         LM2 = self.IRC_csv_list[j]
 
                 j += 1
+
+            try:
+                assert(LM1.filename.split('irc')[0] == LM2.filename.split('irc')[0])
+            except:
+                print('Pathway connects IRCs to TS incorrectly')
+                exit(1)
 
             self.Pathways.append(Pathway(TS, LM1, LM2))
 
@@ -734,7 +755,7 @@ class Reference_Landscape():
 
         if len(name_list) > 1:
             for j in range(len(name_list)):
-                skm_name_list[name_list[j]] = name + '_' + str(j)
+                skm_name_list[name_list[j]] = name + '(' + str(j) + ')'
 
     def assign_region_names(self, tessellation):
         skm_name_list = []
@@ -834,16 +855,48 @@ class Reference_Landscape():
     def plot_regions_names(self, plot, tessellation):
         for i in range(len(tessellation.skm_name_list)):
             name = tessellation.skm_name_list[i]
+
+            name_list = list(name)
+
+            last_bit = ''
+
+            for j in range(len(name_list) - 2):
+                last_bit += name_list[j + 2]
+
+            if len(name_list) > 2 and 'e' not in name_list:
+                if name_list[0] == 'b':
+                    new_name = name_list[0].upper() + r'$\rm{_' + name_list[1].upper() + '}$' + r'$\rm{_,}$' + r'$\rm{_' + last_bit.upper() + '}$'
+                elif 'b' in name_list:
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + r'$\rm{^,}$' + r'$\rm{^' + name_list[1].upper() + '}$' + last_bit.upper()
+                else:
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + name_list[1].upper() + r'$\rm{_' + last_bit.upper() + '}$'
+
+            else:
+                if name_list[0] == 'e':
+                    new_name = name_list[0].upper() + r'$\rm{_' + name_list[1].upper() + '}$' + last_bit.upper()
+                elif 'e' in name_list and len(name_list) > 2:
+                    last_bit = ''
+
+                    for j in range(len(name_list) - 1):
+                        last_bit += name_list[j + 1]
+
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + last_bit.upper()
+                else:
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + name_list[1].upper()
+
             vert = cart2pol(tessellation.skm.cluster_centers_[i])
 
             phi = vert[0]
             theta = vert[1] - 5
 
             if i == 0:
-                theta = 20
+                theta = 10
                 phi = 180
 
-            plot.ax_rect.annotate(name, xy=(phi, theta), xytext=(phi, theta),  ha="center", va="center", fontsize=8, zorder=100)
+            if phi < 5:
+                phi += 2
+
+            plot.ax_rect.annotate(new_name, xy=(phi, theta), xytext=(phi, theta),  ha="center", va="center", fontsize=8, zorder=100)
 
     def plot_regions_coords(self, plot, tessellation):
         for i in range(len(tessellation.skm.cluster_centers_)):
@@ -853,8 +906,11 @@ class Reference_Landscape():
             theta = vert[1] - 5
 
             if i == 0:
-                theta = 20
+                theta = 10
                 phi = 180
+
+            if phi < 5:
+                phi += 2
 
             plot.ax_rect.annotate(str(round(vert[0],1)) + '\n' + str(round(vert[1],1)),
                                   xy=(phi, theta + 7), xytext=(phi, theta + 7),
@@ -947,7 +1003,7 @@ class Compare_Methods():
 
         self.dir_init()
         #endregion
-
+        print('var init done')
         # # # reference init # # #
         #region
         self.reference_landscape_init()
@@ -993,7 +1049,7 @@ class Compare_Methods():
         self.do_calcs(self.reference_landscape.LM_Tessellation, REFERENCE)
         self.do_calcs(self.reference_landscape.TS_Tessellation, REFERENCE)
         #endregion
-
+        print('reference init done')
         # # # method init # # #
         #region
         for method in self.Method_Pathways_dict:
@@ -1018,22 +1074,30 @@ class Compare_Methods():
 
             self.do_init_calcs(method)
 
+            print(method + ' skm groupings done')
 
             self.reference_landscape.LM_Tessellation.methods[method]['comp_metrics'] = {}
             self.reference_landscape.TS_Tessellation.methods[method]['comp_metrics'] = {}
 
             self.do_calcs(self.reference_landscape.LM_Tessellation, method)
             self.do_calcs(self.reference_landscape.TS_Tessellation, method)
+
+            print(method + ' calcs done')
         #endregion
-
+        print('method init done')
+        # # # pathway init # # #
+        #region
         self.pathway_groupings_init()
-
         self.populate_pathway_groupings(REFERENCE)
 
         for method in self.Method_Pathways_dict:
             self.populate_pathway_groupings(method)
             self.normalize_pathways(method)
 
+        for method in self.Method_Pathways_dict:
+            self.do_path_calcs('4c1', method)
+        #endregion
+        print('pathway init done')
         # # # reorg # # #
         #region
         self.reorg_methods(self.reference_landscape.LM_Tessellation)
@@ -1233,9 +1297,15 @@ class Compare_Methods():
 
                 if LM1.closest_skm == LM2.closest_skm:
                     print('A pathway was not included since its LM1 and LM2 are the same structure.')
-                    print('class: Compare_Methods')
-                    print('function: assign_skm_labels')
-                    print('method: ' + method)
+                    print('LM1 filename: ' + LM1.filename)
+                    print('LM2 filename: ' + LM2.filename)
+
+                    print('\nLM1: ' + str(LM1.phi) + ', ' + str(LM1.theta))
+                    print('LM2: ' + str(LM2.phi) + ', ' + str(LM2.theta))
+
+                    print('\nLM1: ' + str(LM1.comp_metrics['arc']) + ' to ' + str(LM1.closest_skm))
+                    print('LM2: ' + str(LM2.comp_metrics['arc']) + ' to ' + str(LM2.closest_skm))
+                    print()
                 else:
                     pathways_aux_list.append(item)
                     IRC_aux_list.append(LM1)
@@ -1288,43 +1358,15 @@ class Compare_Methods():
     def are_equal(self, struct1, struct2):
         tol = 5
 
-        if abs(struct1.phi - struct2.phi) < tol and abs(struct1.theta - struct2.theta) < tol\
+        if abs(struct1.phi - struct2.phi) < tol and abs(struct1.theta - struct2.theta) < tol \
             and abs(struct1.gibbs - struct2.gibbs) < tol / 5:
-                return True
+            return True
         elif struct1.theta < 20 and struct2.theta < 20:
             return True
         elif struct1.theta > 160 and struct2.theta > 160:
             return True
         else:
             return False
-
-    def assign_skm_to_IRC(self, method):
-        for i in range(len(self.Method_Pathways_dict[method].Pathways)):
-            LM1 = self.Method_Pathways_dict[method].Pathways[i].LM1
-            LM2 = self.Method_Pathways_dict[method].Pathways[i].LM2
-
-            LM1.comp_skms = []
-            LM2.comp_skms = []
-
-            skm_grouping = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings']
-
-            for j in range(len(skm_grouping[LM1.closest_skm]['structures'])):
-                if self.are_equal(LM1, skm_grouping[LM1.closest_skm]['structures'][j]) and LM1.closest_skm not in LM1.comp_skms:
-                    LM1.comp_skms.append(LM1.closest_skm)
-
-            for j in range(len(skm_grouping[LM1.next_closest_skm]['structures'])):
-                if self.are_equal(LM1, skm_grouping[LM1.next_closest_skm]['structures'][j]) and LM1.next_closest_skm not in LM1.comp_skms:
-                    LM1.comp_skms.append(LM1.next_closest_skm)
-
-            for j in range(len(skm_grouping[LM2.closest_skm]['structures'])):
-                if self.are_equal(LM2, skm_grouping[LM2.closest_skm]['structures'][j]) and LM2.closest_skm not in LM2.comp_skms:
-                    LM2.comp_skms.append(LM2.closest_skm)
-
-            for j in range(len(skm_grouping[LM2.next_closest_skm]['structures'])):
-                if self.are_equal(LM2, skm_grouping[LM2.next_closest_skm]['structures'][j]) and LM2.next_closest_skm not in LM2.comp_skms:
-                    LM2.comp_skms.append(LM2.next_closest_skm)
-
-        pass
 
     def get_ref_IRC_skms(self, structure):
         skm_list = []
@@ -1384,13 +1426,39 @@ class Compare_Methods():
 
         return skm_list
 
-    def assign_skm_to_ref_IRC(self):
-        for i in range(len(self.Method_Pathways_dict[REFERENCE].Pathways)):
-            LM1 = self.Method_Pathways_dict[REFERENCE].Pathways[i].LM1
-            LM2 = self.Method_Pathways_dict[REFERENCE].Pathways[i].LM2
+    def assign_skm_to_IRC(self, method):
+        if method == REFERENCE:
+            for i in range(len(self.Method_Pathways_dict[REFERENCE].Pathways)):
+                LM1 = self.Method_Pathways_dict[REFERENCE].Pathways[i].LM1
+                LM2 = self.Method_Pathways_dict[REFERENCE].Pathways[i].LM2
 
-            LM1.comp_skms = self.get_ref_IRC_skms(LM1)
-            LM2.comp_skms = self.get_ref_IRC_skms(LM2)
+                LM1.comp_skms = self.get_ref_IRC_skms(LM1)
+                LM2.comp_skms = self.get_ref_IRC_skms(LM2)
+        else:
+            for i in range(len(self.Method_Pathways_dict[method].Pathways)):
+                LM1 = self.Method_Pathways_dict[method].Pathways[i].LM1
+                LM2 = self.Method_Pathways_dict[method].Pathways[i].LM2
+
+                LM1.comp_skms = []
+                LM2.comp_skms = []
+
+                skm_grouping = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings']
+
+                for j in range(len(skm_grouping[LM1.closest_skm]['structures'])):
+                    if self.are_equal(LM1, skm_grouping[LM1.closest_skm]['structures'][j]) and LM1.closest_skm not in LM1.comp_skms:
+                        LM1.comp_skms.append(LM1.closest_skm)
+
+                for j in range(len(skm_grouping[LM1.next_closest_skm]['structures'])):
+                    if self.are_equal(LM1, skm_grouping[LM1.next_closest_skm]['structures'][j]) and LM1.next_closest_skm not in LM1.comp_skms:
+                        LM1.comp_skms.append(LM1.next_closest_skm)
+
+                for j in range(len(skm_grouping[LM2.closest_skm]['structures'])):
+                    if self.are_equal(LM2, skm_grouping[LM2.closest_skm]['structures'][j]) and LM2.closest_skm not in LM2.comp_skms:
+                        LM2.comp_skms.append(LM2.closest_skm)
+
+                for j in range(len(skm_grouping[LM2.next_closest_skm]['structures'])):
+                    if self.are_equal(LM2, skm_grouping[LM2.next_closest_skm]['structures'][j]) and LM2.next_closest_skm not in LM2.comp_skms:
+                        LM2.comp_skms.append(LM2.next_closest_skm)
 
     def assign_skm_to_TS(self, method, TS):
         skm_list = []
@@ -1409,10 +1477,7 @@ class Compare_Methods():
         pathway_groupings = self.pathway_groupings
 
         for method in self.Method_Pathways_dict:
-            if method != REFERENCE:
-                self.assign_skm_to_IRC(method)
-            else:
-                self.assign_skm_to_ref_IRC()
+            self.assign_skm_to_IRC(method)
 
             for i in range(len(self.Method_Pathways_dict[method].Pathways)):
                 TS = self.Method_Pathways_dict[method].Pathways[i].TS
@@ -1464,10 +1529,40 @@ class Compare_Methods():
                         else:
                             lm_grouping = str(LM2_skm) + '_' + str(LM1_skm)
 
-                        key = lm_grouping + '-' + str(TS_skm)
+                        LM1 = copy.deepcopy(LM1)
+                        LM1.closest_skm = LM1_skm
+                        LM2 = copy.deepcopy(LM2)
+                        LM2.closest_skm = LM2_skm
 
-                        pathway_groupings[key]['pathways'].append(
-                            self.Method_Pathways_dict[method].Pathways[i])
+                        if method == REFERENCE:
+                            LM1.gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM1.closest_skm]['weighted_gibbs']
+                            LM2.gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM2.closest_skm]['weighted_gibbs']
+
+                        if LM1.gibbs is not None and LM2.gibbs is not None:
+                            f_gibbs = TS.gibbs - LM1.gibbs
+                            r_gibbs = TS.gibbs - LM2.gibbs
+
+                            if f_gibbs > r_gibbs:
+                                forward_gibbs = f_gibbs
+                                reverse_gibbs = r_gibbs
+                                lm = LM1
+                            else:
+                                forward_gibbs = r_gibbs
+                                reverse_gibbs = f_gibbs
+                                lm = LM2
+
+                            key = lm_grouping + '-' + str(TS_skm)
+
+                            pathway = Pathway(TS=TS,
+                                              LM1=LM1,
+                                              LM2=LM2)
+
+                            pathway.forward_gibbs = forward_gibbs
+                            pathway.reverse_gibbs = reverse_gibbs
+                            pathway.forward_LM = lm
+
+                            pathway_groupings[key]['pathways'].append(pathway)
+
 
     # creates a list of structures grouped by skm
     def populate_skm_groupings(self, tessellation, method, structure_list):
@@ -1744,8 +1839,8 @@ class Compare_Methods():
                                 structure.comp_by_skm_ratio = True
 
                             if structure.comp_by_cano_dist * portion or structure.comp_by_skm_ratio:
-                                if structure.gibbs is not None and tessellation.methods[method]['skm_groupings'][i][tessellation.type + '_weighted_gibbs'] is None\
-                                    or abs(structure.gibbs - tessellation.methods[method]['skm_groupings'][i][tessellation.type + '_weighted_gibbs']) < gibbs_diff_tol\
+                                if structure.gibbs is not None and tessellation.methods[method]['skm_groupings'][i][tessellation.type + '_weighted_gibbs'] is None \
+                                    or abs(structure.gibbs - tessellation.methods[method]['skm_groupings'][i][tessellation.type + '_weighted_gibbs']) < gibbs_diff_tol \
                                     or self.weighting_is_significant(tessellation, structure, i, method):
 
                                     structure_copy = Structure(structure.phi,
@@ -1774,6 +1869,7 @@ class Compare_Methods():
 
     def reorg_methods(self, tessellation):
         temp_dict = {}
+        met_temp_dict = {}
 
         ordered_methods = [REFERENCE, 'B3LYP', 'APFD', 'BMK', 'M06L', 'PBEPBE', 'DFTB', 'AM1', 'PM3', 'PM3MM', 'PM6']
 
@@ -1783,7 +1879,11 @@ class Compare_Methods():
             if method in tessellation.methods:
                 temp_dict[method] = tessellation.methods[method]
 
+            if method in self.Method_Pathways_dict:
+                met_temp_dict[method] = self.Method_Pathways_dict[method]
+
         tessellation.methods = temp_dict
+        self.Method_Pathways_dict[method] = met_temp_dict[method]
 
 
     def normalize_pathways(self, method):
@@ -1797,6 +1897,169 @@ class Compare_Methods():
             else:
                 tessellation.methods[method]['pathway_groupings'][key]['norm_pathways'] = 0
 
+    def get_pathways_from(self, LM, method):
+        pathways = []
+
+        for i in range(len(self.reference_landscape.LM_Tessellation.skm_name_list)):
+            if self.reference_landscape.LM_Tessellation.skm_name_list[i] == LM:
+                LM = i
+
+        for key in self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']:
+            LM1 = int(key.split('_')[0])
+            LM2 = int(key.split('_')[1].split('-')[0])
+
+            if LM == LM1 or LM == LM2:
+                pathways += self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways']
+
+        return pathways
+
+    def calc_all_uniq_path_weightings(self, method):
+        for key in self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']:
+            self.calc_uniq_path_weightings(key, method)
+
+    def calc_uniq_path_weightings(self, key, method):
+        # total_boltz = 0
+        #
+        # for i in range(len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'])):
+        #     pathway = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'][i]
+        #     e_val = pathway.forward_gibbs
+        #
+        #     component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+        #     pathway.ind_bolts = component
+        #     total_boltz += component
+        #
+        # wt_gibbs = 0
+        #
+        # for i in range(len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'])):
+        #     pathway = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'][i]
+        #
+        #     if pathway.ind_bolts == 0:
+        #         pathway.weighting = 0
+        #         wt_gibbs += 0
+        #     else:
+        #         pathway.weighting = pathway.ind_bolts / total_boltz
+        #         wt_gibbs += pathway.forward_gibbs * pathway.weighting
+        #
+        # if len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways']) == 0:
+        #     self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = None
+        # else:
+        #     self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = wt_gibbs
+        pass
+
+    def do_path_calcs(self, LM, method):
+        key_list = []
+        LM_grouping_list = []
+
+        for i in range(len(self.reference_landscape.LM_Tessellation.skm_name_list)):
+            if self.reference_landscape.LM_Tessellation.skm_name_list[i] == LM:
+                LM = i
+
+        for key in self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']:
+            LM1 = int(key.split('_')[0])
+            LM2 = int(key.split('_')[1].split('-')[0])
+
+            LM_grouping = key.split('-')[0]
+
+            if LM == LM1 or LM == LM2:
+                key_list.append(key)
+
+                if LM_grouping not in LM_grouping_list:
+                    LM_grouping_list.append(LM_grouping)
+
+        for i in range(len(key_list)):
+            key = key_list[i]
+            TS = int(key.split('-')[1])
+            LM1 = int(key.split('_')[0])
+            LM2 = int(key.split('_')[1].split('-')[0])
+
+            LM_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM]['weighted_gibbs']
+            LM1_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM1]['weighted_gibbs']
+            LM2_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM2]['weighted_gibbs']
+            TS_gibbs = self.reference_landscape.TS_Tessellation.methods[method]['skm_groupings'][TS]['weighted_gibbs']
+
+            if LM1_gibbs is not None and LM2_gibbs is not None and TS_gibbs is not None:
+                self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = TS_gibbs - LM_gibbs
+            else:
+                self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = None
+
+        self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'] = {}
+
+        for i in range(len(LM_grouping_list)):
+            LM_grouping = LM_grouping_list[i]
+            self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'][LM_grouping] = {}
+
+            LM1 = int(LM_grouping.split('_')[0])
+            LM2 = int(LM_grouping.split('_')[1])
+
+            LM1_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM1]['weighted_gibbs']
+            LM2_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM2]['weighted_gibbs']
+
+            if LM1_gibbs is not None and LM2_gibbs is not None:
+                self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'][LM_grouping]['weighted_delta_gibbs'] = abs(LM1_gibbs - LM2_gibbs)
+            else:
+                self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'][LM_grouping]['weighted_delta_gibbs'] = None
+
+        self.do_boltz_calcs(key_list, self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'], 'weighted_forward_gibbs')
+        self.do_boltz_calcs(LM_grouping_list, self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'], 'weighted_delta_gibbs')
+
+    def do_boltz_calcs(self, key_list, groupings, metric):
+        total_boltz = 0
+
+        for i in range(len(key_list)):
+            key = key_list[i]
+            pathway = groupings[key]
+            e_val = pathway[metric]
+
+            if e_val is not None:
+                component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
+                pathway['ind_boltz'] = component
+            else:
+                pathway['ind_boltz'] = 0
+
+            total_boltz += pathway['ind_boltz']
+
+        for i in range(len(key_list)):
+            key = key_list[i]
+            pathway = groupings[key]
+
+            if pathway['ind_boltz'] == 0:
+                pathway['weighting'] = 0
+            else:
+                pathway['weighting'] = pathway['ind_boltz'] / total_boltz
+
+    def get_lowest_energy_pathways(self, method, count, LM):
+        pathways = self.get_pathways_from(LM, method)
+
+        min_pathways = []
+
+        if len(pathways) < count:
+            count = len(pathways)
+
+        for i in range(count):
+            min_pathway_gibbs = 100
+
+            for j in range(len(pathways)):
+                curr_pathway_gibbs = pathways[j].forward_gibbs
+
+                LM1_skm = pathways[j].LM1.closest_skm
+                LM2_skm = pathways[j].LM2.closest_skm
+                TS_skm = pathways[j].TS.closest_skm
+
+                if LM1_skm < LM2_skm:
+                    lm_grouping = str(LM1_skm) + '_' + str(LM2_skm)
+                else:
+                    lm_grouping = str(LM2_skm) + '_' + str(LM1_skm)
+
+                key = lm_grouping + '-' + str(TS_skm)
+                key = self.get_name_from_key(key)
+
+                if key not in min_pathways and curr_pathway_gibbs < min_pathway_gibbs:
+                    min_pathway = key
+                    min_pathway_gibbs = curr_pathway_gibbs
+
+            min_pathways.append(min_pathway)
+
+        return min_pathways
     #endregion
 
     # # # do_calcs # # #
@@ -1922,8 +2185,8 @@ class Compare_Methods():
                        method=method,
                        comp_key='gibbs')
         self.calc_WRMSD(tessellation=tessellation,
-                       method=method,
-                       comp_key='gibbs')
+                        method=method,
+                        comp_key='gibbs')
 
     def calc_weighting(self, tessellation, method, i):
         total_boltz = 0
@@ -2067,196 +2330,40 @@ class Compare_Methods():
     #region
     def get_artist(self, method):
         ts_artist = plt.scatter((5000, 5000), (4999, 4999), s=30, c='', marker=self.met_ts_markers_dict[method],
-                                    edgecolor=self.met_colors_dict[method])
+                                edgecolor=self.met_colors_dict[method])
 
         lm_artist = plt.scatter((5000, 5000), (4999, 4999), s=30, c=self.met_colors_dict[method], marker=self.met_lm_markers_dict[method],
-                             edgecolor=self.met_colors_dict[method])
+                                edgecolor=self.met_colors_dict[method])
 
         return ts_artist, lm_artist
 
-    # # # raw plotting # # #
-    #region
-    def plot_raw_data_LM(self, plot, method):
+    def plot_line(self, plot, TS_vert, LM_vert, method, zorder=10, line_style='-', plot_TS_vert=True, plot_LM_vert=True):
         size = 30
+        color = self.met_colors_dict[method]
 
-        lm_phi_vals = []
-        lm_theta_vals = []
+        line = get_pol_coords(pol2cart(TS_vert), pol2cart(LM_vert))
 
-        irc_phi_vals = []
-        irc_theta_vals = []
+        if (is_end(line)):
+            two_edges = split_in_two(line)
 
-        for j in range(len(self.Method_Pathways_dict[method].LM_csv_list)):
-            LM = self.Method_Pathways_dict[method].LM_csv_list[j]
+            plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color=color, linestyle=line_style, zorder=1)
+            plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color=color, linestyle=line_style, zorder=1)
+        else:
+            plot.ax_rect.plot(line[0], line[1], color=color, linestyle=line_style)
 
-            LM_vert = [LM.phi, LM.theta]
-            lm_phi_vals.append(LM_vert[0])
-            lm_theta_vals.append(LM_vert[1])
+        if plot_TS_vert:
+            plot.ax_rect.scatter(TS_vert[0], TS_vert[1], c='white',
+                                 edgecolor=color,
+                                 marker=self.met_ts_markers_dict[method],
+                                 s=size, zorder=zorder)
 
-        pathways = self.Method_Pathways_dict[method].Pathways
+        if plot_LM_vert:
+            plot.ax_rect.scatter(LM_vert[0], LM_vert[1], c=color,
+                                 edgecolor=color,
+                                 marker=self.met_lm_markers_dict[method],
+                                 s=size, zorder=zorder)
 
-        for j in range(len(pathways)):
-            LM1 = pathways[j].LM1
-
-            LM1_vert = [LM1.phi, LM1.theta]
-            irc_phi_vals.append(LM1_vert[0])
-            irc_theta_vals.append(LM1_vert[1])
-
-            LM2 = pathways[j].LM2
-
-            LM2_vert = [LM2.phi, LM2.theta]
-            irc_phi_vals.append(LM2_vert[0])
-            irc_theta_vals.append(LM2_vert[1])
-
-        plot.ax_rect.scatter(irc_phi_vals, irc_theta_vals, c=self.met_colors_dict[method],
-                             edgecolor='black',
-                             marker=self.met_lm_markers_dict[method],
-                             s=size / 2, zorder=10)
-
-        plot.ax_rect.scatter(lm_phi_vals, lm_theta_vals, c=self.met_colors_dict[method],
-                             edgecolor=self.met_colors_dict[method],
-                             marker=self.met_lm_markers_dict[method],
-                             s=size, zorder=10)
-
-    def save_raw_data_LM(self, method='ALL'):
-        filename = self.molecule + '-' + method + '-raw_data_LM'
-
-        dir1 = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
-        dir = make_dir(os.path.join(dir1, 'raw_data'))
-
-        if not os.path.exists(os.path.join(dir, filename + '.png')):
-            plot = Plots(rect_arg=True)
-
-            self.reference_landscape.plot_voronoi_regions(plot=plot,
-                                                          tessellation=self.reference_landscape.LM_Tessellation)
-            self.reference_landscape.plot_regions_names(plot=plot,
-                                                      tessellation=self.reference_landscape.LM_Tessellation)
-            self.reference_landscape.plot_skm_centers(plot=plot,
-                                                      tessellation=self.reference_landscape.LM_Tessellation)
-            self.reference_landscape.plot_cano(plot=plot)
-
-            artist_list = []
-            label_list = []
-
-            if method == 'ALL':
-                for method in self.Method_Pathways_dict:
-                    self.plot_raw_data_LM(plot=plot, method=method)
-
-                    ts_artist, lm_artist = self.get_artist(method)
-
-                    artist_list.append(lm_artist)
-                    label_list.append('TS ' + method)
-
-                    plot.ax_rect.legend(artist_list,
-                                        label_list,
-                                        scatterpoints=1, fontsize=8, frameon=True,
-                                        framealpha=0.75,
-                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                        ncol=1).set_zorder(100)
-            else:
-                self.plot_raw_data_LM(plot=plot, method=REFERENCE)
-                self.plot_raw_data_LM(plot=plot, method=method)
-
-                ts_artist, lm_artist = self.get_artist(method)
-                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
-
-                artist_list.append(lm_artist)
-                artist_list.append(ref_lm_artist)
-                label_list.append('TS ' + method)
-                label_list.append('TS ' + REFERENCE)
-
-                plot.ax_rect.legend(artist_list,
-                                     label_list,
-                                     scatterpoints=1, fontsize=8, frameon=False,
-                                     framealpha=0.75,
-                                     bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
-                                     ncol=len(self.met_colors_dict)).set_zorder(100)
-
-            plot.ax_rect.set_ylim(185, -5)
-            plot.ax_rect.set_xlim(-5, 365)
-
-            plot.save(dir_=dir, filename=filename)
-
-    def plot_raw_data_TS(self, plot, method):
-        size = 30
-
-        ts_phi_vals = []
-        ts_theta_vals = []
-
-        pathways = self.Method_Pathways_dict[method].Pathways
-
-        for j in range(len(pathways)):
-            TS = pathways[j].TS
-
-            TS_vert = [TS.phi, TS.theta]
-            ts_phi_vals.append(TS_vert[0])
-            ts_theta_vals.append(TS_vert[1])
-
-        plot.ax_rect.scatter(ts_phi_vals, ts_theta_vals, c='white',
-                             edgecolor=self.met_colors_dict[method],
-                             marker=self.met_ts_markers_dict[method],
-                             s=size, zorder=10)
-
-    def save_raw_data_TS(self, method='ALL'):
-        filename = self.molecule + '-' + method + '-raw_data_TS'
-
-        dir1 = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
-        dir = make_dir(os.path.join(dir1, 'raw_data'))
-
-        if not os.path.exists(os.path.join(dir, filename + '.png')):
-            plot = Plots(rect_arg=True)
-
-            self.reference_landscape.plot_voronoi_regions(plot=plot,
-                                                          tessellation=self.reference_landscape.TS_Tessellation)
-            self.reference_landscape.plot_regions_names(plot=plot,
-                                                        tessellation=self.reference_landscape.TS_Tessellation)
-            self.reference_landscape.plot_skm_centers(plot=plot,
-                                                      tessellation=self.reference_landscape.TS_Tessellation)
-            self.reference_landscape.plot_cano(plot=plot)
-
-            artist_list = []
-            label_list = []
-
-            if method == 'ALL':
-                for method in self.Method_Pathways_dict:
-                    self.plot_raw_data_TS(plot=plot, method=method)
-
-                    ts_artist, lm_artist = self.get_artist(method)
-
-                    artist_list.append(ts_artist)
-                    label_list.append('TS ' + method)
-
-                    plot.ax_rect.legend(artist_list,
-                                        label_list,
-                                        scatterpoints=1, fontsize=8, frameon=True,
-                                        framealpha=0.75,
-                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                        ncol=1).set_zorder(100)
-            else:
-                self.plot_raw_data_TS(plot=plot, method=REFERENCE)
-                self.plot_raw_data_TS(plot=plot, method=method)
-
-                ts_artist, lm_artist = self.get_artist(method)
-                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
-
-                artist_list.append(ts_artist)
-                artist_list.append(ref_ts_artist)
-                label_list.append('TS ' + method)
-                label_list.append('TS ' + REFERENCE)
-
-                plot.ax_rect.legend(artist_list,
-                                     label_list,
-                                     scatterpoints=1, fontsize=8, frameon=False,
-                                     framealpha=0.75,
-                                     bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
-                                     ncol=len(self.met_colors_dict)).set_zorder(100)
-
-            plot.ax_rect.set_ylim(185, -5)
-            plot.ax_rect.set_xlim(-5, 365)
-
-            plot.save(dir_=dir, filename=filename)
-    #endregion
-
-    # # # norm plotting # # #
+    # # # raw # # #
     #region
     def plot_raw_data_norm_LM(self, plot, method, connect_to_skm=False, plot_criteria=False):
         skm_groupings = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings']
@@ -2320,8 +2427,8 @@ class Compare_Methods():
                                                              s=LM_size * amt, zorder=10)
 
                                     if structure.gibbs is not None and tessellation.methods[method]['skm_groupings'][structure.next_closest_skm][
-                                        tessellation.type + '_weighted_gibbs'] is None and\
-                                        tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm][tessellation.type + '_weighted_gibbs'] is not None:
+                                            tessellation.type + '_weighted_gibbs'] is None and \
+                                            tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm][tessellation.type + '_weighted_gibbs'] is not None:
 
                                         plot.ax_rect.scatter(LM.phi, LM.theta, c='',
                                                              edgecolor='orange',
@@ -2518,8 +2625,8 @@ class Compare_Methods():
                                                              s=TS_size * amt, zorder=10)
 
                                     if structure.gibbs is not None and tessellation.methods[method]['skm_groupings'][structure.next_closest_skm][
-                                        tessellation.type + '_weighted_gibbs'] is None and\
-                                        tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm][tessellation.type + '_weighted_gibbs'] is not None:
+                                            tessellation.type + '_weighted_gibbs'] is None and \
+                                            tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm][tessellation.type + '_weighted_gibbs'] is not None:
 
                                         plot.ax_rect.scatter(TS.phi, TS.theta, c='',
                                                              edgecolor='orange',
@@ -2629,32 +2736,8 @@ class Compare_Methods():
             plot.save(dir_=dir, filename=filename, width=18, height=10)
     #endregion
 
-    def plot_line(self, plot, TS_vert, LM_vert, method, zorder=10, line_style='-', plot_TS_vert=True, plot_LM_vert=True):
-        size = 30
-        color = self.met_colors_dict[method]
-
-        line = get_pol_coords(pol2cart(TS_vert), pol2cart(LM_vert))
-
-        if (is_end(line)):
-            two_edges = split_in_two(line)
-
-            plot.ax_rect.plot(two_edges[0][0], two_edges[0][1], color=color, linestyle=line_style, zorder=1)
-            plot.ax_rect.plot(two_edges[1][0], two_edges[1][1], color=color, linestyle=line_style, zorder=1)
-        else:
-            plot.ax_rect.plot(line[0], line[1], color=color, linestyle=line_style)
-
-        if plot_TS_vert:
-            plot.ax_rect.scatter(TS_vert[0], TS_vert[1], c='white',
-                                 edgecolor=color,
-                                 marker=self.met_ts_markers_dict[method],
-                                 s=size, zorder=zorder)
-
-        if plot_LM_vert:
-            plot.ax_rect.scatter(LM_vert[0], LM_vert[1], c=color,
-                                 edgecolor=color,
-                                 marker=self.met_lm_markers_dict[method],
-                                 s=size, zorder=zorder)
-
+    # # # connectivity # # #
+    #region
     def plot_connectivity(self, tessellation, plot, method):
         pathway_groupings = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']
 
@@ -2666,7 +2749,7 @@ class Compare_Methods():
                 LM1 = pathway.LM1
                 LM2 = pathway.LM2
 
-                if tessellation.methods[method]['pathway_groupings'][key]['norm_pathways']\
+                if tessellation.methods[method]['pathway_groupings'][key]['norm_pathways'] \
                     == tessellation.methods[REFERENCE]['pathway_groupings'][key]['norm_pathways']:
 
                     linestyle = '-'
@@ -2687,9 +2770,32 @@ class Compare_Methods():
             for i in range(len(pathway_groupings[key]['pathways'])):
                 pathway = pathway_groupings[key]['pathways'][i]
 
-                TS = pathway.TS
-                LM1 = pathway.LM1
-                LM2 = pathway.LM2
+                if tessellation.methods[method]['pathway_groupings'][key]['norm_pathways'] \
+                    == tessellation.methods[REFERENCE]['pathway_groupings'][key]['norm_pathways']:
+
+                    linestyle = '-'
+                else:
+                    linestyle = '--'
+
+                LM1_i = int(key.split('_')[0])
+                LM2_i = int(key.split('_')[1].split('-')[0])
+                TS_i = int(key.split('-')[1])
+
+                TS_vert = cart2pol(self.reference_landscape.TS_Tessellation.skm.cluster_centers_[TS_i])
+                LM1_vert = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[LM1_i])
+                LM2_vert = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[LM2_i])
+
+                self.plot_line(plot, TS_vert, LM1_vert, method, line_style=linestyle)
+                self.plot_line(plot, TS_vert, LM2_vert, method, line_style=linestyle)
+
+    def plot_energy_connectivity(self, tessellation, plot, method):
+        pathway_groupings = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']
+
+        pt_list = []
+
+        for key in pathway_groupings:
+            if len(pathway_groupings[key]['pathways']) > 0:
+                pathway = pathway_groupings[key]['pathways'][0]
 
                 if tessellation.methods[method]['pathway_groupings'][key]['norm_pathways'] \
                     == tessellation.methods[REFERENCE]['pathway_groupings'][key]['norm_pathways']:
@@ -2708,6 +2814,18 @@ class Compare_Methods():
 
                 self.plot_line(plot, TS_vert, LM1_vert, method, line_style=linestyle)
                 self.plot_line(plot, TS_vert, LM2_vert, method, line_style=linestyle)
+
+                while TS_vert in pt_list:
+                    TS_vert[1] += 5
+
+                pt_list.append(TS_vert)
+
+                phi = TS_vert[0]
+                theta = TS_vert[1]
+
+                plot.ax_rect.annotate(str(round(pathway_groupings[key]['forward_gibbs'], 1)),
+                                      xy=(phi, theta), xytext=(phi, theta),
+                                      ha="center", va="center", fontsize=3, zorder=100)
 
     def save_connectivity(self, tessellation, method='ALL', type='raw'):
         filename = self.molecule + '-' + method + '-connectivity'
@@ -2736,6 +2854,8 @@ class Compare_Methods():
                         self.plot_connectivity(plot=plot, method=method, tessellation=tessellation)
                     elif type == 'skm':
                         self.plot_skm_connectivity(plot=plot, method=method, tessellation=tessellation)
+                    elif type == 'energy':
+                        self.plot_energy_connectivity(plot=plot, method=method, tessellation=tessellation)
 
                     ts_artist, lm_artist = self.get_artist(method)
 
@@ -2743,7 +2863,7 @@ class Compare_Methods():
                     artist_list.append(lm_artist)
 
                     label_list.append('TS ' + method)
-                    label_list.append('TS ' + method)
+                    label_list.append('LM ' + method)
 
                     plot.ax_rect.legend(artist_list,
                                         label_list,
@@ -2759,6 +2879,8 @@ class Compare_Methods():
                             self.plot_connectivity(plot=plot, method=method, tessellation=tessellation)
                         elif type == 'skm':
                             self.plot_skm_connectivity(plot=plot, method=method, tessellation=tessellation)
+                        elif type == 'energy':
+                            self.plot_energy_connectivity(plot=plot, method=method, tessellation=tessellation)
 
                         ts_artist, lm_artist = self.get_artist(method)
 
@@ -2766,7 +2888,7 @@ class Compare_Methods():
                         artist_list.append(lm_artist)
 
                         label_list.append('TS ' + method)
-                        label_list.append('TS ' + method)
+                        label_list.append('LM ' + method)
 
                         plot.ax_rect.legend(artist_list,
                                             label_list,
@@ -2781,6 +2903,9 @@ class Compare_Methods():
                 elif type == 'skm':
                     self.plot_skm_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
                     self.plot_skm_connectivity(plot=plot, method=method, tessellation=tessellation)
+                elif type == 'energy':
+                    self.plot_skm_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
+                    self.plot_energy_connectivity(plot=plot, method=method, tessellation=tessellation)
 
                 ts_artist, lm_artist = self.get_artist(method)
                 ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
@@ -2796,17 +2921,17 @@ class Compare_Methods():
                 label_list.append('TS ' + REFERENCE)
 
                 plot.ax_rect.legend(artist_list,
-                                     label_list,
-                                     scatterpoints=1, fontsize=8, frameon=False,
-                                     framealpha=0.75,
-                                     bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
-                                     ncol=len(self.met_colors_dict)).set_zorder(100)
+                                    label_list,
+                                    scatterpoints=1, fontsize=8, frameon=False,
+                                    framealpha=0.75,
+                                    bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                    ncol=len(self.met_colors_dict)).set_zorder(100)
 
             plot.ax_rect.set_xlim(-5, 365)
             plot.ax_rect.set_ylim(185, -5)
 
             plot.save(dir_=dir, filename=filename)
-
+    #endregion
 
     def save_tessellation(self, tessellation):
         filename = self.molecule + '-tessellation-' + tessellation.type
@@ -2836,21 +2961,134 @@ class Compare_Methods():
 
     # # # Writing # # #
     #region
+    def key_has_LM(self, key, LM):
+        for i in range(len(self.reference_landscape.LM_Tessellation.skm_name_list)):
+            if self.reference_landscape.LM_Tessellation.skm_name_list[i] == LM:
+                LM = i
+
+        LM1 = int(key.split('_')[0])
+        LM2 = int(key.split('_')[1].split('-')[0])
+
+        if LM == LM1 or LM == LM2:
+            return True
+        else:
+            return False
+
+    def format_pathway_weighting_dict_for_csv(self, grouping_type):
+        pathway_weighting_dict = {}
+
+        for method in self.reference_landscape.TS_Tessellation.methods:
+            pathway_weighting_dict[method] = []
+
+            for key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
+                if self.key_has_LM(key, '4c1'):
+                    pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
+
+                    if pathway['weighting'] > 0.05:
+                        pathway_weighting_dict[method].append(self.get_name_from_key(key) + ': ' + str(round(pathway['weighting'], 3)))
+
+        max_length = 0
+
+        for method in self.reference_landscape.TS_Tessellation.methods:
+            if len(pathway_weighting_dict[method]) > max_length:
+                max_length = len(pathway_weighting_dict[method])
+
+        for method in self.reference_landscape.TS_Tessellation.methods:
+            while len(pathway_weighting_dict[method]) < max_length:
+                pathway_weighting_dict[method].append('')
+
+        for method in self.reference_landscape.TS_Tessellation.methods:
+            weighting = 0
+
+            for key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
+                if self.key_has_LM(key, '4c1'):
+                    pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
+
+                    weighting += pathway['weighting']
+
+            try:
+                assert(weighting > 0.99)
+            except:
+                print(method + ' pathway weighting doesn\'t add to 1')
+
+        for method in pathway_weighting_dict:
+            for i in range(len(pathway_weighting_dict[method])):
+                for j in range(len(pathway_weighting_dict[method]) - 1):
+                    if pathway_weighting_dict[method][j] != '':
+                        first_val = float(pathway_weighting_dict[method][j].split()[1])
+                    else:
+                        first_val =  ''
+
+                    if pathway_weighting_dict[method][j + 1] != '':
+                        second_val = float(pathway_weighting_dict[method][j + 1].split()[1])
+                    else:
+                        second_val = ''
+
+                    if second_val != '':
+                        if first_val == '' or first_val < second_val:
+                            aux_val = second_val
+                            second_val = first_val
+                            first_val = aux_val
+
+                    if first_val != '':
+                        pathway_weighting_dict[method][j] = pathway_weighting_dict[method][j].split()[0] + ' ' + str(first_val)
+                    else:
+                        pathway_weighting_dict[method][j] = first_val
+                    if second_val != '':
+                        pathway_weighting_dict[method][j + 1] = pathway_weighting_dict[method][j + 1].split()[0] + ' ' + str(second_val)
+                    else:
+                        pathway_weighting_dict[method][j + 1] = second_val
+
+        return pathway_weighting_dict
+
+    def format_min_pathways_dict_for_csv(self, count):
+        min_pathways_dict = {}
+
+        for key in self.reference_landscape.TS_Tessellation.methods:
+            min_pathways_dict[key] = self.get_lowest_energy_pathways(key, count, '4c1')
+
+        return min_pathways_dict
+
     def format_skm_dict_for_csv(self, tessellation, val):
         csv_dict = {}
+        csv_dict['method'] = []
 
-        csv_dict[''] = []
         for i in range(len(tessellation.methods[REFERENCE]['skm_groupings'])):
-            vert = cart2pol(tessellation.skm.cluster_centers_[i])
-            name = self.reference_landscape.get_closest_cano(vert[0], vert[1])
-            csv_dict[''].append(name)
+            name = tessellation.skm_name_list[i]
+            csv_dict['method'].append(name)
 
         for method in tessellation.methods:
             csv_dict[method] = []
 
             for i in range(len(tessellation.methods[method]['skm_groupings'])):
                 skm_group = tessellation.methods[method]['skm_groupings'][i]
+
                 csv_dict[method].append(skm_group[val])
+
+        aux_dict = {}
+        aux_dict['method'] = []
+
+        for method in tessellation.methods:
+            aux_dict[method] = []
+
+        for i in range(len(csv_dict[REFERENCE])):
+            has_val = False
+
+            for method in tessellation.methods:
+                if csv_dict[method][i] is not None:
+                    has_val = True
+                    break
+
+            if has_val:
+                aux_dict['method'].append(csv_dict['method'][i])
+
+                for method in tessellation.methods:
+                    if csv_dict[method][i] is None:
+                        aux_dict[method].append('n/a')
+                    else:
+                        aux_dict[method].append(csv_dict[method][i])
+
+        csv_dict = aux_dict
 
         return csv_dict
 
@@ -2873,29 +3111,49 @@ class Compare_Methods():
         return csv_dict
 
     def get_name_from_key(self, key):
-        LM1 = int(key.split('_')[0])
-        LM2 = int(key.split('_')[1].split('-')[0])
-        TS = int(key.split('-')[1])
+        if '-' in key:
+            LM1 = int(key.split('_')[0])
+            LM2 = int(key.split('_')[1].split('-')[0])
+            TS = int(key.split('-')[1])
 
-        LM1_name = self.reference_landscape.LM_Tessellation.skm_name_list[LM1]
-        LM2_name = self.reference_landscape.LM_Tessellation.skm_name_list[LM2]
-        TS_name = self.reference_landscape.TS_Tessellation.skm_name_list[TS]
+            LM1_name = self.reference_landscape.LM_Tessellation.skm_name_list[LM1]
+            LM2_name = self.reference_landscape.LM_Tessellation.skm_name_list[LM2]
+            TS_name = self.reference_landscape.TS_Tessellation.skm_name_list[TS]
 
-        if LM1 < LM2:
-            name = LM1_name + '_' + LM2_name + '-' + TS_name
+            if LM1 < LM2:
+                name = LM1_name + '_' + LM2_name + '-' + TS_name
+            else:
+                name = LM2_name + '_' + LM1_name + '-' + TS_name
         else:
-            name = LM2_name + '_' + LM1_name + '-' + TS_name
+            LM1 = int(key.split('_')[0])
+            LM2 = int(key.split('_')[1])
+
+            LM1_name = self.reference_landscape.LM_Tessellation.skm_name_list[LM1]
+            LM2_name = self.reference_landscape.LM_Tessellation.skm_name_list[LM2]
+
+            if LM1 < LM2:
+                name = LM1_name + '_' + LM2_name
+            else:
+                name = LM2_name + '_' + LM1_name
 
         return name
 
     def format_norm_pathway_dict_for_csv(self, tessellation):
         csv_dict = {}
-        csv_dict['pathway'] = []
+        csv_dict['LM1'] = []
+        csv_dict['TS'] = []
+        csv_dict['LM2'] = []
 
         for key in self.pathway_groupings:
             name = self.get_name_from_key(key)
 
-            csv_dict['pathway'].append(name)
+            LM1 = name.split('_')[0]
+            TS = name.split('-')[1]
+            LM2 = name.split('_')[1].split('-')[0]
+
+            csv_dict['LM1'].append(LM1)
+            csv_dict['TS'].append(TS)
+            csv_dict['LM2'].append(LM2)
 
         for method in tessellation.methods:
             csv_dict[method] = []
@@ -2950,6 +3208,8 @@ class Compare_Methods():
         LM_tsl = self.reference_landscape.LM_Tessellation
         TS_tsl = self.reference_landscape.TS_Tessellation
 
+        self.write_dict_to_csv(self.format_min_pathways_dict_for_csv(3), 'min_pathways')
+
         self.write_dict_to_csv(self.format_skm_dict_for_csv(LM_tsl, 'gibbs_group_RMSD'), 'LM_gibbs_group_RMSD')
         self.write_dict_to_csv(self.format_RMSD_dict_for_csv(LM_tsl, 'gibbs'), 'LM_gibbs_RMSD')
         self.write_dict_to_csv(self.format_skm_dict_for_csv(LM_tsl, 'arc_group_WRMSD'), 'LM_arc_group_WRMSD')
@@ -2961,6 +3221,9 @@ class Compare_Methods():
         self.write_dict_to_csv(self.format_skm_dict_for_csv(TS_tsl, 'arc_group_WRMSD'), 'TS_arc_group_WRMSD')
         self.write_dict_to_csv(self.format_WRMSD_dict_for_csv(TS_tsl, 'arc'), 'TS_arc_WRMSD')
         self.write_dict_to_csv(self.format_skm_dict_for_csv(TS_tsl, 'weighted_gibbs'), 'TS_weighted_gibbs')
+
+        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('pathway_groupings'), 'pathway_weightings')
+        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('LM_groupings'), 'LM_grouping_weightings')
 
         self.write_dict_to_csv(self.format_pathway_dict_for_csv(TS_tsl), 'pathways')
         self.write_dict_to_csv(self.format_norm_pathway_dict_for_csv(TS_tsl), 'norm_pathways')
