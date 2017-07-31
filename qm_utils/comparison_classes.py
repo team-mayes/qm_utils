@@ -1897,55 +1897,6 @@ class Compare_Methods():
             else:
                 tessellation.methods[method]['pathway_groupings'][key]['norm_pathways'] = 0
 
-    def get_pathways_from(self, LM, method):
-        pathways = []
-
-        for i in range(len(self.reference_landscape.LM_Tessellation.skm_name_list)):
-            if self.reference_landscape.LM_Tessellation.skm_name_list[i] == LM:
-                LM = i
-
-        for key in self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']:
-            LM1 = int(key.split('_')[0])
-            LM2 = int(key.split('_')[1].split('-')[0])
-
-            if LM == LM1 or LM == LM2:
-                pathways += self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways']
-
-        return pathways
-
-    def calc_all_uniq_path_weightings(self, method):
-        for key in self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']:
-            self.calc_uniq_path_weightings(key, method)
-
-    def calc_uniq_path_weightings(self, key, method):
-        # total_boltz = 0
-        #
-        # for i in range(len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'])):
-        #     pathway = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'][i]
-        #     e_val = pathway.forward_gibbs
-        #
-        #     component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
-        #     pathway.ind_bolts = component
-        #     total_boltz += component
-        #
-        # wt_gibbs = 0
-        #
-        # for i in range(len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'])):
-        #     pathway = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways'][i]
-        #
-        #     if pathway.ind_bolts == 0:
-        #         pathway.weighting = 0
-        #         wt_gibbs += 0
-        #     else:
-        #         pathway.weighting = pathway.ind_bolts / total_boltz
-        #         wt_gibbs += pathway.forward_gibbs * pathway.weighting
-        #
-        # if len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways']) == 0:
-        #     self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = None
-        # else:
-        #     self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = wt_gibbs
-        pass
-
     def do_path_calcs(self, LM, method):
         key_list = []
         LM_grouping_list = []
@@ -1977,10 +1928,17 @@ class Compare_Methods():
             LM2_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM2]['weighted_gibbs']
             TS_gibbs = self.reference_landscape.TS_Tessellation.methods[method]['skm_groupings'][TS]['weighted_gibbs']
 
-            if LM1_gibbs is not None and LM2_gibbs is not None and TS_gibbs is not None:
+            if LM == LM1:
+                other_gibbs = LM2_gibbs
+            else:
+                other_gibbs = LM1_gibbs
+
+            if len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways']) > 0:
                 self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = TS_gibbs - LM_gibbs
+                self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_reverse_gibbs'] = TS_gibbs - other_gibbs
             else:
                 self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = None
+                self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_reverse_gibbs'] = None
 
         self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'] = {}
 
@@ -1991,15 +1949,22 @@ class Compare_Methods():
             LM1 = int(LM_grouping.split('_')[0])
             LM2 = int(LM_grouping.split('_')[1])
 
+            LM_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM]['weighted_gibbs']
             LM1_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM1]['weighted_gibbs']
             LM2_gibbs = self.reference_landscape.LM_Tessellation.methods[method]['skm_groupings'][LM2]['weighted_gibbs']
 
+            if LM == LM1:
+                other_gibbs = LM2_gibbs
+            else:
+                other_gibbs = LM1_gibbs
+
             if LM1_gibbs is not None and LM2_gibbs is not None:
-                self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'][LM_grouping]['weighted_delta_gibbs'] = abs(LM1_gibbs - LM2_gibbs)
+                self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'][LM_grouping]['weighted_delta_gibbs'] = abs(other_gibbs - LM_gibbs)
             else:
                 self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'][LM_grouping]['weighted_delta_gibbs'] = None
 
         self.do_boltz_calcs(key_list, self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'], 'weighted_forward_gibbs')
+        self.do_boltz_calcs(key_list, self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'], 'weighted_reverse_gibbs')
         self.do_boltz_calcs(LM_grouping_list, self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'], 'weighted_delta_gibbs')
 
     def do_boltz_calcs(self, key_list, groupings, metric):
@@ -2012,54 +1977,20 @@ class Compare_Methods():
 
             if e_val is not None:
                 component = math.exp(-e_val / (K_B * DEFAULT_TEMPERATURE))
-                pathway['ind_boltz'] = component
+                pathway[metric + '_ind_boltz'] = component
             else:
-                pathway['ind_boltz'] = 0
+                pathway[metric + '_ind_boltz'] = 0
 
-            total_boltz += pathway['ind_boltz']
+            total_boltz += pathway[metric + '_ind_boltz']
 
         for i in range(len(key_list)):
             key = key_list[i]
             pathway = groupings[key]
 
-            if pathway['ind_boltz'] == 0:
-                pathway['weighting'] = 0
+            if pathway[metric + '_ind_boltz'] == 0:
+                pathway[metric + '_weighting'] = 0
             else:
-                pathway['weighting'] = pathway['ind_boltz'] / total_boltz
-
-    def get_lowest_energy_pathways(self, method, count, LM):
-        pathways = self.get_pathways_from(LM, method)
-
-        min_pathways = []
-
-        if len(pathways) < count:
-            count = len(pathways)
-
-        for i in range(count):
-            min_pathway_gibbs = 100
-
-            for j in range(len(pathways)):
-                curr_pathway_gibbs = pathways[j].forward_gibbs
-
-                LM1_skm = pathways[j].LM1.closest_skm
-                LM2_skm = pathways[j].LM2.closest_skm
-                TS_skm = pathways[j].TS.closest_skm
-
-                if LM1_skm < LM2_skm:
-                    lm_grouping = str(LM1_skm) + '_' + str(LM2_skm)
-                else:
-                    lm_grouping = str(LM2_skm) + '_' + str(LM1_skm)
-
-                key = lm_grouping + '-' + str(TS_skm)
-                key = self.get_name_from_key(key)
-
-                if key not in min_pathways and curr_pathway_gibbs < min_pathway_gibbs:
-                    min_pathway = key
-                    min_pathway_gibbs = curr_pathway_gibbs
-
-            min_pathways.append(min_pathway)
-
-        return min_pathways
+                pathway[metric + '_weighting'] = pathway[metric + '_ind_boltz'] / total_boltz
     #endregion
 
     # # # do_calcs # # #
@@ -2974,80 +2905,52 @@ class Compare_Methods():
         else:
             return False
 
-    def format_pathway_weighting_dict_for_csv(self, grouping_type):
+    def format_pathway_weighting_dict_for_csv(self, grouping_type, metric):
         pathway_weighting_dict = {}
+        pathway_weighting_dict['pathway'] = []
+
+        pathway_weighting_dict['LM1'] = []
+
+        if grouping_type == 'pathway_groupings':
+            pathway_weighting_dict['TS'] = []
+
+        pathway_weighting_dict['LM2'] = []
 
         for method in self.reference_landscape.TS_Tessellation.methods:
             pathway_weighting_dict[method] = []
 
+        for method in self.reference_landscape.TS_Tessellation.methods:
             for key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
-                if self.key_has_LM(key, '4c1'):
+                if self.key_has_LM(key, '4c1') and key not in pathway_weighting_dict['pathway']:
+                    pathway_weighting_dict['pathway'].append(key)
+                    key = self.get_name_from_key(key)
+
+                    if grouping_type == 'pathway_groupings':
+                        TS = key.split('-')[1]
+                        LM1 = key.split('_')[0]
+                        LM2 = key.split('_')[1].split('-')[0]
+
+                        pathway_weighting_dict['TS'].append(TS)
+                    else:
+                        LM1 = key.split('_')[0]
+                        LM2 = key.split('_')[1]
+
+                    pathway_weighting_dict['LM1'].append(LM1)
+                    pathway_weighting_dict['LM2'].append(LM2)
+
+        for i in range(len(pathway_weighting_dict['pathway'])):
+            key = pathway_weighting_dict['pathway'][i]
+
+            for method in self.reference_landscape.TS_Tessellation.methods:
+                if key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
                     pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
+                    pathway_weighting_dict[method].append(round(pathway[metric + '_weighting'], 3))
+                else:
+                    pathway_weighting_dict[method].append('n/a')
 
-                    if pathway['weighting'] > 0.05:
-                        pathway_weighting_dict[method].append(self.get_name_from_key(key) + ': ' + str(round(pathway['weighting'], 3)))
-
-        max_length = 0
-
-        for method in self.reference_landscape.TS_Tessellation.methods:
-            if len(pathway_weighting_dict[method]) > max_length:
-                max_length = len(pathway_weighting_dict[method])
-
-        for method in self.reference_landscape.TS_Tessellation.methods:
-            while len(pathway_weighting_dict[method]) < max_length:
-                pathway_weighting_dict[method].append('')
-
-        for method in self.reference_landscape.TS_Tessellation.methods:
-            weighting = 0
-
-            for key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
-                if self.key_has_LM(key, '4c1'):
-                    pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
-
-                    weighting += pathway['weighting']
-
-            try:
-                assert(weighting > 0.99)
-            except:
-                print(method + ' pathway weighting doesn\'t add to 1')
-
-        for method in pathway_weighting_dict:
-            for i in range(len(pathway_weighting_dict[method])):
-                for j in range(len(pathway_weighting_dict[method]) - 1):
-                    if pathway_weighting_dict[method][j] != '':
-                        first_val = float(pathway_weighting_dict[method][j].split()[1])
-                    else:
-                        first_val =  ''
-
-                    if pathway_weighting_dict[method][j + 1] != '':
-                        second_val = float(pathway_weighting_dict[method][j + 1].split()[1])
-                    else:
-                        second_val = ''
-
-                    if second_val != '':
-                        if first_val == '' or first_val < second_val:
-                            aux_val = second_val
-                            second_val = first_val
-                            first_val = aux_val
-
-                    if first_val != '':
-                        pathway_weighting_dict[method][j] = pathway_weighting_dict[method][j].split()[0] + ' ' + str(first_val)
-                    else:
-                        pathway_weighting_dict[method][j] = first_val
-                    if second_val != '':
-                        pathway_weighting_dict[method][j + 1] = pathway_weighting_dict[method][j + 1].split()[0] + ' ' + str(second_val)
-                    else:
-                        pathway_weighting_dict[method][j + 1] = second_val
+        del pathway_weighting_dict['pathway']
 
         return pathway_weighting_dict
-
-    def format_min_pathways_dict_for_csv(self, count):
-        min_pathways_dict = {}
-
-        for key in self.reference_landscape.TS_Tessellation.methods:
-            min_pathways_dict[key] = self.get_lowest_energy_pathways(key, count, '4c1')
-
-        return min_pathways_dict
 
     def format_skm_dict_for_csv(self, tessellation, val):
         csv_dict = {}
@@ -3208,8 +3111,6 @@ class Compare_Methods():
         LM_tsl = self.reference_landscape.LM_Tessellation
         TS_tsl = self.reference_landscape.TS_Tessellation
 
-        self.write_dict_to_csv(self.format_min_pathways_dict_for_csv(3), 'min_pathways')
-
         self.write_dict_to_csv(self.format_skm_dict_for_csv(LM_tsl, 'gibbs_group_RMSD'), 'LM_gibbs_group_RMSD')
         self.write_dict_to_csv(self.format_RMSD_dict_for_csv(LM_tsl, 'gibbs'), 'LM_gibbs_RMSD')
         self.write_dict_to_csv(self.format_skm_dict_for_csv(LM_tsl, 'arc_group_WRMSD'), 'LM_arc_group_WRMSD')
@@ -3222,8 +3123,9 @@ class Compare_Methods():
         self.write_dict_to_csv(self.format_WRMSD_dict_for_csv(TS_tsl, 'arc'), 'TS_arc_WRMSD')
         self.write_dict_to_csv(self.format_skm_dict_for_csv(TS_tsl, 'weighted_gibbs'), 'TS_weighted_gibbs')
 
-        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('pathway_groupings'), 'pathway_weightings')
-        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('LM_groupings'), 'LM_grouping_weightings')
+        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('pathway_groupings', 'weighted_forward_gibbs'), 'forward_pathway_weightings')
+        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('pathway_groupings', 'weighted_reverse_gibbs'), 'reverse_pathway_weightings')
+        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('LM_groupings', 'weighted_delta_gibbs'), 'LM_grouping_weightings')
 
         self.write_dict_to_csv(self.format_pathway_dict_for_csv(TS_tsl), 'pathways')
         self.write_dict_to_csv(self.format_norm_pathway_dict_for_csv(TS_tsl), 'norm_pathways')
