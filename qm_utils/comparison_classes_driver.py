@@ -81,66 +81,72 @@ def do_main():
 
         comp_met.write_csvs()
 
-        # for method in comp_met.Method_Pathways_dict:
-        #     comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-        #                                method=method,
-        #                                type='raw')
-        #     comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
-        #                                method=method,
-        #                                type='raw')
-        #     comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-        #                                method=method,
-        #                                type='skm')
-        #     comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
-        #                                method=method,
-        #                                type='skm')
-        #
-        #     comp_met.save_raw_data_norm_LM(method, False, True)
-        #     comp_met.save_raw_data_norm_TS(method, False, True)
-        #
-        #     comp_met.save_raw_data_norm_LM(method, False, True, plot_criteria=True)
-        #     comp_met.save_raw_data_norm_TS(method, False, True, plot_criteria=True)
-        #
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-        #                            method='ALL',
-        #                            type='raw')
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
-        #                            method='ALL',
-        #                            type='raw')
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-        #                            method='ALL',
-        #                            type='skm')
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
-        #                            method='ALL',
-        #                            type='skm')
-        #
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-        #                            method='DFT',
-        #                            type='raw')
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
-        #                            method='DFT',
-        #                            type='raw')
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-        #                            method='DFT',
-        #                            type='skm')
-        # comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
-        #                            method='DFT',
-        #                            type='skm')
-        #
-        # comp_met.save_raw_data_norm_LM('ALL', False, True)
-        # comp_met.save_raw_data_norm_TS('ALL', False, True)
-        #
-        # comp_met.save_raw_data_norm_LM('ALL', False, True, plot_criteria=True)
-        # comp_met.save_raw_data_norm_TS('ALL', False, True, plot_criteria=True)
-        #
-        # comp_met.save_raw_data_norm_LM('DFT', False, True)
-        # comp_met.save_raw_data_norm_TS('DFT', False, True)
-        #
-        # comp_met.save_raw_data_norm_LM('DFT', False, True, plot_criteria=True)
-        # comp_met.save_raw_data_norm_TS('DFT', False, True, plot_criteria=True)
-        #
-        # comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
-        # comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
+        for method in comp_met.Method_Pathways_dict:
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                       method=method,
+                                       type='raw')
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                       method=method,
+                                       type='raw')
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                       method=method,
+                                       type='skm')
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                       method=method,
+                                       type='skm')
+
+            comp_met.save_raw_data_norm_LM(method, connect_to_skm=True)
+            comp_met.save_raw_data_norm_TS(method, connect_to_skm=True)
+
+            comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
+            comp_met.save_raw_data_norm_TS(method, connect_to_skm=True, plot_criteria=True)
+
+            comp_met.save_raw_data_norm_LM(method, connect_to_skm=False)
+            comp_met.save_raw_data_norm_TS(method, connect_to_skm=False)
+
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='ALL',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='ALL',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='ALL',
+                                   type='skm')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='ALL',
+                                   type='skm')
+
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='DFT',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='DFT',
+                                   type='raw')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                   method='DFT',
+                                   type='skm')
+        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                   method='DFT',
+                                   type='skm')
+
+        comp_met.save_raw_data_norm_LM('ALL', connect_to_skm=True)
+        comp_met.save_raw_data_norm_TS('ALL', connect_to_skm=True)
+
+        comp_met.save_raw_data_norm_LM('ALL', connect_to_skm=True, plot_criteria=True)
+        comp_met.save_raw_data_norm_TS('ALL', connect_to_skm=True, plot_criteria=True)
+
+        comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=False)
+        comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=False)
+
+        comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=True)
+        comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=True)
+
+        comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=True, plot_criteria=True)
+        comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=True, plot_criteria=True)
+
+        comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
+        comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
 
 def save_ref_plots():
     met_colors_dict = {}
