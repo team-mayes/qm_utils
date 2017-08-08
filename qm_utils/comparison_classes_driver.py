@@ -62,6 +62,12 @@ def do_main():
             seed_num += increment
 
         color = cmap(seed_num)
+
+        if method == 'M06L':
+            color = cmap(increment * 16)
+        elif method == 'PBEPBE':
+            color = cmap(increment * 18)
+
         seed_num += increment
         met_colors_dict[method] = color
 
@@ -133,17 +139,11 @@ def do_main():
         comp_met.save_raw_data_norm_LM('ALL', connect_to_skm=True)
         comp_met.save_raw_data_norm_TS('ALL', connect_to_skm=True)
 
-        comp_met.save_raw_data_norm_LM('ALL', connect_to_skm=True, plot_criteria=True)
-        comp_met.save_raw_data_norm_TS('ALL', connect_to_skm=True, plot_criteria=True)
-
         comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=False)
         comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=False)
 
         comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=True)
         comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=True)
-
-        comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=True, plot_criteria=True)
-        comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=True, plot_criteria=True)
 
         comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
         comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
