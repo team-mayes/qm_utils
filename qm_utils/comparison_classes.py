@@ -1010,6 +1010,9 @@ class Compare_Methods():
         # # # reference init # # #
         #region
         self.reference_landscape_init()
+        self.save_tessellation(self.reference_landscape.LM_Tessellation, 'init')
+        self.save_tessellation(self.reference_landscape.TS_Tessellation, 'init')
+
         self.Method_Pathways_dict = {}
         self.Method_Pathways_init()
 
@@ -1033,6 +1036,9 @@ class Compare_Methods():
 
         self.recalc_skms(self.reference_landscape.LM_Tessellation, REFERENCE)
         self.recalc_skms(self.reference_landscape.TS_Tessellation, REFERENCE)
+
+        self.save_tessellation(self.reference_landscape.LM_Tessellation, 'next')
+        self.save_tessellation(self.reference_landscape.TS_Tessellation, 'next')
 
         self.assign_skm_labels()
         self.assign_IRC_energies()
@@ -1380,7 +1386,7 @@ class Compare_Methods():
         arc = structure.comp_metrics['arc']
         next_arc = structure.comp_metrics['next_arc']
 
-        dist_tol = 1.2
+        dist_tol = 1.5
 
         if arc == 0:
             dist_ratio = dist_tol
@@ -2317,7 +2323,8 @@ class Compare_Methods():
     def plot_raw_data_norm(self, plot, method, connect_to_skm=False, plot_criteria=False, tessellation=None):
         skm_groupings = tessellation.methods[method]['skm_groupings']
 
-        LM_size = 10
+        LM_size = 15
+        amt = 10
 
         color = self.met_colors_dict[method]
 
@@ -2413,7 +2420,7 @@ class Compare_Methods():
                                 plot.ax_rect.scatter(LM.phi, LM.theta, c='',
                                                      edgecolor='red',
                                                      marker=self.met_ts_markers_dict[method],
-                                                     s=LM_size * amt, zorder=10)
+                                                     s=LM_size * amt * 3, zorder=10)
 
                             self.plot_line(plot, LM_vert, skm_vert, method, line_style=linestyle,
                                            plot_TS_vert=False,
@@ -2818,8 +2825,8 @@ class Compare_Methods():
             plot.save(dir_=dir, filename=filename)
     #endregion
 
-    def save_tessellation(self, tessellation):
-        filename = self.molecule + '-tessellation-' + tessellation.type
+    def save_tessellation(self, tessellation, extra=''):
+        filename = self.molecule + '-tessellation-' + tessellation.type + extra
         dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'plots'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
