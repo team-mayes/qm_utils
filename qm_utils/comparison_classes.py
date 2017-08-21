@@ -754,7 +754,14 @@ class Reference_Landscape():
 
         if len(name_list) > 1:
             for j in range(len(name_list)):
-                skm_name_list[name_list[j]] = name + '(' + str(j) + ')'
+                if j == 0:
+                    subscript = 'a'
+                elif j == 1:
+                    subscript = 'b'
+                else:
+                    subscript = 'c'
+
+                skm_name_list[name_list[j]] = name + '(' + subscript + ')'
 
     def assign_region_names(self, tessellation):
         skm_name_list = []
@@ -1010,8 +1017,8 @@ class Compare_Methods():
         # # # reference init # # #
         #region
         self.reference_landscape_init()
-        self.save_tessellation(self.reference_landscape.LM_Tessellation, 'init')
-        self.save_tessellation(self.reference_landscape.TS_Tessellation, 'init')
+        # self.save_tessellation(self.reference_landscape.LM_Tessellation, 'init')
+        # self.save_tessellation(self.reference_landscape.TS_Tessellation, 'init')
 
         self.Method_Pathways_dict = {}
         self.Method_Pathways_init()
@@ -1037,8 +1044,8 @@ class Compare_Methods():
         self.recalc_skms(self.reference_landscape.LM_Tessellation, REFERENCE)
         self.recalc_skms(self.reference_landscape.TS_Tessellation, REFERENCE)
 
-        self.save_tessellation(self.reference_landscape.LM_Tessellation, 'next')
-        self.save_tessellation(self.reference_landscape.TS_Tessellation, 'next')
+        # self.save_tessellation(self.reference_landscape.LM_Tessellation, 'next')
+        # self.save_tessellation(self.reference_landscape.TS_Tessellation, 'next')
 
         self.assign_skm_labels()
         self.assign_IRC_energies()
@@ -1081,6 +1088,9 @@ class Compare_Methods():
                                     method,
                                     self.Method_Pathways_dict[method].TS_csv_list)
 
+            self.correct_skm_groupings(self.reference_landscape.LM_Tessellation, method)
+            self.correct_skm_groupings(self.reference_landscape.TS_Tessellation, method)
+
             self.do_init_calcs(method)
 
             print(method + ' skm groupings done')
@@ -1101,6 +1111,8 @@ class Compare_Methods():
 
         for method in self.Method_Pathways_dict:
             self.populate_pathway_groupings(method)
+            self.correct_pathway_groupings(self.reference_landscape.TS_Tessellation, method)
+
             self.normalize_pathways(method)
 
         for method in self.Method_Pathways_dict:
@@ -1539,6 +1551,50 @@ class Compare_Methods():
 
                             pathway_groupings[key]['pathways'].append(pathway)
 
+    def pathways_are_equal(self, pathway, comp_pathway):
+        LM1 = pathway.LM1
+        LM2 = pathway.LM2
+        TS = pathway.TS
+
+        comp_LM1 = comp_pathway.LM1
+        comp_LM2 = comp_pathway.LM2
+        comp_TS = comp_pathway.TS
+
+        if self.are_equal(TS, comp_TS):
+            if self.are_equal(LM1, comp_LM1) and self.are_equal(LM2, comp_LM2) or\
+                self.are_equal(LM1, comp_LM2) and self.are_equal(LM2, comp_LM1):
+                    return True
+
+        return False
+
+    def pathway_double_counted_poorly(self, tessellation, method, pathway):
+        for key in tessellation.methods[method]['pathway_groupings']:
+            pathways = tessellation.methods[method]['pathway_groupings'][key]['pathways']
+
+            if len(tessellation.methods[REFERENCE]['pathway_groupings'][key]['pathways']) > 0:
+                for k in range(len(pathways)):
+                    comp_pathway = pathways[k]
+
+                    if self.pathways_are_equal(pathway, comp_pathway):
+                        return True
+
+        return False
+
+    def correct_pathway_groupings(self, tessellation, method):
+        for key in tessellation.methods[method]['pathway_groupings']:
+            pathways = tessellation.methods[method]['pathway_groupings'][key]['pathways']
+
+            if len(tessellation.methods[REFERENCE]['pathway_groupings'][key]['pathways']) == 0 and len(pathways) > 0:
+                new_pathways = []
+
+                for j in range(len(pathways)):
+                    pathway = pathways[j]
+
+                    if not self.pathway_double_counted_poorly(tessellation, method, pathway):
+                        new_pathways.append(pathway)
+
+                tessellation.methods[method]['pathway_groupings'][key]['pathways'] = new_pathways
+
 
     # creates a list of structures grouped by skm
     def populate_skm_groupings(self, tessellation, method, structure_list):
@@ -1780,7 +1836,7 @@ class Compare_Methods():
                         arc = structure.comp_metrics['arc']
                         next_arc = structure.comp_metrics['next_arc']
 
-                        dist_tol = 1.2
+                        dist_tol = 1.5
 
                         if arc == 0:
                             dist_ratio = dist_tol
@@ -1804,6 +1860,29 @@ class Compare_Methods():
                             structure_copy.comp_metrics['next_arc'] = structure.comp_metrics['arc']
 
                             structures.append(structure_copy)
+
+    def correct_skm_groupings(self, tessellation, method):
+        for i in range(len(tessellation.methods[method]['skm_groupings'])):
+            if len(tessellation.methods[REFERENCE]['skm_groupings'][i]['structures']) == 0 and len(tessellation.methods[method]['skm_groupings'][i]['structures']) > 0:
+                structures = []
+
+                for j in range(len(tessellation.methods[method]['skm_groupings'][i]['structures'])):
+                    structure = tessellation.methods[method]['skm_groupings'][i]['structures'][j]
+
+                    if not self.skm_double_counted_poorly(tessellation, method, structure):
+                        structures.append(structure)
+
+                tessellation.methods[method]['skm_groupings'][i]['structures'] = structures
+
+    def skm_double_counted_poorly(self, tessellation, method, structure):
+        if len(tessellation.methods[REFERENCE]['skm_groupings'][structure.next_closest_skm]['structures']) > 0:
+            for k in range(len(tessellation.methods[method]['skm_groupings'][structure.next_closest_skm]['structures'])):
+                comp_structure = tessellation.methods[method]['skm_groupings'][structure.next_closest_skm]['structures'][k]
+
+                if self.are_equal(structure, comp_structure):
+                    return True
+
+        return False
 
 
     def populate_skm_grouping_names(self, tessellation):
@@ -2417,10 +2496,11 @@ class Compare_Methods():
                             else:
                                 linestyle = '-.'
 
-                                plot.ax_rect.scatter(LM.phi, LM.theta, c='',
-                                                     edgecolor='red',
-                                                     marker=self.met_ts_markers_dict[method],
-                                                     s=LM_size * amt * 3, zorder=10)
+                                if plot_criteria:
+                                    plot.ax_rect.scatter(LM.phi, LM.theta, c='',
+                                                         edgecolor='red',
+                                                         marker=self.met_ts_markers_dict[method],
+                                                         s=LM_size * amt * 3, zorder=10)
 
                             self.plot_line(plot, LM_vert, skm_vert, method, line_style=linestyle,
                                            plot_TS_vert=False,
