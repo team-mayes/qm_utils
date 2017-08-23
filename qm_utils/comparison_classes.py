@@ -649,6 +649,9 @@ class Reference_Landscape():
 
         self.Reference_Pathways.normalize_energies()
 
+        self.assign_formatted_names(tessellation=self.LM_Tessellation)
+        self.assign_formatted_names(tessellation=self.TS_Tessellation)
+
     def reorg_canonical(self):
         aux_list = []
 
@@ -740,6 +743,42 @@ class Reference_Landscape():
             centers.append(center)
 
         self.TS_Tessellation = Tessellation(centers, number_clusters, n_init, max_iter, 'TS')
+
+    def assign_formatted_names(self, tessellation):
+        tessellation.formatted_name_list = []
+
+        for i in range(len(tessellation.skm_name_list)):
+            name = tessellation.skm_name_list[i]
+
+            name_list = list(name)
+
+            last_bit = ''
+
+            for j in range(len(name_list) - 2):
+                last_bit += name_list[j + 2]
+
+            if len(name_list) > 2 and 'e' not in name_list:
+                if name_list[0] == 'b':
+                    new_name = name_list[0].upper() + r'$\rm{_' + name_list[1].upper() + '}$' + r'$\rm{_,}$' + r'$\rm{_' + last_bit.upper() + '}$'
+                elif 'b' in name_list:
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + r'$\rm{^,}$' + r'$\rm{^' + name_list[1].upper() + '}$' + last_bit.upper()
+                else:
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + name_list[1].upper() + r'$\rm{_' + last_bit.upper() + '}$'
+
+            else:
+                if name_list[0] == 'e':
+                    new_name = name_list[0].upper() + r'$\rm{_' + name_list[1].upper() + '}$' + last_bit.upper()
+                elif 'e' in name_list and len(name_list) > 2:
+                    last_bit = ''
+
+                    for j in range(len(name_list) - 1):
+                        last_bit += name_list[j + 1]
+
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + last_bit.upper()
+                else:
+                    new_name = r'$\rm{^' + name_list[0].upper() + '}$' + name_list[1].upper()
+
+            tessellation.formatted_name_list.append(new_name)
 
 
     def check_for_dup_names(self, i, skm_name_list):
@@ -1017,8 +1056,6 @@ class Compare_Methods():
         # # # reference init # # #
         #region
         self.reference_landscape_init()
-        # self.save_tessellation(self.reference_landscape.LM_Tessellation, 'init')
-        # self.save_tessellation(self.reference_landscape.TS_Tessellation, 'init')
 
         self.Method_Pathways_dict = {}
         self.Method_Pathways_init()
@@ -1043,9 +1080,6 @@ class Compare_Methods():
 
         self.recalc_skms(self.reference_landscape.LM_Tessellation, REFERENCE)
         self.recalc_skms(self.reference_landscape.TS_Tessellation, REFERENCE)
-
-        # self.save_tessellation(self.reference_landscape.LM_Tessellation, 'next')
-        # self.save_tessellation(self.reference_landscape.TS_Tessellation, 'next')
 
         self.assign_skm_labels()
         self.assign_IRC_energies()
@@ -1117,6 +1151,7 @@ class Compare_Methods():
 
         for method in self.Method_Pathways_dict:
             self.do_path_calcs('4c1', method)
+            self.do_path_calcs('1c4', method)
         #endregion
         print('pathway init done')
         # # # reorg # # #
@@ -1963,9 +1998,11 @@ class Compare_Methods():
             if len(self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['pathways']) > 0:
                 self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = TS_gibbs - LM_gibbs
                 self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_reverse_gibbs'] = TS_gibbs - other_gibbs
+                self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_delta_gibbs'] = other_gibbs - LM_gibbs
             else:
                 self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_forward_gibbs'] = None
                 self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_reverse_gibbs'] = None
+                self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][key]['weighted_delta_gibbs'] = None
 
         self.reference_landscape.TS_Tessellation.methods[method]['LM_groupings'] = {}
 
@@ -2396,6 +2433,147 @@ class Compare_Methods():
                                  edgecolor=color,
                                  marker=self.met_lm_markers_dict[method],
                                  s=size, zorder=zorder)
+
+    # # # hemisphere # # #
+    #region
+    def plot_on_circle(self, ax_circ, TS_vert, LM_vert, method, zorder=10, line_style='-'):
+        size = 30
+        color = self.met_colors_dict[method]
+
+        line = get_pol_coords(pol2cart(TS_vert), pol2cart(LM_vert))
+
+        # theta
+        r = []
+
+        # phi
+        theta = line[0]
+
+        for i in range(len(line[1])):
+            r.append(abs(math.sin(np.radians(line[1][i]))))
+            theta[i] = np.radians(line[0][i])
+
+        theta[0] = theta[1]
+
+        ax_circ.plot(theta, r, color=color, linestyle=line_style, zorder=1)
+
+        r_0 = abs(math.sin(np.radians(LM_vert[1])))
+        r_1 = abs(math.sin(np.radians(TS_vert[1])))
+        theta_0 = np.radians(LM_vert[0])
+        theta_1 = np.radians(TS_vert[0])
+
+        ax_circ.scatter(theta_1, r_1, c='white',
+                         edgecolor=color,
+                         marker=self.met_ts_markers_dict[method],
+                         s=size, zorder=zorder)
+
+        ax_circ.scatter(theta_0, r_0, c=color,
+                         edgecolor=color,
+                         marker=self.met_lm_markers_dict[method],
+                         s=size, zorder=zorder)
+
+    def get_three_lowest_pathways(self, method, hemisphere):
+        pathways = {}
+        path_list = []
+
+        for i in range(3):
+            min_delta_gibbs = 100
+
+            pathway_groupings = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']
+
+            for path in pathway_groupings:
+                if hemisphere == 'N' and int(path.split('_')[0]) == 0 or\
+                    hemisphere == 'S' and int(path.split('-')[0].split('_')[1]) == len(self.reference_landscape.LM_Tessellation.skm_name_list) - 1:
+
+                    pathway = pathway_groupings[path]
+
+                    if pathway['weighted_forward_gibbs'] != None and pathway['weighted_reverse_gibbs'] != None:
+                        delta_gibbs = pathway['weighted_forward_gibbs'] - pathway['weighted_reverse_gibbs']
+
+                        if delta_gibbs < min_delta_gibbs and path not in path_list:
+                            min_delta_gibbs = delta_gibbs
+                            min_path = path
+
+            pathways[min_path] = pathway_groupings[min_path]
+            path_list.append(min_path)
+
+        return pathways
+
+    def plot_circ_paths(self, ax_circ, method, hemisphere):
+        pathways = self.get_three_lowest_pathways(method, hemisphere)
+
+        for path in pathways:
+            TS_skm = int(path.split('-')[1])
+            LM1_skm = int(path.split('_')[0])
+            LM2_skm = int(path.split('-')[0].split('_')[1])
+
+            LM1_vert = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[LM1_skm])
+            TS_vert = cart2pol(self.reference_landscape.TS_Tessellation.skm.cluster_centers_[TS_skm])
+            LM2_vert = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[LM2_skm])
+
+            self.plot_on_circle(ax_circ, TS_vert, LM1_vert, method)
+            self.plot_on_circle(ax_circ, TS_vert, LM2_vert, method)
+
+            LM_name_list = self.reference_landscape.LM_Tessellation.formatted_name_list
+            TS_name_list = self.reference_landscape.TS_Tessellation.formatted_name_list
+
+            offset = 0.1
+            theta_offset = np.radians(5)
+
+            LM1_r = abs(math.sin(np.radians(LM1_vert[1]))) - offset
+            LM1_theta = np.radians(LM1_vert[0]) + theta_offset
+
+            TS_r = abs(math.sin(np.radians(TS_vert[1]))) - offset
+            TS_theta = np.radians(TS_vert[0]) + theta_offset
+
+            LM2_r = abs(math.sin(np.radians(LM2_vert[1]))) - offset
+            LM2_theta = np.radians(LM2_vert[0]) + theta_offset
+
+            ax_circ.annotate(LM_name_list[LM1_skm],
+                                xy=(LM1_theta, LM1_r),
+                                ha="center", va="center", fontsize=10, zorder=100,
+                                path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+
+            ax_circ.annotate(TS_name_list[TS_skm],
+                                xy = (TS_theta, TS_r),
+                                ha = "center", va = "center", fontsize = 10, zorder = 100,
+                                path_effects = [PathEffects.withStroke(linewidth=1, foreground="w")])
+
+            ax_circ.annotate(LM_name_list[LM2_skm],
+                             xy=(LM2_theta, LM2_r),
+                             ha="center", va="center", fontsize=10, zorder=100,
+                             path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+
+            if hemisphere == 'N':
+                energy_r = ((TS_r + LM2_r) / 2)
+                energy_theta = ((TS_theta + LM2_theta) / 2)
+            else:
+                energy_r = ((TS_r + LM1_r) / 2)
+                energy_theta = ((TS_theta + LM1_theta) / 2)
+
+            ax_circ.annotate(round(pathways[path]['weighted_delta_gibbs'], 2),
+                             xy=(energy_theta, energy_r),
+                             ha="center", va="center", fontsize=10, zorder=100,
+                             path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+
+    def save_circ_paths(self, method, hemisphere):
+        filename = self.molecule + '-' + method + '-circ_paths_' + hemisphere
+
+        dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
+        dir = make_dir(os.path.join(dir, hemisphere))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            if hemisphere == 'N':
+                plot = Plots(north_pol_arg=True)
+                ax_circ = plot.ax_circ_north
+            elif hemisphere == 'S':
+                plot = Plots(south_pol_arg=True)
+                ax_circ = plot.ax_circ_south
+
+            self.plot_circ_paths(ax_circ, method, hemisphere)
+
+            plot.save(dir_=dir, filename=filename)
+
+    #endregion
 
     # # # raw # # #
     #region
@@ -2946,7 +3124,7 @@ class Compare_Methods():
         else:
             return False
 
-    def format_pathway_weighting_dict_for_csv(self, grouping_type, metric):
+    def format_pathway_metric_dict_for_csv(self, grouping_type, metric, LM):
         pathway_weighting_dict = {}
         pathway_weighting_dict['pathway'] = []
 
@@ -2962,7 +3140,7 @@ class Compare_Methods():
 
         for method in self.reference_landscape.TS_Tessellation.methods:
             for key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
-                if self.key_has_LM(key, '4c1') and key not in pathway_weighting_dict['pathway']:
+                if self.key_has_LM(key, LM) and key not in pathway_weighting_dict['pathway']:
                     pathway_weighting_dict['pathway'].append(key)
                     key = self.get_name_from_key(key)
 
@@ -2983,9 +3161,10 @@ class Compare_Methods():
             key = pathway_weighting_dict['pathway'][i]
 
             for method in self.reference_landscape.TS_Tessellation.methods:
-                if key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
-                    pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
-                    pathway_weighting_dict[method].append(round(pathway[metric + '_weighting'], 3))
+                pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
+
+                if key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type] and pathway[metric] != None:
+                    pathway_weighting_dict[method].append(round(pathway[metric], 3))
                 else:
                     pathway_weighting_dict[method].append('n/a')
 
@@ -3204,9 +3383,33 @@ class Compare_Methods():
         self.write_dict_to_csv(self.format_phys_RMSD_dict_for_csv(TS_tsl, 'gibbs'), 'TS_gibbs_phys_RMSD')
         self.write_dict_to_csv(self.format_phys_WRMSD_dict_for_csv(TS_tsl, 'arc'), 'TS_arc_phys_WRMSD')
 
-        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('pathway_groupings', 'weighted_forward_gibbs'), 'forward_pathway_weightings')
-        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('pathway_groupings', 'weighted_reverse_gibbs'), 'reverse_pathway_weightings')
-        self.write_dict_to_csv(self.format_pathway_weighting_dict_for_csv('LM_groupings', 'weighted_delta_gibbs'), 'LM_grouping_weightings')
+        self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                       'weighted_forward_gibbs_weighting', '4c1'),
+                               'forward_pathway_weightings_4c1')
+        self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                       'weighted_reverse_gibbs_weighting', '4c1'),
+                               'reverse_pathway_weightings_4c1')
+        self.write_dict_to_csv(
+            self.format_pathway_metric_dict_for_csv('LM_groupings', 'weighted_delta_gibbs_weighting', '4c1'),
+            'LM_grouping_weightings_4c1')
+
+        self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                       'weighted_delta_gibbs', '4c1'),
+                               'delta_pathway_gibbs_4c1')
+
+
+        self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings', 'weighted_forward_gibbs_weighting', '1c4'),
+            'forward_pathway_weightings_1c4')
+        self.write_dict_to_csv(
+            self.format_pathway_metric_dict_for_csv('pathway_groupings', 'weighted_reverse_gibbs_weighting', '1c4'),
+            'reverse_pathway_weightings_1c4')
+        self.write_dict_to_csv(
+            self.format_pathway_metric_dict_for_csv('LM_groupings', 'weighted_delta_gibbs_weighting', '1c4'),
+            'LM_grouping_weightings_1c4')
+
+        self.write_dict_to_csv(
+            self.format_pathway_metric_dict_for_csv('pathway_groupings', 'weighted_delta_gibbs', '1c4'),
+            'delta_pathway_gibbs_1c4')
 
         self.write_dict_to_csv(self.format_pathway_dict_for_csv(TS_tsl), 'pathways')
         self.write_dict_to_csv(self.format_norm_pathway_dict_for_csv(TS_tsl), 'norm_pathways')
