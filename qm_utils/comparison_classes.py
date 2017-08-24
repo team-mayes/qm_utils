@@ -8,6 +8,7 @@ import math
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
+from PIL import Image
 
 import csv
 
@@ -256,7 +257,9 @@ class Pathway():
         self.LM2 = LM2
 
 class Method_Pathways():
-    def __init__(self, LM_csv_filename, TS_csv_filename, IRC_csv_filename, method, molecule):
+    def __init__(self, LM_csv_filename, TS_csv_filename, IRC_csv_filename, method, molecule, energy_format):
+        self.energy_format = energy_format
+
         self.method = method
         self.molecule = molecule
 
@@ -302,7 +305,7 @@ class Method_Pathways():
             info = LM_csv_dict[i]
             phi = float(info['phi'])
             theta = float(info['theta'])
-            gibbs = float(info['G298 (Hartrees)'])
+            gibbs = float(info[self.energy_format])
             name = info['Pucker']
 
             try:
@@ -323,7 +326,7 @@ class Method_Pathways():
             info = TS_csv_dict[i]
             phi = float(info['phi'])
             theta = float(info['theta'])
-            gibbs = float(info['G298 (Hartrees)'])
+            gibbs = float(info[self.energy_format])
             name = info['File Name'].split('-')[1].split('-')[0]
 
             try:
@@ -346,7 +349,7 @@ class Method_Pathways():
             info = IRC_csv_dict[i]
             phi = float(info['phi'])
             theta = float(info['theta'])
-            gibbs = float(info['G298 (Hartrees)'])
+            gibbs = float(info[self.energy_format])
 
             try:
                 assert(float(info['Freq 1']) > 0)
@@ -444,7 +447,8 @@ class Method_Pathways():
             self.Pathways.append(Pathway(TS, LM1, LM2))
 
 class Reference_Pathways():
-    def __init__(self, LM_csv_filename, TS_csv_filename):
+    def __init__(self, LM_csv_filename, TS_csv_filename, energy_format):
+        self.energy_format = energy_format
         self.method = REFERENCE
 
         self.parse_LM_csv(LM_csv_filename)
@@ -477,7 +481,7 @@ class Reference_Pathways():
             info = LM_csv_dict[i]
             phi = float(info['phi'])
             theta = float(info['theta'])
-            gibbs = float(info['G298 (Hartrees)'])
+            gibbs = float(info[self.energy_format])
             name = info['Pucker']
 
             self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'LM'))
@@ -492,7 +496,7 @@ class Reference_Pathways():
             info = TS_csv_dict[i]
             phi = float(info['phi'])
             theta = float(info['theta'])
-            gibbs = float(info['G298 (Hartrees)'])
+            gibbs = float(info[self.energy_format])
             name = info['Pucker']
 
             phi_lm1 = float(info['phi_lm1'])
@@ -607,12 +611,13 @@ class Tessellation():
 class Reference_Landscape():
     # # # Init # # #
     #region
-    def __init__(self, LM_csv_filename, TS_csv_filename, molecule, LM_clusters=None, TS_clusters=None):
+    def __init__(self, LM_csv_filename, TS_csv_filename, molecule, energy_format, LM_clusters=None, TS_clusters=None):
         self.method = REFERENCE
         self.molecule = molecule
         self.MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
+        self.MOL_SAVE_DIR = make_dir(os.path.join(self.MOL_SAVE_DIR, energy_format.split(' ')[0]))
 
-        self.Reference_Pathways = Reference_Pathways(LM_csv_filename, TS_csv_filename)
+        self.Reference_Pathways = Reference_Pathways(LM_csv_filename, TS_csv_filename, energy_format)
 
         self.Pathways = self.Reference_Pathways.Pathways
         self.Local_Minima = self.Reference_Pathways.LM_csv_list
@@ -1042,9 +1047,11 @@ class Compare_Methods():
                  molecule,
                  met_colors_dict,
                  met_ts_markers_dict,
-                 met_lm_markers_dict):
+                 met_lm_markers_dict,
+                 energy_format):
         # # # var init # # #
         #region
+        self.energy_format = energy_format
         self.molecule = molecule
         self.met_colors_dict = met_colors_dict
         self.met_ts_markers_dict = met_ts_markers_dict
@@ -1169,6 +1176,7 @@ class Compare_Methods():
     def dir_init(self):
         self.MOL_DATA_DIR = make_dir(os.path.join(SV_MOL_DIR, self.molecule))
         self.MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
+        self.MOL_SAVE_DIR = make_dir(os.path.join(self.MOL_SAVE_DIR, self.energy_format.split(' ')[0]))
 
         self.IRC_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'IRC'))
         self.LM_DATA_DIR = make_dir(os.path.join(self.MOL_DATA_DIR, 'LM'))
@@ -1215,7 +1223,8 @@ class Compare_Methods():
                                                        TS_csv_filename=ref_TS_csv_filename,
                                                        molecule=self.molecule,
                                                        LM_clusters=LM_clusters,
-                                                       TS_clusters=TS_clusters)
+                                                       TS_clusters=TS_clusters,
+                                                       energy_format=self.energy_format)
 
     def Method_Pathways_init(self):
         for i in range(len(self.IRC_DATA_dir_list)):
@@ -1228,11 +1237,12 @@ class Compare_Methods():
             LM_csv_filename = os.path.join(self.LM_DATA_DIR, 'z_dataset-' + self.molecule + '-LM-' + method + '.csv')
             TS_csv_filename = os.path.join(self.TS_DATA_DIR, 'z_dataset-' + self.molecule + '-TS-' + method + '.csv')
 
-            self.Method_Pathways_dict[method] = (Method_Pathways(LM_csv_filename=LM_csv_filename,
+            self.Method_Pathways_dict[method] = Method_Pathways(LM_csv_filename=LM_csv_filename,
                                                                  TS_csv_filename=TS_csv_filename,
                                                                  IRC_csv_filename=IRC_csv_filename,
                                                                  method=method.upper(),
-                                                                 molecule=self.molecule))
+                                                                 molecule=self.molecule,
+                                                                 energy_format=self.energy_format)
 
             self.Method_Pathways_dict[method].comp_metrics = {}
 
@@ -2569,6 +2579,90 @@ class Compare_Methods():
 
             plot.save(dir_=dir, filename=filename)
 
+    def merge_images(self, img_files, img_dir):
+        img_list = []
+
+        for i in range(len(img_files)):
+            img_list.append(os.path.join(img_dir, img_files[i]))
+
+        result_width = 0
+        result_height = 0
+
+        for i in range(len(img_list)):
+            image = Image.open(img_list[i])
+
+            (width, height) = image.size
+
+            result_width += width
+            result_height = max(height, result_height)
+
+        result = Image.new('RGB', (result_width, result_height))
+
+        paste_width = 0
+
+        for i in range(len(img_list)):
+            image = Image.open(img_list[i])
+
+            (width, height) = image.size
+
+            result.paste(im=image, box=(paste_width, 0))
+
+            paste_width += width
+
+        return result
+
+    def save_merged_images(self, img_dir, filename):
+        img_files = os.listdir(img_dir)
+        merged_img = self.merge_images(img_files, img_dir)
+
+        merged_img.save(os.path.join(img_dir, filename))
+
+    def save_all_merged_images(self, hemisphere):
+        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
+        img_dir = make_dir(os.path.join(img_dir, hemisphere))
+
+        filename = self.molecule + '-' + hemisphere + '-' + 'merged.png'
+
+        if not os.path.exists(os.path.join(img_dir, filename)):
+            self.save_merged_images(img_dir, filename)
+
+    def save_merged_north_and_south(self):
+        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
+        N_dir = make_dir(os.path.join(img_dir, 'N'))
+        S_dir = make_dir(os.path.join(img_dir, 'S'))
+
+        filename = self.molecule + '-' + 'merged.png'
+
+        if not os.path.exists(os.path.join(img_dir, filename)):
+            img_list = []
+            img_list.append(os.path.join(N_dir, self.molecule + '-N-merged.png'))
+            img_list.append(os.path.join(S_dir, self.molecule + '-S-merged.png'))
+
+            result_width = 0
+            result_height = 0
+
+            for i in range(len(img_list)):
+                image = Image.open(img_list[i])
+
+                (width, height) = image.size
+
+                result_height += height
+                result_width = max(width, result_width)
+
+            result = Image.new('RGB', (result_width, result_height))
+
+            paste_height = 0
+
+            for i in range(len(img_list)):
+                image = Image.open(img_list[i])
+
+                (width, height) = image.size
+
+                result.paste(im=image, box=(0, paste_height))
+
+                paste_height += height
+
+            result.save(os.path.join(img_dir, filename))
     #endregion
 
     # # # raw # # #

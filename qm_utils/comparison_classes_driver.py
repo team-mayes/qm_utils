@@ -71,17 +71,47 @@ def do_main():
 
     mol_list = ['bglc', 'bxyl', 'oxane']
 
+    energy_format = 'H298 (Hartrees)'
+
     for i in range(len(mol_list)):
         comp_met = cc.Compare_Methods(mol_list[i],
                                       met_colors_dict,
                                       met_ts_markers_dict,
-                                      met_lm_markers_dict)
+                                      met_lm_markers_dict,
+                                      energy_format)
 
         comp_met.write_csvs()
 
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_circ_paths(method, 'N')
             comp_met.save_circ_paths(method, 'S')
+
+        comp_met.save_all_merged_images('N')
+        comp_met.save_all_merged_images('S')
+        comp_met.save_merged_north_and_south()
+
+        for method in comp_met.Method_Pathways_dict:
+            comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
+            comp_met.save_raw_data_norm_TS(method, connect_to_skm=True, plot_criteria=True)
+
+    energy_format = 'G298 (Hartrees)'
+
+    for i in range(len(mol_list)):
+        comp_met = cc.Compare_Methods(mol_list[i],
+                                      met_colors_dict,
+                                      met_ts_markers_dict,
+                                      met_lm_markers_dict,
+                                      energy_format)
+
+        comp_met.write_csvs()
+
+        for method in comp_met.Method_Pathways_dict:
+            comp_met.save_circ_paths(method, 'N')
+            comp_met.save_circ_paths(method, 'S')
+
+        comp_met.save_all_merged_images('N')
+        comp_met.save_all_merged_images('S')
+        comp_met.save_merged_north_and_south()
 
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
