@@ -139,11 +139,33 @@ class Plots():
 
             self.ax_circ_north_init()
 
+            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}', xy=(np.radians(7.5), 0.53),
+                                        ha="center",
+                                        va="center", fontsize=6, zorder=100,
+                                        path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+
+            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}', xy=(np.radians(4), 1.02),
+                                        ha="center",
+                                        va="center", fontsize=6, zorder=100,
+                                        path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+
         if south_pol_arg:
             gs = gridspec.GridSpec(1, 1)
             self.ax_circ_south = self.fig.add_subplot(gs[0, 0], projection='polar')
 
             self.ax_circ_south_init()
+
+            self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}',
+                                        xy=(np.radians(7.5), 0.53),
+                                        ha="center",
+                                        va="center", fontsize=6, zorder=100,
+                                        path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+
+            self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}',
+                                        xy=(np.radians(4), 1.02),
+                                        ha="center",
+                                        va="center", fontsize=6, zorder=100,
+                                        path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
         if rxn_arg:
             self.fig, self.ax_rect = plt.subplots(facecolor='white')
@@ -197,8 +219,8 @@ class Plots():
     def ax_circ_north_init(self):
         thetaticks = np.arange(0, 360, 30)
 
-        self.ax_circ_north.set_rlim([0, 1])
-        self.ax_circ_north.set_rticks([0.5])  # less radial ticks
+        self.ax_circ_north.set_rlim([0, 1.1])
+        self.ax_circ_north.set_rticks([0.5, 1])  # less radial ticks
         self.ax_circ_north.set_rlabel_position(-22.5)  # get radial labels away from plotted line
         self.ax_circ_north.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_north.set_theta_zero_location("N")
@@ -209,8 +231,8 @@ class Plots():
     def ax_circ_south_init(self):
         thetaticks = np.arange(0, 360, 30)
 
-        self.ax_circ_south.set_rlim([0, 1])
-        self.ax_circ_south.set_rticks([0.5])  # less radial ticks
+        self.ax_circ_south.set_rlim([0, 1.1])
+        self.ax_circ_south.set_rticks([0.5, 1])  # less radial ticks
         self.ax_circ_south.set_rlabel_position(-22.5)  # get radial labels away from plotted line
         self.ax_circ_south.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_south.set_theta_zero_location("N")
