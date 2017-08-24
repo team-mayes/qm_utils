@@ -3262,6 +3262,54 @@ class Compare_Methods():
 
         return pathway_weighting_dict
 
+    def format_relevant_pathway_metric_dict_for_csv(self, grouping_type, comp_metric, table_metric, LM):
+        pathway_weighting_dict = {}
+        pathway_weighting_dict['pathway'] = []
+
+        pathway_weighting_dict['LM1'] = []
+
+        if grouping_type == 'pathway_groupings':
+            pathway_weighting_dict['TS'] = []
+
+        pathway_weighting_dict['LM2'] = []
+
+        for method in self.reference_landscape.TS_Tessellation.methods:
+            pathway_weighting_dict[method] = []
+
+        for method in self.reference_landscape.TS_Tessellation.methods:
+            for key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]:
+                if self.key_has_LM(key, LM) and key not in pathway_weighting_dict['pathway']:
+                    pathway_weighting_dict['pathway'].append(key)
+                    key = self.get_name_from_key(key)
+
+                    if grouping_type == 'pathway_groupings':
+                        TS = key.split('-')[1]
+                        LM1 = key.split('_')[0]
+                        LM2 = key.split('_')[1].split('-')[0]
+
+                        pathway_weighting_dict['TS'].append(TS)
+                    else:
+                        LM1 = key.split('_')[0]
+                        LM2 = key.split('_')[1]
+
+                    pathway_weighting_dict['LM1'].append(LM1)
+                    pathway_weighting_dict['LM2'].append(LM2)
+
+        for i in range(len(pathway_weighting_dict['pathway'])):
+            key = pathway_weighting_dict['pathway'][i]
+
+            for method in self.reference_landscape.TS_Tessellation.methods:
+                pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
+
+                if key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type] and pathway[comp_metric] != None and pathway[comp_metric] > 0.1:
+                    pathway_weighting_dict[method].append(round(pathway[table_metric], 3))
+                else:
+                    pathway_weighting_dict[method].append('n/a')
+
+        del pathway_weighting_dict['pathway']
+
+        return pathway_weighting_dict
+
     def format_skm_dict_for_csv(self, tessellation, val):
         csv_dict = {}
         csv_dict['method'] = []
@@ -3500,6 +3548,27 @@ class Compare_Methods():
         self.write_dict_to_csv(
             self.format_pathway_metric_dict_for_csv('pathway_groupings', 'weighted_delta_gibbs', '1c4'),
             'delta_pathway_gibbs_1c4')
+
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                '4c1'),
+                                                                                'relevant_weightings_4c1')
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_delta_gibbs',
+                                                                                '4c1'),
+                                                                                'relevant_energies_4c1')
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                '1c4'),
+                                                                                'relevant_weightings_1c4')
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_delta_gibbs',
+                                                                                '1c4'),
+                                                                                'relevant_energies_1c4')
 
         self.write_dict_to_csv(self.format_pathway_dict_for_csv(TS_tsl), 'pathways')
         self.write_dict_to_csv(self.format_norm_pathway_dict_for_csv(TS_tsl), 'norm_pathways')
