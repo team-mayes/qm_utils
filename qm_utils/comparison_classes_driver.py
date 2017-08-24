@@ -26,7 +26,7 @@ def main():
 def do_main():
     methods_list = []
 
-    methods_list.append('REFERENCE')
+    methods_list.append('REF')
     methods_list.append('B3LYP')
     methods_list.append('APFD')
     methods_list.append('BMK')
@@ -80,6 +80,10 @@ def do_main():
         comp_met.write_csvs()
 
         for method in comp_met.Method_Pathways_dict:
+            comp_met.save_circ_paths(method, 'N')
+            comp_met.save_circ_paths(method, 'S')
+
+        for method in comp_met.Method_Pathways_dict:
             comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
                                        method=method,
                                        type='raw')
@@ -111,10 +115,6 @@ def do_main():
 
         comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
         comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
-
-        for method in comp_met.Method_Pathways_dict:
-            comp_met.save_circ_paths(method, 'N')
-            comp_met.save_circ_paths(method, 'S')
 
 if __name__ == '__main__':
     status = main()

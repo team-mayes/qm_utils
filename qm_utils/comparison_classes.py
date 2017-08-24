@@ -45,7 +45,7 @@ DEFAULT_TEMPERATURE = 298.15
 K_B = 0.001985877534  # Boltzmann Constant in kcal/mol K
 HART2KCAL = 627.509
 
-REFERENCE = 'REFERENCE'
+REFERENCE = 'REF'
 #endregion
 
 ################################################### Helper Functions ###################################################
@@ -445,7 +445,7 @@ class Method_Pathways():
 
 class Reference_Pathways():
     def __init__(self, LM_csv_filename, TS_csv_filename):
-        self.method = 'REFERENCE'
+        self.method = REFERENCE
 
         self.parse_LM_csv(LM_csv_filename)
         self.parse_TS_csv(TS_csv_filename)
@@ -608,7 +608,7 @@ class Reference_Landscape():
     # # # Init # # #
     #region
     def __init__(self, LM_csv_filename, TS_csv_filename, molecule, LM_clusters=None, TS_clusters=None):
-        self.method = 'REFERENCE'
+        self.method = REFERENCE
         self.molecule = molecule
         self.MOL_SAVE_DIR = make_dir(os.path.join(COMP_CLASSES_DIR, self.molecule))
 
@@ -1221,6 +1221,9 @@ class Compare_Methods():
         for i in range(len(self.IRC_DATA_dir_list)):
             method = self.IRC_DATA_dir_list[i].split('-')[3].split('.')[0]
 
+            if method == REFERENCE:
+                method = 'REF'
+
             IRC_csv_filename = os.path.join(self.IRC_DATA_DIR, 'z_dataset-' + self.molecule + '-IRC-' + method + '.csv')
             LM_csv_filename = os.path.join(self.LM_DATA_DIR, 'z_dataset-' + self.molecule + '-LM-' + method + '.csv')
             TS_csv_filename = os.path.join(self.TS_DATA_DIR, 'z_dataset-' + self.molecule + '-TS-' + method + '.csv')
@@ -1233,8 +1236,8 @@ class Compare_Methods():
 
             self.Method_Pathways_dict[method].comp_metrics = {}
 
-        self.Method_Pathways_dict['REFERENCE'] = self.reference_landscape.Reference_Pathways
-        self.Method_Pathways_dict['REFERENCE'].comp_metrics = {}
+        self.Method_Pathways_dict[REFERENCE] = self.reference_landscape.Reference_Pathways
+        self.Method_Pathways_dict[REFERENCE].comp_metrics = {}
 
 
     def assign_structure_names(self):
@@ -2454,7 +2457,7 @@ class Compare_Methods():
 
         theta[0] = theta[1]
 
-        ax_circ.plot(theta, r, color=color, linestyle=line_style, zorder=1)
+        ax_circ.plot(theta, r, color=color, linestyle=line_style, zorder=zorder/2)
 
         r_0 = abs(math.sin(np.radians(LM_vert[1])))
         r_1 = abs(math.sin(np.radians(TS_vert[1])))
@@ -2471,35 +2474,26 @@ class Compare_Methods():
                          marker=self.met_lm_markers_dict[method],
                          s=size, zorder=zorder)
 
-    def get_three_lowest_pathways(self, method, hemisphere):
+    def get_lowest_pathways(self, method, hemisphere):
         pathways = {}
-        path_list = []
+        tol = 0.1
 
-        for i in range(3):
-            min_delta_gibbs = 100
+        pathway_groupings = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']
 
-            pathway_groupings = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']
+        for path in pathway_groupings:
+            if hemisphere == 'N' and int(path.split('_')[0]) == 0 or\
+                hemisphere == 'S' and int(path.split('-')[0].split('_')[1]) == len(self.reference_landscape.LM_Tessellation.skm_name_list) - 1:
 
-            for path in pathway_groupings:
-                if hemisphere == 'N' and int(path.split('_')[0]) == 0 or\
-                    hemisphere == 'S' and int(path.split('-')[0].split('_')[1]) == len(self.reference_landscape.LM_Tessellation.skm_name_list) - 1:
+                pathway = pathway_groupings[path]
 
-                    pathway = pathway_groupings[path]
-
-                    if pathway['weighted_forward_gibbs'] != None and pathway['weighted_reverse_gibbs'] != None:
-                        delta_gibbs = pathway['weighted_forward_gibbs'] - pathway['weighted_reverse_gibbs']
-
-                        if delta_gibbs < min_delta_gibbs and path not in path_list:
-                            min_delta_gibbs = delta_gibbs
-                            min_path = path
-
-            pathways[min_path] = pathway_groupings[min_path]
-            path_list.append(min_path)
+                if pathway['weighted_forward_gibbs'] != None and pathway['weighted_reverse_gibbs'] != None:
+                    if pathway['weighted_forward_gibbs_weighting'] > tol:
+                        pathways[path] = pathway_groupings[path]
 
         return pathways
 
     def plot_circ_paths(self, ax_circ, method, hemisphere):
-        pathways = self.get_three_lowest_pathways(method, hemisphere)
+        pathways = self.get_lowest_pathways(method, hemisphere)
 
         for path in pathways:
             TS_skm = int(path.split('-')[1])
@@ -2516,7 +2510,7 @@ class Compare_Methods():
             LM_name_list = self.reference_landscape.LM_Tessellation.formatted_name_list
             TS_name_list = self.reference_landscape.TS_Tessellation.formatted_name_list
 
-            offset = 0.1
+            offset = 0
             theta_offset = np.radians(5)
 
             LM1_r = abs(math.sin(np.radians(LM1_vert[1]))) - offset
@@ -2543,17 +2537,17 @@ class Compare_Methods():
                              ha="center", va="center", fontsize=10, zorder=100,
                              path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
-            if hemisphere == 'N':
-                energy_r = ((TS_r + LM2_r) / 2)
-                energy_theta = ((TS_theta + LM2_theta) / 2)
-            else:
-                energy_r = ((TS_r + LM1_r) / 2)
-                energy_theta = ((TS_theta + LM1_theta) / 2)
-
-            ax_circ.annotate(round(pathways[path]['weighted_delta_gibbs'], 2),
-                             xy=(energy_theta, energy_r),
-                             ha="center", va="center", fontsize=10, zorder=100,
-                             path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+            # if hemisphere == 'N':
+            #     energy_r = ((TS_r + LM2_r) / 2)
+            #     energy_theta = ((TS_theta + LM2_theta) / 2)
+            # else:
+            #     energy_r = ((TS_r + LM1_r) / 2)
+            #     energy_theta = ((TS_theta + LM1_theta) / 2)
+            #
+            # ax_circ.annotate(round(pathways[path]['weighted_delta_gibbs'], 2),
+            #                  xy=(energy_theta, energy_r),
+            #                  ha="center", va="center", fontsize=10, zorder=100,
+            #                  path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
     def save_circ_paths(self, method, hemisphere):
         filename = self.molecule + '-' + method + '-circ_paths_' + hemisphere
@@ -2568,6 +2562,8 @@ class Compare_Methods():
             elif hemisphere == 'S':
                 plot = Plots(south_pol_arg=True)
                 ax_circ = plot.ax_circ_south
+
+            ax_circ.set_title(method, ha='right', va='bottom', loc='left', fontsize=12)
 
             self.plot_circ_paths(ax_circ, method, hemisphere)
 
@@ -2746,7 +2742,7 @@ class Compare_Methods():
                                         ncol=1).set_zorder(100)
 
             elif method == 'DFT':
-                DFT_list = ['B3LYP', 'REFERENCE', 'M06L', 'PBEPBE', 'APFD', 'BMK']
+                DFT_list = ['B3LYP', 'REF', 'M06L', 'PBEPBE', 'APFD', 'BMK']
                 for method in self.Method_Pathways_dict:
                     if method in DFT_list:
                         self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm,
@@ -2842,7 +2838,7 @@ class Compare_Methods():
                                         bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
                                         ncol=1).set_zorder(100)
             elif method == 'DFT':
-                DFT_list = ['B3LYP', 'REFERENCE', 'M06L', 'PBEPBE', 'APFD', 'BMK']
+                DFT_list = ['B3LYP', 'REF', 'M06L', 'PBEPBE', 'APFD', 'BMK']
                 for method in self.Method_Pathways_dict:
                     if method in DFT_list:
                         self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm,
@@ -3020,7 +3016,7 @@ class Compare_Methods():
                                         bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
                                         ncol=1).set_zorder(100)
             elif method == 'DFT':
-                DFT_list = ['B3LYP', 'REFERENCE', 'M06L', 'PBEPBE', 'APFD', 'BMK']
+                DFT_list = ['B3LYP', 'REF', 'M06L', 'PBEPBE', 'APFD', 'BMK']
                 for method in self.Method_Pathways_dict:
                     if method in DFT_list:
                         if type == 'raw':
