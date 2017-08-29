@@ -225,7 +225,7 @@ class Plots():
         self.ax_circ_north.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_north.set_theta_zero_location("N")
         self.ax_circ_north.set_yticklabels([])
-        self.ax_circ_north.set_thetagrids(thetaticks, frac=1.25, fontsize=12, zorder=-100)
+        self.ax_circ_north.set_thetagrids(thetaticks, frac=1.125, fontsize=12, zorder=-100)
         self.ax_circ_north.set_theta_direction(-1)
 
     def ax_circ_south_init(self):
@@ -237,7 +237,7 @@ class Plots():
         self.ax_circ_south.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_south.set_theta_zero_location("N")
         self.ax_circ_south.set_yticklabels([])
-        self.ax_circ_south.set_thetagrids(thetaticks, frac=1.25, fontsize=12, zorder=-100)
+        self.ax_circ_south.set_thetagrids(thetaticks, frac=1.125, fontsize=12, zorder=-100)
         self.ax_circ_south.set_theta_direction(-1)
 
     # shows all plots
@@ -2569,18 +2569,6 @@ class Compare_Methods():
                              ha="center", va="center", fontsize=10, zorder=100,
                              path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
-            # if hemisphere == 'N':
-            #     energy_r = ((TS_r + LM2_r) / 2)
-            #     energy_theta = ((TS_theta + LM2_theta) / 2)
-            # else:
-            #     energy_r = ((TS_r + LM1_r) / 2)
-            #     energy_theta = ((TS_theta + LM1_theta) / 2)
-            #
-            # ax_circ.annotate(round(pathways[path]['weighted_delta_gibbs'], 2),
-            #                  xy=(energy_theta, energy_r),
-            #                  ha="center", va="center", fontsize=10, zorder=100,
-            #                  path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
-
     def save_circ_paths(self, method, hemisphere):
         filename = self.molecule + '-' + method + '-circ_paths_' + hemisphere
 
@@ -2595,96 +2583,72 @@ class Compare_Methods():
                 plot = Plots(south_pol_arg=True)
                 ax_circ = plot.ax_circ_south
 
-            ax_circ.set_title(method, ha='right', va='bottom', loc='left', fontsize=12)
+            ax_circ.set_title(method, ha='right', va='bottom', color=self.met_colors_dict[method], loc='left', fontsize=9)
 
             self.plot_circ_paths(ax_circ, method, hemisphere)
 
             plot.save(dir_=dir, filename=filename)
 
-    def merge_images(self, img_files, img_dir):
-        img_list = []
+    # img1 is N, img2 is S
+    def merge_two_images(self, img1, img2, direction):
+        if isinstance(img1, str):
+            image1 = Image.open(img1)
+        else:
+            image1 = img1
 
-        for i in range(len(img_files)):
-            img_list.append(os.path.join(img_dir, img_files[i]))
+        image2 = Image.open(img2)
 
-        result_width = 0
-        result_height = 0
+        (width1, height1) = image1.size
+        (width2, height2) = image2.size
 
-        for i in range(len(img_list)):
-            image = Image.open(img_list[i])
+        if direction == 'vertical':
+            result_height = height1 + height2
+            result_width = max(width1, width2)
 
-            (width, height) = image.size
+            result = Image.new('RGB', (result_width, result_height))
 
-            result_width += width
-            result_height = max(height, result_height)
+            result.paste(im=image1, box=(0, 0))
+            result.paste(im=image2, box=(0, height1))
+        elif direction == 'horizontal':
+            result_height = max(height1, height2)
+            result_width = width1 + width2
 
-        result = Image.new('RGB', (result_width, result_height))
+            result = Image.new('RGB', (result_width, result_height))
 
-        paste_width = 0
-
-        for i in range(len(img_list)):
-            image = Image.open(img_list[i])
-
-            (width, height) = image.size
-
-            result.paste(im=image, box=(paste_width, 0))
-
-            paste_width += width
+            result.paste(im=image1, box=(0, 0))
+            result.paste(im=image2, box=(width1, 0))
 
         return result
-
-    def save_merged_images(self, img_dir, filename):
-        img_files = os.listdir(img_dir)
-        merged_img = self.merge_images(img_files, img_dir)
-
-        merged_img.save(os.path.join(img_dir, filename))
-
-    def save_all_merged_images(self, hemisphere):
-        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
-        img_dir = make_dir(os.path.join(img_dir, hemisphere))
-
-        filename = self.molecule + '-' + hemisphere + '-' + 'merged.png'
-
-        if not os.path.exists(os.path.join(img_dir, filename)):
-            self.save_merged_images(img_dir, filename)
 
     def save_merged_north_and_south(self):
         img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
         N_dir = make_dir(os.path.join(img_dir, 'N'))
         S_dir = make_dir(os.path.join(img_dir, 'S'))
+        merged_dir = make_dir(os.path.join(img_dir, 'merged'))
 
-        filename = self.molecule + '-' + 'merged.png'
+        for method in self.Method_Pathways_dict:
+            filename = self.molecule + '-' + method + '-merged.png'
 
-        if not os.path.exists(os.path.join(img_dir, filename)):
-            img_list = []
-            img_list.append(os.path.join(N_dir, self.molecule + '-N-merged.png'))
-            img_list.append(os.path.join(S_dir, self.molecule + '-S-merged.png'))
+            if not os.path.exists(os.path.join(merged_dir, filename)):
+                N_img = os.path.join(N_dir, self.molecule + '-' + method + '-circ_paths_N.png')
+                S_img = os.path.join(S_dir, self.molecule + '-' + method + '-circ_paths_S.png')
 
-            result_width = 0
-            result_height = 0
+                merged_img = self.merge_two_images(N_img, S_img, 'vertical')
+                merged_img.save(os.path.join(merged_dir, filename))
 
-            for i in range(len(img_list)):
-                image = Image.open(img_list[i])
+    def save_merged_method_images(self, methods_list):
+        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
+        merged_dir = make_dir(os.path.join(img_dir, 'merged'))
 
-                (width, height) = image.size
+        for i in range(len(methods_list)):
+            if i % 2 == 0:
+                if i + 1 < len(methods_list) and not os.path.exists(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-merged.png')):
+                    img1 = os.path.join(merged_dir, self.molecule + '-' + methods_list[i] + '-merged.png')
+                    img2 = os.path.join(merged_dir, self.molecule + '-' + methods_list[i + 1] + '-merged.png')
 
-                result_height += height
-                result_width = max(width, result_width)
+                    curr_img = self.merge_two_images(img1, img2, 'horizontal')
 
-            result = Image.new('RGB', (result_width, result_height))
-
-            paste_height = 0
-
-            for i in range(len(img_list)):
-                image = Image.open(img_list[i])
-
-                (width, height) = image.size
-
-                result.paste(im=image, box=(0, paste_height))
-
-                paste_height += height
-
-            result.save(os.path.join(img_dir, filename))
+                    curr_img.save(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-merged.png'))
     #endregion
 
     # # # raw # # #

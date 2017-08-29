@@ -86,9 +86,16 @@ def do_main():
             comp_met.save_circ_paths(method, 'N')
             comp_met.save_circ_paths(method, 'S')
 
-        comp_met.save_all_merged_images('N')
-        comp_met.save_all_merged_images('S')
         comp_met.save_merged_north_and_south()
+
+        overall_list = []
+        for i in range(len(methods_list)):
+            method = methods_list[i]
+
+            if method in comp_met.Method_Pathways_dict and method != 'PM3MM':
+                overall_list.append(method)
+
+        comp_met.save_merged_method_images(overall_list)
 
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
@@ -109,9 +116,17 @@ def do_main():
             comp_met.save_circ_paths(method, 'N')
             comp_met.save_circ_paths(method, 'S')
 
-        comp_met.save_all_merged_images('N')
-        comp_met.save_all_merged_images('S')
         comp_met.save_merged_north_and_south()
+
+        overall_list = []
+
+        for i in range(len(methods_list)):
+            method = methods_list[i]
+
+            if method in comp_met.Method_Pathways_dict and method != 'PM3MM':
+                overall_list.append(method)
+
+        comp_met.save_merged_method_images(overall_list)
 
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
