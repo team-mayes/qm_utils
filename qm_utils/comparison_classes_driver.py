@@ -14,6 +14,7 @@ import csv
 import matplotlib as mpl
 mpl.use('TkAgg')
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import qm_utils.comparison_classes as cc
 
@@ -38,31 +39,27 @@ def do_main():
     methods_list.append('PM3MM')
     methods_list.append('PM6')
 
-    cmap = plt.get_cmap('Vega20')
-    # allows for incrementing over 20 colors
-    increment = 0.0524
-    seed_num = 0
-    i = 0
-
+    cmap = plt.get_cmap('Paired')
     met_colors_dict = {}
+
+    met_colors_dict['REF'] = cmap.colors[1]
+    met_colors_dict['B3LYP'] = cmap.colors[0]
+    met_colors_dict['APFD'] = cmap.colors[7]
+    met_colors_dict['BMK'] = cmap.colors[2]
+    met_colors_dict['M06L'] = cmap.colors[6]
+    met_colors_dict['PBEPBE'] = cmap.colors[3]
+    met_colors_dict['DFTB'] = cmap.colors[4]
+    met_colors_dict['AM1'] = cmap.colors[5]
+    met_colors_dict['PM3'] = cmap.colors[8]
+    met_colors_dict['PM3MM'] = cmap.colors[9]
+    met_colors_dict['PM6'] = cmap.colors[11]
+
     met_ts_markers_dict = {}
     met_lm_markers_dict = {}
 
+    i = 0
+
     for method in list(methods_list):
-        # if color is red
-        if seed_num == increment * 6:
-            seed_num += increment
-
-        color = cmap(seed_num)
-
-        if method == 'M06L':
-            color = cmap(increment * 16)
-        elif method == 'PBEPBE':
-            color = cmap(increment * 18)
-
-        seed_num += increment
-        met_colors_dict[method] = color
-
         ts_marker = mpl.markers.MarkerStyle.filled_markers[i]
         lm_marker = mpl.markers.MarkerStyle.filled_markers[i]
         i += 1

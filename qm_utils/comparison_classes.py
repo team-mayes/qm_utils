@@ -139,14 +139,14 @@ class Plots():
 
             self.ax_circ_north_init()
 
-            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}', xy=(np.radians(7.5), 0.53),
+            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}', xy=(0, 0.47),
                                         ha="center",
-                                        va="center", fontsize=6, zorder=100,
+                                        va="center", fontsize=10, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
-            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}', xy=(np.radians(4), 1.02),
+            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}', xy=(0, 0.98),
                                         ha="center",
-                                        va="center", fontsize=6, zorder=100,
+                                        va="center", fontsize=10, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
         if south_pol_arg:
@@ -156,15 +156,15 @@ class Plots():
             self.ax_circ_south_init()
 
             self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}',
-                                        xy=(np.radians(7.5), 0.53),
+                                        xy=(np.radians(7.5), 0.47),
                                         ha="center",
-                                        va="center", fontsize=6, zorder=100,
+                                        va="center", fontsize=10, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
             self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}',
-                                        xy=(np.radians(4), 1.02),
+                                        xy=(np.radians(4), 0.98),
                                         ha="center",
-                                        va="center", fontsize=6, zorder=100,
+                                        va="center", fontsize=10, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
         if rxn_arg:
@@ -222,7 +222,7 @@ class Plots():
         self.ax_circ_north.set_rlim([0, 1.1])
         self.ax_circ_north.set_rticks([0.5, 1])  # less radial ticks
         self.ax_circ_north.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-        self.ax_circ_north.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
+        # self.ax_circ_north.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_north.set_theta_zero_location("N")
         self.ax_circ_north.set_yticklabels([])
         self.ax_circ_north.set_thetagrids(thetaticks, frac=1.125, fontsize=12, zorder=-100)
@@ -234,7 +234,7 @@ class Plots():
         self.ax_circ_south.set_rlim([0, 1.1])
         self.ax_circ_south.set_rticks([0.5, 1])  # less radial ticks
         self.ax_circ_south.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-        self.ax_circ_south.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
+        # self.ax_circ_south.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_south.set_theta_zero_location("N")
         self.ax_circ_south.set_yticklabels([])
         self.ax_circ_south.set_thetagrids(thetaticks, frac=1.125, fontsize=12, zorder=-100)
@@ -2472,7 +2472,7 @@ class Compare_Methods():
     # # # hemisphere # # #
     #region
     def plot_on_circle(self, ax_circ, TS_vert, LM_vert, method, zorder=10, line_style='-'):
-        size = 30
+        size = 50
         color = self.met_colors_dict[method]
 
         line = get_pol_coords(pol2cart(TS_vert), pol2cart(LM_vert))
@@ -2489,7 +2489,7 @@ class Compare_Methods():
 
         theta[0] = theta[1]
 
-        ax_circ.plot(theta, r, color=color, linestyle=line_style, zorder=zorder/2)
+        ax_circ.plot(theta, r, color=color, linestyle=line_style, linewidth=4, zorder=zorder/2)
 
         r_0 = abs(math.sin(np.radians(LM_vert[1])))
         r_1 = abs(math.sin(np.radians(TS_vert[1])))
@@ -2524,8 +2524,29 @@ class Compare_Methods():
 
         return pathways
 
+    def get_label_theta(self, theta):
+        offset = np.radians(5)
+
+        theta = np.radians(theta) + offset
+
+        return theta
+
+    def get_label_r(self, r):
+        offset = 0
+
+        if r < 20:
+            offset = -0.1
+        elif r < 80:
+            offset = 0.1
+
+        r = abs(math.sin(np.radians(r))) - offset
+
+        return r
+
     def plot_circ_paths(self, ax_circ, method, hemisphere):
         pathways = self.get_lowest_pathways(method, hemisphere)
+
+        fontsize = 12
 
         for path in pathways:
             TS_skm = int(path.split('-')[1])
@@ -2542,31 +2563,28 @@ class Compare_Methods():
             LM_name_list = self.reference_landscape.LM_Tessellation.formatted_name_list
             TS_name_list = self.reference_landscape.TS_Tessellation.formatted_name_list
 
-            offset = 0
-            theta_offset = np.radians(5)
+            LM1_r = self.get_label_r(LM1_vert[1])
+            LM1_theta = self.get_label_theta(LM1_vert[0])
 
-            LM1_r = abs(math.sin(np.radians(LM1_vert[1]))) - offset
-            LM1_theta = np.radians(LM1_vert[0]) + theta_offset
+            TS_r = self.get_label_r(TS_vert[1])
+            TS_theta = self.get_label_theta(TS_vert[0])
 
-            TS_r = abs(math.sin(np.radians(TS_vert[1]))) - offset
-            TS_theta = np.radians(TS_vert[0]) + theta_offset
-
-            LM2_r = abs(math.sin(np.radians(LM2_vert[1]))) - offset
-            LM2_theta = np.radians(LM2_vert[0]) + theta_offset
+            LM2_r = self.get_label_r(LM2_vert[1])
+            LM2_theta = self.get_label_theta(LM2_vert[0])
 
             ax_circ.annotate(LM_name_list[LM1_skm],
                                 xy=(LM1_theta, LM1_r),
-                                ha="center", va="center", fontsize=10, zorder=100,
+                                ha="center", va="center", fontsize=fontsize, zorder=100,
                                 path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
             ax_circ.annotate(TS_name_list[TS_skm],
                                 xy = (TS_theta, TS_r),
-                                ha = "center", va = "center", fontsize = 10, zorder = 100,
+                                ha = "center", va = "center", fontsize=fontsize, zorder = 100,
                                 path_effects = [PathEffects.withStroke(linewidth=1, foreground="w")])
 
             ax_circ.annotate(LM_name_list[LM2_skm],
                              xy=(LM2_theta, LM2_r),
-                             ha="center", va="center", fontsize=10, zorder=100,
+                             ha="center", va="center", fontsize=fontsize, zorder=100,
                              path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
     def save_circ_paths(self, method, hemisphere):
@@ -2582,8 +2600,6 @@ class Compare_Methods():
             elif hemisphere == 'S':
                 plot = Plots(south_pol_arg=True)
                 ax_circ = plot.ax_circ_south
-
-            ax_circ.set_title(method, ha='right', va='bottom', color=self.met_colors_dict[method], loc='left', fontsize=9)
 
             self.plot_circ_paths(ax_circ, method, hemisphere)
 
@@ -2619,6 +2635,31 @@ class Compare_Methods():
             result.paste(im=image2, box=(width1, 0))
 
         return result
+
+    def save_merged_method_images_hemi(self, methods_list):
+        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
+        N_dir = make_dir(os.path.join(img_dir, 'N'))
+        S_dir = make_dir(os.path.join(img_dir, 'S'))
+        N_merged_dir = make_dir(os.path.join(img_dir, 'N_merged'))
+        S_merged_dir = make_dir(os.path.join(img_dir, 'S_merged'))
+
+        for i in range(len(methods_list)):
+            if i % 2 == 0:
+                if i + 1 < len(methods_list) and not os.path.exists(os.path.join(N_merged_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-N_merged.png')):
+                    img1 = os.path.join(N_dir, self.molecule + '-' + methods_list[i] + '-N_merged.png')
+                    img2 = os.path.join(N_dir, self.molecule + '-' + methods_list[i + 1] + '-N_merged.png')
+
+                    curr_img = self.merge_two_images(img1, img2, 'horizontal')
+
+                    curr_img.save(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-N_merged.png'))
+
+                if i + 1 < len(methods_list) and not os.path.exists(os.path.join(S_merged_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-S_merged.png')):
+                    img1 = os.path.join(S_dir, self.molecule + '-' + methods_list[i] + '-S_merged.png')
+                    img2 = os.path.join(S_dir, self.molecule + '-' + methods_list[i + 1] + '-S_merged.png')
+
+                    curr_img = self.merge_two_images(img1, img2, 'horizontal')
+
+                    curr_img.save(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-S_merged.png'))
 
     def save_merged_north_and_south(self):
         img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
