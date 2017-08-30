@@ -139,14 +139,14 @@ class Plots():
 
             self.ax_circ_north_init()
 
-            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}', xy=(0, 0.47),
+            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}', xy=(np.radians(85), 0.37),
                                         ha="center",
-                                        va="center", fontsize=10, zorder=100,
+                                        va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
-            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}', xy=(0, 0.98),
+            self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}', xy=(np.radians(87.5), 0.87),
                                         ha="center",
-                                        va="center", fontsize=10, zorder=100,
+                                        va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
         if south_pol_arg:
@@ -156,15 +156,15 @@ class Plots():
             self.ax_circ_south_init()
 
             self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}',
-                                        xy=(np.radians(7.5), 0.47),
+                                        xy=(np.radians(85), 0.37),
                                         ha="center",
-                                        va="center", fontsize=10, zorder=100,
+                                        va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
             self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}',
-                                        xy=(np.radians(4), 0.98),
+                                        xy=(np.radians(87.5), 0.87),
                                         ha="center",
-                                        va="center", fontsize=10, zorder=100,
+                                        va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
         if rxn_arg:
@@ -225,7 +225,7 @@ class Plots():
         # self.ax_circ_north.set_title("Northern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_north.set_theta_zero_location("N")
         self.ax_circ_north.set_yticklabels([])
-        self.ax_circ_north.set_thetagrids(thetaticks, frac=1.125, fontsize=12, zorder=-100)
+        self.ax_circ_north.set_thetagrids(thetaticks, frac=1.15, fontsize=12, zorder=-100, visible=True)
         self.ax_circ_north.set_theta_direction(-1)
 
     def ax_circ_south_init(self):
@@ -237,7 +237,7 @@ class Plots():
         # self.ax_circ_south.set_title("Southern", ha='right', va='bottom', loc='left', fontsize=12)
         self.ax_circ_south.set_theta_zero_location("N")
         self.ax_circ_south.set_yticklabels([])
-        self.ax_circ_south.set_thetagrids(thetaticks, frac=1.125, fontsize=12, zorder=-100)
+        self.ax_circ_south.set_thetagrids(thetaticks, frac=1.15, fontsize=12, zorder=-100, visible=True)
         self.ax_circ_south.set_theta_direction(-1)
 
     # shows all plots
@@ -2489,7 +2489,7 @@ class Compare_Methods():
 
         theta[0] = theta[1]
 
-        ax_circ.plot(theta, r, color=color, linestyle=line_style, linewidth=4, zorder=zorder/2)
+        ax_circ.plot(theta, r, color=color, linestyle=line_style, linewidth=3, zorder=zorder/2)
 
         r_0 = abs(math.sin(np.radians(LM_vert[1])))
         r_1 = abs(math.sin(np.radians(TS_vert[1])))
@@ -2524,29 +2524,125 @@ class Compare_Methods():
 
         return pathways
 
-    def get_label_theta(self, theta):
-        offset = np.radians(5)
+    def pos_theta_conflicts(self, theta, r, comp_theta, comp_r):
+        theta_thresh = 30
+        r_thresh = 30
 
-        theta = np.radians(theta) + offset
+        if r == comp_r and theta == comp_theta:
+            return False
 
-        return theta
+        if comp_theta - theta < theta_thresh and comp_theta - theta > 0 and abs(r - comp_r) < r_thresh:
+            return True
+        else:
+            return False
 
-    def get_label_r(self, r):
-        offset = 0
+    def pos_r_conflicts(self, theta, r, comp_theta, comp_r):
+        theta_thresh = 30
+        r_thresh = 30
 
-        if r < 20:
-            offset = -0.1
-        elif r < 80:
-            offset = 0.1
+        if r == comp_r and theta == comp_theta:
+            return False
 
-        r = abs(math.sin(np.radians(r))) - offset
+        if comp_r - r < r_thresh and comp_r - r > 0 and comp_r < 80 and abs(theta - comp_theta) < theta_thresh:
+            return True
+        else:
+            return False
 
-        return r
+    def neg_theta_conflicts(self, theta, r, comp_theta, comp_r):
+        theta_thresh = 30
+        r_thresh = 30
+
+        if r == comp_r and theta == comp_theta:
+            return False
+
+        test1 = theta - comp_theta < theta_thresh
+        test2 = theta - comp_theta > 0
+        test3 = abs(r - comp_r) < r_thresh
+
+        if theta - comp_theta < theta_thresh and theta - comp_theta > 0 and abs(r - comp_r) < r_thresh:
+            return True
+        else:
+            return False
+
+    def neg_r_conflicts(self, theta, r, comp_theta, comp_r):
+        theta_thresh = 30
+        r_thresh = 30
+
+        if r == comp_r and theta == comp_theta:
+            return False
+
+        if r - comp_r < r_thresh and r - comp_r > 0 and abs(theta - comp_theta) < theta_thresh:
+            return True
+        else:
+            return False
+
+    def get_label_theta_and_r(self, theta, r, vert_list):
+        vert_list.append([87.5, 90])
+        vert_list.append([85, 30])
+
+        theta_offset = 0
+        r_offset = 0
+
+        tot_pos_theta = False
+        tot_pos_r = False
+        tot_neg_theta = False
+        tot_neg_r = False
+
+        for i in range(len(vert_list)):
+            vert = vert_list[i]
+
+            pos_theta = self.pos_theta_conflicts(theta, r, vert[0], vert[1])
+            pos_r = self.pos_r_conflicts(theta, r, vert[0], vert[1])
+            neg_theta = self.neg_theta_conflicts(theta, r, vert[0], vert[1])
+            neg_r = self.neg_theta_conflicts(theta, r, vert[0], vert[1])
+
+            if pos_theta:
+                tot_pos_theta = True
+            if pos_r:
+                tot_pos_r = True
+            if neg_theta:
+                tot_neg_theta = True
+            if neg_r:
+                tot_neg_r = True
+
+        if not tot_pos_theta and not tot_pos_r:
+            theta_offset = np.radians(8)
+        elif not tot_pos_theta and not tot_neg_r:
+            theta_offset = np.radians(8)
+            r_offset = -0.1
+        elif not tot_pos_theta:
+            theta_offset = np.radians(8)
+        elif not tot_neg_theta:
+            theta_offset = -np.radians(8)
+        elif not tot_pos_r:
+            r_offset = 0.1
+        elif not tot_neg_r:
+            r_offset = -0.1
+
+        theta = np.radians(theta) + theta_offset
+        r = abs(math.sin(np.radians(r))) + r_offset
+
+        return theta, r
 
     def plot_circ_paths(self, ax_circ, method, hemisphere):
         pathways = self.get_lowest_pathways(method, hemisphere)
 
         fontsize = 12
+
+        vert_list = []
+
+        for path in pathways:
+            TS_skm = int(path.split('-')[1])
+            LM1_skm = int(path.split('_')[0])
+            LM2_skm = int(path.split('-')[0].split('_')[1])
+
+            LM1_vert = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[LM1_skm])
+            TS_vert = cart2pol(self.reference_landscape.TS_Tessellation.skm.cluster_centers_[TS_skm])
+            LM2_vert = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[LM2_skm])
+
+            vert_list.append(LM1_vert)
+            vert_list.append(TS_vert)
+            vert_list.append(LM2_vert)
 
         for path in pathways:
             TS_skm = int(path.split('-')[1])
@@ -2563,14 +2659,11 @@ class Compare_Methods():
             LM_name_list = self.reference_landscape.LM_Tessellation.formatted_name_list
             TS_name_list = self.reference_landscape.TS_Tessellation.formatted_name_list
 
-            LM1_r = self.get_label_r(LM1_vert[1])
-            LM1_theta = self.get_label_theta(LM1_vert[0])
+            LM1_theta, LM1_r = self.get_label_theta_and_r(LM1_vert[0], LM1_vert[1], vert_list)
 
-            TS_r = self.get_label_r(TS_vert[1])
-            TS_theta = self.get_label_theta(TS_vert[0])
+            TS_theta, TS_r = self.get_label_theta_and_r(TS_vert[0], TS_vert[1], vert_list)
 
-            LM2_r = self.get_label_r(LM2_vert[1])
-            LM2_theta = self.get_label_theta(LM2_vert[0])
+            LM2_theta, LM2_r = self.get_label_theta_and_r(LM2_vert[0], LM2_vert[1], vert_list)
 
             ax_circ.annotate(LM_name_list[LM1_skm],
                                 xy=(LM1_theta, LM1_r),
@@ -2603,7 +2696,7 @@ class Compare_Methods():
 
             self.plot_circ_paths(ax_circ, method, hemisphere)
 
-            plot.save(dir_=dir, filename=filename)
+            plot.save(dir_=dir, filename=filename, height=3.7)
 
     # img1 is N, img2 is S
     def merge_two_images(self, img1, img2, direction):
