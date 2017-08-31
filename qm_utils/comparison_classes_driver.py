@@ -33,6 +33,7 @@ def do_main():
     methods_list.append('M06L')
     methods_list.append('PBEPBE')
     methods_list.append('DFTB')
+    methods_list.append('DFTB3')
     methods_list.append('AM1')
     methods_list.append('PM3')
     methods_list.append('PM3MM')
@@ -48,6 +49,7 @@ def do_main():
     met_colors_dict['M06L'] = cmap.colors[6]
     met_colors_dict['PBEPBE'] = cmap.colors[3]
     met_colors_dict['DFTB'] = cmap.colors[4]
+    met_colors_dict['DFTB3'] = 'teal'
     met_colors_dict['AM1'] = cmap.colors[5]
     met_colors_dict['PM3'] = cmap.colors[8]
     met_colors_dict['PM3MM'] = cmap.colors[9]
@@ -61,7 +63,13 @@ def do_main():
     for method in list(methods_list):
         ts_marker = mpl.markers.MarkerStyle.filled_markers[i]
         lm_marker = mpl.markers.MarkerStyle.filled_markers[i]
-        i += 1
+
+        if method == 'DFTB3':
+            ts_marker = mpl.markers.MarkerStyle.filled_markers[11]
+            lm_marker = mpl.markers.MarkerStyle.filled_markers[11]
+        else:
+            i += 1
+
         met_ts_markers_dict[method] = ts_marker
         met_lm_markers_dict[method] = lm_marker
 

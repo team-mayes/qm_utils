@@ -1968,7 +1968,7 @@ class Compare_Methods():
         temp_dict = {}
         met_temp_dict = {}
 
-        ordered_methods = [REFERENCE, 'B3LYP', 'APFD', 'BMK', 'M06L', 'PBEPBE', 'DFTB', 'AM1', 'PM3', 'PM3MM', 'PM6']
+        ordered_methods = [REFERENCE, 'B3LYP', 'APFD', 'BMK', 'M06L', 'PBEPBE', 'DFTB', 'DFTB3', 'AM1', 'PM3', 'PM3MM', 'PM6']
 
         for i in range(len(ordered_methods)):
             method = ordered_methods[i]
