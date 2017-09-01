@@ -90,11 +90,20 @@ def make_dir(dir):
 # class for initializing plots
 class Plots():
     # arguments are bools for creating the 2d and 3d plots
-    def __init__(self, twoD_arg=False, threeD_arg=False, merc_arg=False, ts_merc_arg=False, north_pol_arg=False, south_pol_arg=False, rect_arg=False, rxn_arg=False):
+    def __init__(self, twoD_arg=False, threeD_arg=False, merc_arg=False, ts_merc_arg=False,
+                 north_pol_arg=False, south_pol_arg=False, rect_arg=False, rxn_arg=False):
         self.fig = plt.figure()
 
         if rect_arg:
             self.fig, self.ax_rect = plt.subplots(facecolor='white')
+
+            xticks = np.arange(0, 390, 60)
+            minor_xticks = np.arange(0, 360, 30)
+            yticks = np.arange(0, 210, 30)
+
+            self.ax_rect.set_xticks(xticks)
+            self.ax_rect.set_yticks(yticks)
+            self.ax_rect.set_xticks(minor_xticks, minor=True)
 
             self.ax_rect.set_xlabel('Phi (degrees)')
             self.ax_rect.set_ylabel('Theta (degrees)')
@@ -140,11 +149,13 @@ class Plots():
             self.ax_circ_north_init()
 
             self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}', xy=(np.radians(85), 0.37),
+                                        color='lightgray',
                                         ha="center",
                                         va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
             self.ax_circ_north.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}', xy=(np.radians(87.5), 0.87),
+                                        color='lightgray',
                                         ha="center",
                                         va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
@@ -157,12 +168,14 @@ class Plots():
 
             self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((0.5))))) + u'\N{DEGREE SIGN}',
                                         xy=(np.radians(85), 0.37),
+                                        color='lightgray',
                                         ha="center",
                                         va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
 
             self.ax_circ_south.annotate(str(abs(np.degrees(np.arcsin((1))))) + u'\N{DEGREE SIGN}',
                                         xy=(np.radians(87.5), 0.87),
+                                        color='lightgray',
                                         ha="center",
                                         va="center", fontsize=8, zorder=100,
                                         path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
@@ -228,6 +241,16 @@ class Plots():
         self.ax_circ_north.set_thetagrids(thetaticks, frac=1.15, fontsize=12, zorder=-100, visible=True)
         self.ax_circ_north.set_theta_direction(-1)
 
+        theta_gridlines = self.ax_circ_north.get_xgridlines()
+
+        for i in range(len(theta_gridlines)):
+            theta_gridlines[i].set_color('lightgray')
+
+        r_gridlines = self.ax_circ_north.get_ygridlines()
+
+        for i in range(len(r_gridlines)):
+            r_gridlines[i].set_color('lightgray')
+
     def ax_circ_south_init(self):
         thetaticks = np.arange(0, 360, 30)
 
@@ -239,6 +262,16 @@ class Plots():
         self.ax_circ_south.set_yticklabels([])
         self.ax_circ_south.set_thetagrids(thetaticks, frac=1.15, fontsize=12, zorder=-100, visible=True)
         self.ax_circ_south.set_theta_direction(-1)
+
+        theta_gridlines = self.ax_circ_south.get_xgridlines()
+
+        for i in range(len(theta_gridlines)):
+            theta_gridlines[i].set_color('lightgray')
+
+        r_gridlines = self.ax_circ_south.get_ygridlines()
+
+        for i in range(len(r_gridlines)):
+            r_gridlines[i].set_color('lightgray')
 
     # shows all plots
     def show(self):
@@ -1002,6 +1035,9 @@ class Reference_Landscape():
             if len(tessellation.methods[REFERENCE]['skm_groupings'][i]['structures']) > 0:
                 plot.ax_rect.scatter(phi, theta, c='green', marker='x', s=60, zorder=10)
             else:
+                if phi == 0 and theta == 0:
+                    phi = 180
+
                 plot.ax_rect.scatter(phi, theta, c='red', marker='+', s=60, zorder=10)
 
     def plot_cano(self, plot):
@@ -2936,7 +2972,7 @@ class Compare_Methods():
                 for i in range(len(color_list)):
                     artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=30, c='', marker=self.met_ts_markers_dict[method],
                                                     edgecolor=color_list[i]))
-                    label_list.append('criterion ' + str(i))
+                    label_list.append('Distance Criterion')
 
             if method == 'ALL':
                 for method in self.Method_Pathways_dict:
@@ -2990,9 +3026,9 @@ class Compare_Methods():
                                     label_list,
                                     scatterpoints=1, fontsize=8, frameon=False,
                                     framealpha=0.75,
+                                    bbox_to_anchor=(0.5, -0.2), loc='lower center',
                                     borderaxespad=0,
-                                    bbox_to_anchor=(1.2, 0.5), loc='right',
-                                    ncol=1).set_zorder(100)
+                                    ncol=3).set_zorder(100)
 
             plot.ax_rect.set_ylim(185, -5)
             plot.ax_rect.set_xlim(-5, 365)
@@ -3034,7 +3070,7 @@ class Compare_Methods():
                 for i in range(len(color_list)):
                     artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=30, c='', marker=self.met_ts_markers_dict[method],
                                                     edgecolor=color_list[i]))
-                    label_list.append('criterion ' + str(i + 1))
+                    label_list.append('Distance Criterion')
 
             if method == 'ALL':
                 for method in self.Method_Pathways_dict:
@@ -3673,22 +3709,47 @@ class Compare_Methods():
                                                                                 'weighted_forward_gibbs_weighting',
                                                                                 'weighted_forward_gibbs_weighting',
                                                                                 '4c1'),
-                                                                                'relevant_weightings_4c1')
+                                                                                'relevant_forward_weightings_4c1')
         self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
                                                                                 'weighted_forward_gibbs_weighting',
                                                                                 'weighted_delta_gibbs',
                                                                                 '4c1'),
-                                                                                'relevant_energies_4c1')
+                                                                                'relevant_delta_energies_4c1')
+
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_forward_gibbs',
+                                                                                '4c1'),
+                                                                                'relevant_forward_energies_4c1')
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_reverse_gibbs',
+                                                                                '4c1'),
+                                                                                'relevant_reverse_energies_4c1')
+
+
         self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
                                                                                 'weighted_forward_gibbs_weighting',
                                                                                 'weighted_forward_gibbs_weighting',
                                                                                 '1c4'),
-                                                                                'relevant_weightings_1c4')
+                                                                                'relevant_forward_weightings_1c4')
         self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
                                                                                 'weighted_forward_gibbs_weighting',
                                                                                 'weighted_delta_gibbs',
                                                                                 '1c4'),
-                                                                                'relevant_energies_1c4')
+                                                                                'relevant_delta_energies_1c4')
+
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_forward_gibbs',
+                                                                                '1c4'),
+                                                                                'relevant_forward_energies_1c4')
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_reverse_gibbs',
+                                                                                '1c4'),
+                                                                                'relevant_reverse_energies_1c4')
+
 
         self.write_dict_to_csv(self.format_pathway_dict_for_csv(TS_tsl), 'pathways')
         self.write_dict_to_csv(self.format_norm_pathway_dict_for_csv(TS_tsl), 'norm_pathways')
