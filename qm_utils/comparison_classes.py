@@ -2542,7 +2542,7 @@ class Compare_Methods():
                          marker=self.met_lm_markers_dict[method],
                          s=size, zorder=zorder)
 
-    def get_lowest_pathways(self, method, hemisphere):
+    def get_lowest_pathways(self, method, hemisphere, all_paths):
         pathways = {}
         tol = 0.1
 
@@ -2555,7 +2555,7 @@ class Compare_Methods():
                 pathway = pathway_groupings[path]
 
                 if pathway['weighted_forward_gibbs'] != None and pathway['weighted_reverse_gibbs'] != None:
-                    if pathway['weighted_forward_gibbs_weighting'] > tol:
+                    if pathway['weighted_forward_gibbs_weighting'] > tol or all_paths:
                         pathways[path] = pathway_groupings[path]
 
         return pathways
@@ -2660,8 +2660,8 @@ class Compare_Methods():
 
         return theta, r
 
-    def plot_circ_paths(self, ax_circ, method, hemisphere):
-        pathways = self.get_lowest_pathways(method, hemisphere)
+    def plot_circ_paths(self, ax_circ, method, hemisphere, all_paths):
+        pathways = self.get_lowest_pathways(method, hemisphere, all_paths)
 
         fontsize = 12
 
@@ -2704,20 +2704,22 @@ class Compare_Methods():
             ax_circ.annotate(LM_name_list[LM1_skm],
                                 xy=(LM1_theta, LM1_r),
                                 ha="center", va="center", fontsize=fontsize, zorder=100,
-                                path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+                                path_effects=[PathEffects.withStroke(linewidth=2, foreground="w")])
 
             ax_circ.annotate(TS_name_list[TS_skm],
                                 xy = (TS_theta, TS_r),
                                 ha = "center", va = "center", fontsize=fontsize, zorder = 100,
-                                path_effects = [PathEffects.withStroke(linewidth=1, foreground="w")])
+                                path_effects = [PathEffects.withStroke(linewidth=2, foreground="w")])
 
             ax_circ.annotate(LM_name_list[LM2_skm],
                              xy=(LM2_theta, LM2_r),
                              ha="center", va="center", fontsize=fontsize, zorder=100,
-                             path_effects=[PathEffects.withStroke(linewidth=1, foreground="w")])
+                             path_effects=[PathEffects.withStroke(linewidth=2, foreground="w")])
 
-    def save_circ_paths(self, method, hemisphere):
+    def save_circ_paths(self, method, hemisphere, all_paths=False):
         filename = self.molecule + '-' + method + '-circ_paths_' + hemisphere
+        if all_paths:
+            filename += 'all_paths'
 
         dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
         dir = make_dir(os.path.join(dir, hemisphere))
@@ -2730,7 +2732,7 @@ class Compare_Methods():
                 plot = Plots(south_pol_arg=True)
                 ax_circ = plot.ax_circ_south
 
-            self.plot_circ_paths(ax_circ, method, hemisphere)
+            self.plot_circ_paths(ax_circ, method, hemisphere, all_paths)
 
             plot.save(dir_=dir, filename=filename, height=3.7)
 

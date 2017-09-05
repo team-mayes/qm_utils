@@ -80,6 +80,9 @@ def do_main():
 
         comp_met.write_csvs()
 
+        comp_met.save_circ_paths('REF', 'N', True)
+        comp_met.save_circ_paths('REF', 'S', True)
+
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_circ_paths(method, 'N')
             comp_met.save_circ_paths(method, 'S')
