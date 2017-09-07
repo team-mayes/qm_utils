@@ -38,6 +38,7 @@ def do_main():
     methods_list.append('PM3')
     methods_list.append('PM3MM')
     methods_list.append('PM6')
+    methods_list.append('PM7')
 
     cmap = plt.get_cmap('Paired')
     met_colors_dict = {}
@@ -54,6 +55,7 @@ def do_main():
     met_colors_dict['PM3'] = cmap.colors[8]
     met_colors_dict['PM3MM'] = cmap.colors[9]
     met_colors_dict['PM6'] = cmap.colors[11]
+    met_colors_dict['PM7'] = 'rosybrown'
 
     met_ts_markers_dict = {}
     met_lm_markers_dict = {}
