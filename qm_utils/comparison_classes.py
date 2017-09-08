@@ -820,7 +820,7 @@ class Reference_Landscape():
             if len(name_list) > 2 and 'e' not in name_list:
                 if name_list[0] == 'b':
                     new_name = name_list[0].upper() + r'$\rm{_' + name_list[1].upper() + '}$' + r'$\rm{_,}$' + r'$\rm{_' + last_bit.upper() + '}$'
-                elif 'b' in name_list:
+                elif 'b' in name_list and name_list[-2] != 'b':
                     new_name = r'$\rm{^' + name_list[0].upper() + '}$' + r'$\rm{^,}$' + r'$\rm{^' + name_list[1].upper() + '}$' + last_bit.upper()
                 else:
                     new_name = r'$\rm{^' + name_list[0].upper() + '}$' + name_list[1].upper() + r'$\rm{_' + last_bit.upper() + '}$'
@@ -971,7 +971,7 @@ class Reference_Landscape():
             if len(name_list) > 2 and 'e' not in name_list:
                 if name_list[0] == 'b':
                     new_name = name_list[0].upper() + r'$\rm{_' + name_list[1].upper() + '}$' + r'$\rm{_,}$' + r'$\rm{_' + last_bit.upper() + '}$'
-                elif 'b' in name_list:
+                elif 'b' in name_list and name_list[-2] != 'b':
                     new_name = r'$\rm{^' + name_list[0].upper() + '}$' + r'$\rm{^,}$' + r'$\rm{^' + name_list[1].upper() + '}$' + last_bit.upper()
                 else:
                     new_name = r'$\rm{^' + name_list[0].upper() + '}$' + name_list[1].upper() + r'$\rm{_' + last_bit.upper() + '}$'
