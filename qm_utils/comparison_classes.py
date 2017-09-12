@@ -3353,6 +3353,67 @@ class Compare_Methods():
             plot.ax_rect.set_xlim(-5, 365)
 
             plot.save(dir_=dir, filename=filename)
+
+    def save_dehyd(self, dehyd_filename):
+        TS_csv_list = []
+        phi_list = []
+        theta_list = []
+
+        TS_csv_dict = read_csv_to_dict(dehyd_filename, mode='r')
+
+        for i in range(len(TS_csv_dict)):
+            info = TS_csv_dict[i]
+            phi = float(info['phi'])
+            theta = float(info['theta'])
+            gibbs = float(info[self.energy_format])
+            name = info['File Name'].split('-')[1].split('-')[0]
+
+            try:
+                assert (float(info['Freq 1']) < 0)
+            except AssertionError:
+                print('Transition State has a non-negative Freq 1')
+                exit(1)
+
+            TS = Transition_State(phi, theta, gibbs, name, 'TS')
+            TS.filename = info['File Name']
+
+            TS_csv_list.append(TS)
+            phi_list.append(TS.phi)
+            theta_list.append(TS.theta)
+
+        cano_centers = []
+        for i in range(len(self.reference_landscape.canonical_designations)):
+            struct = self.reference_landscape.canonical_designations[i]
+            cano_centers.append(pol2cart([struct.phi, struct.theta]))
+
+        cano_tes = Tessellation(centers=cano_centers,
+                                number_clusters=38,
+                                n_init = 30,
+                                max_iter = 300,
+                                type='cano')
+
+        self.reference_landscape.assign_region_names(cano_tes)
+        self.reference_landscape.assign_formatted_names(cano_tes)
+
+        filename = self.molecule + '-dehyd'
+        dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'dehyd'))
+
+        if not os.path.exists(os.path.join(dir, filename + '.png')):
+            plot = Plots(rect_arg=True)
+
+            self.reference_landscape.plot_voronoi_regions(plot=plot, tessellation=cano_tes)
+            self.reference_landscape.plot_cano(plot=plot)
+
+            plot.ax_rect.scatter(phi_list, theta_list, c='b', s=30)
+
+            plot.ax_rect.set_ylim(185, -5)
+            plot.ax_rect.set_xlim(-5, 365)
+
+            self.reference_landscape.plot_regions_names(plot=plot,
+                                                        tessellation=cano_tes)
+
+            plot.save(dir_=dir, filename=filename)
+
     #endregion
 
     # # # Writing # # #
