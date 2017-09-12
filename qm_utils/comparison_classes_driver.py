@@ -48,6 +48,7 @@ def do_main():
     met_colors_dict['APFD'] = cmap.colors[7]
     met_colors_dict['BMK'] = cmap.colors[2]
     met_colors_dict['M06L'] = cmap.colors[6]
+    met_colors_dict['M062X'] = 'sienna'
     met_colors_dict['PBEPBE'] = cmap.colors[3]
     met_colors_dict['DFTB'] = cmap.colors[4]
     met_colors_dict['DFTB3'] = 'teal'
@@ -93,11 +94,8 @@ def do_main():
             comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
             comp_met.save_raw_data_norm_TS(method, connect_to_skm=True, plot_criteria=True)
 
-        mols_dir = 'C:/Users/justi/Desktop/Winter 2017/Research/codes/python/qm_utils/pucker_prog_data/spherical_kmeans_voronoi/molecules/'
-
-        for i in range(len(mol_list)):
-            dehyd_filename = mols_dir + mol_list[i] + '/z_dataset-dehy.csv'
-            comp_met.save_dehyd(dehyd_filename=dehyd_filename)
+        dehyd_filename = 'C:/Users/justi/Desktop/Winter 2017/Research/codes/python/qm_utils/pucker_prog_data/spherical_kmeans_voronoi/molecules/bglc/z_dataset-dehy.csv'
+        comp_met.save_dehyd(dehyd_filename=dehyd_filename)
 
     energy_format = 'G298 (Hartrees)'
 

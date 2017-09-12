@@ -3375,7 +3375,7 @@ class Compare_Methods():
                 exit(1)
 
             TS = Transition_State(phi, theta, gibbs, name, 'TS')
-            TS.filename = info['File Name']
+            TS.filename = info['File Name'].split('_')[3].split('.')[0].upper()
 
             TS_csv_list.append(TS)
             phi_list.append(TS.phi)
@@ -3404,7 +3404,9 @@ class Compare_Methods():
             self.reference_landscape.plot_voronoi_regions(plot=plot, tessellation=cano_tes)
             self.reference_landscape.plot_cano(plot=plot)
 
-            plot.ax_rect.scatter(phi_list, theta_list, c='b', s=30)
+            for i in range(len(TS_csv_list)):
+                TS = TS_csv_list[i]
+                plot.ax_rect.scatter(TS.phi, TS.theta, c='', edgecolor=self.met_colors_dict[TS.filename], s=30, zorder=30)
 
             plot.ax_rect.set_ylim(185, -5)
             plot.ax_rect.set_xlim(-5, 365)
