@@ -1685,6 +1685,7 @@ class Compare_Methods():
 
         return False
 
+    # what does this do??
     def pathway_double_counted_poorly(self, tessellation, method, pathway):
         for key in tessellation.methods[method]['pathway_groupings']:
             pathways = tessellation.methods[method]['pathway_groupings'][key]['pathways']
