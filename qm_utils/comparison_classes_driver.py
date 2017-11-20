@@ -83,6 +83,12 @@ def do_main():
 
         comp_met.write_csvs()
 
+        for method in comp_met.Method_Pathways_dict:
+            comp_met.write_ind_grouping_csv(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                            method=method, energy_type=energy_format)
+            comp_met.write_ind_grouping_csv(tessellation=comp_met.reference_landscape.LM_Tessellation,
+                                            method=method, energy_type=energy_format)
+
         comp_met.save_circ_paths('REF', 'N', True)
         comp_met.save_circ_paths('REF', 'S', True)
 
@@ -93,6 +99,17 @@ def do_main():
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
             comp_met.save_raw_data_norm_TS(method, connect_to_skm=True, plot_criteria=True)
+
+        for method in comp_met.Method_Pathways_dict:
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                       method=method,
+                                       type='raw')
+            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
+                                       method=method,
+                                       type='skm')
+
+            comp_met.save_raw_data_norm_LM(method, connect_to_skm=False)
+            comp_met.save_raw_data_norm_TS(method, connect_to_skm=False)
 
         dehyd_filename = 'C:/Users/justi/Desktop/Winter 2017/Research/codes/python/qm_utils/pucker_prog_data/spherical_kmeans_voronoi/molecules/bglc/z_dataset-dehy.csv'
         comp_met.save_dehyd(dehyd_filename=dehyd_filename)

@@ -292,6 +292,7 @@ class Structure():
         self.name = name
         self.type = type
 
+        self.comp_metrics = {}
         self.comp_by_skm_ratio = False
 
 class Local_Minimum(Structure):
@@ -370,7 +371,10 @@ class Method_Pathways():
                 print(LM_csv_filename)
                 exit(1)
 
-            self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'LM'))
+            LM = Local_Minimum(phi, theta, gibbs, name, 'LM')
+            LM.filename = info['File Name']
+
+            self.LM_csv_list.append(LM)
 
     def parse_TS_csv(self, TS_csv_filename):
         self.TS_csv_list = []
@@ -387,6 +391,7 @@ class Method_Pathways():
             try:
                 assert(float(info['Freq 1']) < 0)
             except AssertionError:
+                print('TS filename: ' + info['File Name'])
                 print('Transition State has a non-negative Freq 1')
                 exit(1)
 
@@ -539,7 +544,10 @@ class Reference_Pathways():
             gibbs = float(info[self.energy_format])
             name = info['Pucker']
 
-            self.LM_csv_list.append(Local_Minimum(phi, theta, gibbs, name, 'LM'))
+            LM = Local_Minimum(phi, theta, gibbs, name, 'LM')
+            LM.filename = info['File Name']
+
+            self.LM_csv_list.append(LM)
 
     def parse_TS_csv(self, TS_csv_filename):
         TS_csv_dict = read_csv_to_dict(TS_csv_filename, mode='r')
@@ -566,12 +574,16 @@ class Reference_Pathways():
                 exit(1)
 
             TS = Transition_State(phi, theta, gibbs, name, 'TS')
+            TS.filename = info['File Name']
             LM1 = Local_Minimum(phi=phi_lm1,
                                 theta=theta_lm1,
                                 type='IRC')
             LM2 = Local_Minimum(phi=phi_lm2,
                                 theta=theta_lm2,
                                 type='IRC')
+
+            LM1.filename = info['File Name']
+            LM2.filename = info['File Name']
 
             self.TS_csv_list.append(TS)
             self.Pathways.append(Pathway(TS, LM1, LM2))
@@ -1959,6 +1971,7 @@ class Compare_Methods():
                                                        structure.name,
                                                        structure.type + '_added')
 
+                            structure_copy.filename = structure.filename
                             structure_copy.closest_skm = structure.next_closest_skm
                             structure_copy.next_closest_skm = structure.closest_skm
                             structure_copy.comp_metrics = {}
@@ -3481,7 +3494,7 @@ class Compare_Methods():
 
         return pathway_weighting_dict
 
-    def format_relevant_pathway_metric_dict_for_csv(self, grouping_type, comp_metric, table_metric, LM):
+    def format_relevant_pathway_metric_dict_for_csv(self, grouping_type, comp_metric, table_metric, LM, tolerance=0.1):
         pathway_weighting_dict = {}
         pathway_weighting_dict['pathway'] = []
 
@@ -3520,7 +3533,9 @@ class Compare_Methods():
             for method in self.reference_landscape.TS_Tessellation.methods:
                 pathway = self.reference_landscape.TS_Tessellation.methods[method][grouping_type][key]
 
-                if key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type] and pathway[comp_metric] != None and pathway[comp_metric] > 0.1:
+                if key in self.reference_landscape.TS_Tessellation.methods[method][grouping_type]\
+                    and pathway[comp_metric] != None and pathway[comp_metric] > tolerance:
+
                     pathway_weighting_dict[method].append(round(pathway[table_metric], 3))
                 else:
                     pathway_weighting_dict[method].append('n/a')
@@ -3708,6 +3723,32 @@ class Compare_Methods():
 
         return csv_dict
 
+    def format_ind_grouping_dict_for_csv(self, tessellation, method, energy_type):
+        ind_grouping_dict = {}
+
+        ind_grouping_dict['File Name'] = []
+        ind_grouping_dict['new_cluster_group'] = []
+        ind_grouping_dict['boltzmann_weighting'] = []
+        ind_grouping_dict['cluster_group_' + energy_type] = []
+
+        for i in range(len(tessellation.methods[method]['skm_groupings'])):
+            skm_grouping = tessellation.methods[method]['skm_groupings'][i]
+
+            for j in range(len(skm_grouping['structures'])):
+                structure = skm_grouping['structures'][j]
+
+                if tessellation.type == 'TS':
+                    weighting = structure.TS_weighting
+                else:
+                    weighting = structure.LM_weighting
+
+                ind_grouping_dict['File Name'].append(structure.filename)
+                ind_grouping_dict['new_cluster_group'].append(tessellation.skm_name_list[i])
+                ind_grouping_dict['boltzmann_weighting'].append(weighting)
+                ind_grouping_dict['cluster_group_' + energy_type].append(structure.gibbs)
+
+        return ind_grouping_dict
+
     def write_dict_to_csv(self, dict, name):
         csv_filename = self.molecule + '-' + name + '.csv'
         dir = make_dir(os.path.join(self.MOL_SAVE_DIR, 'tables'))
@@ -3717,6 +3758,10 @@ class Compare_Methods():
                 w = csv.writer(file)
                 w.writerow(dict.keys())
                 w.writerows(zip(*dict.values()))
+
+    def write_ind_grouping_csv(self, tessellation, method, energy_type):
+        self.write_dict_to_csv(self.format_ind_grouping_dict_for_csv(tessellation, method, energy_type),
+                               'ind-grouping-' + method + '-' + tessellation.type)
 
     def write_csvs(self):
         LM_tsl = self.reference_landscape.LM_Tessellation
@@ -3816,6 +3861,28 @@ class Compare_Methods():
 
         self.write_dict_to_csv(self.format_pathway_dict_for_csv(TS_tsl), 'pathways')
         self.write_dict_to_csv(self.format_norm_pathway_dict_for_csv(TS_tsl), 'norm_pathways')
+
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_forward_gibbs',
+                                                                                '4c1', tolerance=0),
+                                                                                'forward_energies_4c1')
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_reverse_gibbs',
+                                                                                '4c1', tolerance=0),
+                                                                                'reverse_energies_4c1')
+
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_forward_gibbs',
+                                                                                '1c4', tolerance=0),
+                                                                                'forward_energies_1c4')
+        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
+                                                                                'weighted_forward_gibbs_weighting',
+                                                                                'weighted_reverse_gibbs',
+                                                                                '1c4', tolerance=0),
+                                                                                'reverse_energies_1c4')
     #endregion
 
     pass
