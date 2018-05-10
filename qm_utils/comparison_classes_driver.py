@@ -61,8 +61,6 @@ def do_main():
     met_ts_markers_dict = {}
     met_lm_markers_dict = {}
 
-    i = 0
-
     for method in list(methods_list):
         ts_marker = 'o'
         lm_marker = 'o'
@@ -70,7 +68,7 @@ def do_main():
         met_ts_markers_dict[method] = ts_marker
         met_lm_markers_dict[method] = lm_marker
 
-    mol_list = ['bglc', 'bxyl', 'oxane']
+    mol_list = ['bxyl', 'oxane', 'bglc']
 
     energy_format = 'H298 (Hartrees)'
 
@@ -89,12 +87,8 @@ def do_main():
             comp_met.write_ind_grouping_csv(tessellation=comp_met.reference_landscape.LM_Tessellation,
                                             method=method, energy_type=energy_format)
 
-        comp_met.save_circ_paths('REF', 'N', True)
-        comp_met.save_circ_paths('REF', 'S', True)
-
         for method in comp_met.Method_Pathways_dict:
-            comp_met.save_circ_paths(method, 'N')
-            comp_met.save_circ_paths(method, 'S')
+            comp_met.save_circ_paths(method)
 
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
@@ -111,52 +105,8 @@ def do_main():
             comp_met.save_raw_data_norm_LM(method, connect_to_skm=False)
             comp_met.save_raw_data_norm_TS(method, connect_to_skm=False)
 
-        dehyd_filename = 'C:/Users/justi/Desktop/Winter 2017/Research/codes/python/qm_utils/pucker_prog_data/spherical_kmeans_voronoi/molecules/bglc/z_dataset-dehy.csv'
-        comp_met.save_dehyd(dehyd_filename=dehyd_filename)
-
-    energy_format = 'G298 (Hartrees)'
-
-    for i in range(len(mol_list)):
-        comp_met = cc.Compare_Methods(mol_list[i],
-                                      met_colors_dict,
-                                      met_ts_markers_dict,
-                                      met_lm_markers_dict,
-                                      energy_format)
-
-        comp_met.write_csvs()
-
-        for method in comp_met.Method_Pathways_dict:
-            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-                                       method=method,
-                                       type='raw')
-            comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-                                       method=method,
-                                       type='skm')
-
-            comp_met.save_raw_data_norm_LM(method, connect_to_skm=True)
-            comp_met.save_raw_data_norm_TS(method, connect_to_skm=True)
-
-            comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
-            comp_met.save_raw_data_norm_TS(method, connect_to_skm=True, plot_criteria=True)
-
-            comp_met.save_raw_data_norm_LM(method, connect_to_skm=False)
-            comp_met.save_raw_data_norm_TS(method, connect_to_skm=False)
-
-        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-                                   method='DFT',
-                                   type='raw')
-        comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
-                                   method='DFT',
-                                   type='skm')
-
-        comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=False)
-        comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=False)
-
-        comp_met.save_raw_data_norm_LM('DFT', connect_to_skm=True)
-        comp_met.save_raw_data_norm_TS('DFT', connect_to_skm=True)
-
-        comp_met.save_tessellation(comp_met.reference_landscape.LM_Tessellation)
-        comp_met.save_tessellation(comp_met.reference_landscape.TS_Tessellation)
+        #dehyd_filename = 'C:/Users/justi/Desktop/Winter 2018/Research/codes/python/qm_utils/pucker_prog_data/spherical_kmeans_voronoi/molecules/bglc/z_dataset-dehy.csv'
+        #comp_met.save_dehyd(dehyd_filename=dehyd_filename)
 
 if __name__ == '__main__':
     status = main()

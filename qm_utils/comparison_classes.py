@@ -8,6 +8,7 @@ import math
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
+import matplotlib.colors as mplColors
 from PIL import Image
 
 import csv
@@ -625,7 +626,6 @@ class Reference_Pathways():
                 self.max_gibbs = curr_gibbs
 #endregion
 
-
 class Tessellation():
     def __init__(self, centers, number_clusters, n_init, max_iter, type):
         self.methods = {}
@@ -673,7 +673,6 @@ class Tessellation():
                     self.skm.cluster_centers_[i] = aux_vert
 
             passnum = passnum - 1
-
 
 class Reference_Landscape():
     # # # Init # # #
@@ -1228,7 +1227,6 @@ class Compare_Methods():
 
         for method in self.Method_Pathways_dict:
             self.do_path_calcs('4c1', method)
-            self.do_path_calcs('1c4', method)
         #endregion
         print('pathway init done')
         # # # reorg # # #
@@ -2519,9 +2517,12 @@ class Compare_Methods():
 
     # # # hemisphere # # #
     #region
-    def plot_on_circle(self, ax_circ, TS_vert, LM_vert, method, zorder=10, line_style='-'):
+    def plot_on_circle(self, ax_circ, TS_vert, LM_vert, method, zorder=10, line_style='-', weight=1):
         size = 50
-        color = self.met_colors_dict[method]
+
+        if weight < 0.05:
+            weight = 0.05
+        color = mplColors.to_rgba(self.met_colors_dict[method], weight)
 
         line = get_pol_coords(pol2cart(TS_vert), pol2cart(LM_vert))
 
@@ -2537,7 +2538,8 @@ class Compare_Methods():
 
         theta[0] = theta[1]
 
-        ax_circ.plot(theta, r, color=color, linestyle=line_style, linewidth=3, zorder=zorder/2)
+        ax_circ.plot(theta, r, color=color, linestyle=line_style,
+                     linewidth=3, zorder=zorder/2)
 
         r_0 = abs(math.sin(np.radians(LM_vert[1])))
         r_1 = abs(math.sin(np.radians(TS_vert[1])))
@@ -2556,14 +2558,12 @@ class Compare_Methods():
 
     def get_lowest_pathways(self, method, hemisphere, all_paths):
         pathways = {}
-        tol = 0.1
+        tol = 0
 
         pathway_groupings = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings']
 
         for path in pathway_groupings:
-            if hemisphere == 'N' and int(path.split('_')[0]) == 0 or\
-                hemisphere == 'S' and int(path.split('-')[0].split('_')[1]) == len(self.reference_landscape.LM_Tessellation.skm_name_list) - 1:
-
+            if hemisphere == 'N' and int(path.split('_')[0]) == 0:
                 pathway = pathway_groupings[path]
 
                 if pathway['weighted_forward_gibbs'] != None and pathway['weighted_reverse_gibbs'] != None:
@@ -2672,7 +2672,7 @@ class Compare_Methods():
 
         return theta, r
 
-    def plot_circ_paths(self, ax_circ, method, hemisphere, all_paths):
+    def plot_circ_paths(self, ax_circ, method, hemisphere='N', all_paths=True):
         pathways = self.get_lowest_pathways(method, hemisphere, all_paths)
 
         fontsize = 12
@@ -2701,8 +2701,10 @@ class Compare_Methods():
             TS_vert = cart2pol(self.reference_landscape.TS_Tessellation.skm.cluster_centers_[TS_skm])
             LM2_vert = cart2pol(self.reference_landscape.LM_Tessellation.skm.cluster_centers_[LM2_skm])
 
-            self.plot_on_circle(ax_circ, TS_vert, LM1_vert, method)
-            self.plot_on_circle(ax_circ, TS_vert, LM2_vert, method)
+            weight = self.reference_landscape.TS_Tessellation.methods[method]['pathway_groupings'][path]['weighted_forward_gibbs_weighting']
+
+            self.plot_on_circle(ax_circ, TS_vert, LM1_vert, method, weight=weight)
+            self.plot_on_circle(ax_circ, TS_vert, LM2_vert, method, weight=weight)
 
             LM_name_list = self.reference_landscape.LM_Tessellation.formatted_name_list
             TS_name_list = self.reference_landscape.TS_Tessellation.formatted_name_list
@@ -2728,111 +2730,18 @@ class Compare_Methods():
                              ha="center", va="center", fontsize=fontsize, zorder=100,
                              path_effects=[PathEffects.withStroke(linewidth=2, foreground="w")])
 
-    def save_circ_paths(self, method, hemisphere, all_paths=False):
-        filename = self.molecule + '-' + method + '-circ_paths_' + hemisphere
-        if all_paths:
-            filename += 'all_paths'
+    def save_circ_paths(self, method):
+        filename = self.molecule + '-' + method + '-circ_paths_N'
 
         dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
-        dir = make_dir(os.path.join(dir, hemisphere))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
-            if hemisphere == 'N':
-                plot = Plots(north_pol_arg=True)
-                ax_circ = plot.ax_circ_north
-            elif hemisphere == 'S':
-                plot = Plots(south_pol_arg=True)
-                ax_circ = plot.ax_circ_south
+            plot = Plots(north_pol_arg=True)
+            ax_circ = plot.ax_circ_north
 
-            self.plot_circ_paths(ax_circ, method, hemisphere, all_paths)
+            self.plot_circ_paths(ax_circ, method)
 
             plot.save(dir_=dir, filename=filename, height=3.7)
-
-    # img1 is N, img2 is S
-    def merge_two_images(self, img1, img2, direction):
-        if isinstance(img1, str):
-            image1 = Image.open(img1)
-        else:
-            image1 = img1
-
-        image2 = Image.open(img2)
-
-        (width1, height1) = image1.size
-        (width2, height2) = image2.size
-
-        if direction == 'vertical':
-            result_height = height1 + height2
-            result_width = max(width1, width2)
-
-            result = Image.new('RGB', (result_width, result_height))
-
-            result.paste(im=image1, box=(0, 0))
-            result.paste(im=image2, box=(0, height1))
-        elif direction == 'horizontal':
-            result_height = max(height1, height2)
-            result_width = width1 + width2
-
-            result = Image.new('RGB', (result_width, result_height))
-
-            result.paste(im=image1, box=(0, 0))
-            result.paste(im=image2, box=(width1, 0))
-
-        return result
-
-    def save_merged_method_images_hemi(self, methods_list):
-        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
-        N_dir = make_dir(os.path.join(img_dir, 'N'))
-        S_dir = make_dir(os.path.join(img_dir, 'S'))
-        N_merged_dir = make_dir(os.path.join(img_dir, 'N_merged'))
-        S_merged_dir = make_dir(os.path.join(img_dir, 'S_merged'))
-
-        for i in range(len(methods_list)):
-            if i % 2 == 0:
-                if i + 1 < len(methods_list) and not os.path.exists(os.path.join(N_merged_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-N_merged.png')):
-                    img1 = os.path.join(N_dir, self.molecule + '-' + methods_list[i] + '-N_merged.png')
-                    img2 = os.path.join(N_dir, self.molecule + '-' + methods_list[i + 1] + '-N_merged.png')
-
-                    curr_img = self.merge_two_images(img1, img2, 'horizontal')
-
-                    curr_img.save(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-N_merged.png'))
-
-                if i + 1 < len(methods_list) and not os.path.exists(os.path.join(S_merged_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-S_merged.png')):
-                    img1 = os.path.join(S_dir, self.molecule + '-' + methods_list[i] + '-S_merged.png')
-                    img2 = os.path.join(S_dir, self.molecule + '-' + methods_list[i + 1] + '-S_merged.png')
-
-                    curr_img = self.merge_two_images(img1, img2, 'horizontal')
-
-                    curr_img.save(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-S_merged.png'))
-
-    def save_merged_north_and_south(self):
-        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
-        N_dir = make_dir(os.path.join(img_dir, 'N'))
-        S_dir = make_dir(os.path.join(img_dir, 'S'))
-        merged_dir = make_dir(os.path.join(img_dir, 'merged'))
-
-        for method in self.Method_Pathways_dict:
-            filename = self.molecule + '-' + method + '-merged.png'
-
-            if not os.path.exists(os.path.join(merged_dir, filename)):
-                N_img = os.path.join(N_dir, self.molecule + '-' + method + '-circ_paths_N.png')
-                S_img = os.path.join(S_dir, self.molecule + '-' + method + '-circ_paths_S.png')
-
-                merged_img = self.merge_two_images(N_img, S_img, 'vertical')
-                merged_img.save(os.path.join(merged_dir, filename))
-
-    def save_merged_method_images(self, methods_list):
-        img_dir = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'circ_paths'))
-        merged_dir = make_dir(os.path.join(img_dir, 'merged'))
-
-        for i in range(len(methods_list)):
-            if i % 2 == 0:
-                if i + 1 < len(methods_list) and not os.path.exists(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-merged.png')):
-                    img1 = os.path.join(merged_dir, self.molecule + '-' + methods_list[i] + '-merged.png')
-                    img2 = os.path.join(merged_dir, self.molecule + '-' + methods_list[i + 1] + '-merged.png')
-
-                    curr_img = self.merge_two_images(img1, img2, 'horizontal')
-
-                    curr_img.save(os.path.join(img_dir, self.molecule + '-' + methods_list[i] + '_' + methods_list[i + 1] + '-merged.png'))
     #endregion
 
     # # # raw # # #
@@ -3788,77 +3697,9 @@ class Compare_Methods():
 
         self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings',
                                                                        'weighted_forward_gibbs_weighting', '4c1'),
-                               'forward_pathway_weightings_4c1')
-        self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                       'weighted_reverse_gibbs_weighting', '4c1'),
-                               'reverse_pathway_weightings_4c1')
-        self.write_dict_to_csv(
-            self.format_pathway_metric_dict_for_csv('LM_groupings', 'weighted_delta_gibbs_weighting', '4c1'),
-            'LM_grouping_weightings_4c1')
+                                                                       'forward_pathway_weightings_4c1')
 
-        self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                       'weighted_delta_gibbs', '4c1'),
-                               'delta_pathway_gibbs_4c1')
-
-
-        self.write_dict_to_csv(self.format_pathway_metric_dict_for_csv('pathway_groupings', 'weighted_forward_gibbs_weighting', '1c4'),
-            'forward_pathway_weightings_1c4')
-        self.write_dict_to_csv(
-            self.format_pathway_metric_dict_for_csv('pathway_groupings', 'weighted_reverse_gibbs_weighting', '1c4'),
-            'reverse_pathway_weightings_1c4')
-        self.write_dict_to_csv(
-            self.format_pathway_metric_dict_for_csv('LM_groupings', 'weighted_delta_gibbs_weighting', '1c4'),
-            'LM_grouping_weightings_1c4')
-
-        self.write_dict_to_csv(
-            self.format_pathway_metric_dict_for_csv('pathway_groupings', 'weighted_delta_gibbs', '1c4'),
-            'delta_pathway_gibbs_1c4')
-
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                '4c1'),
-                                                                                'relevant_forward_weightings_4c1')
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_delta_gibbs',
-                                                                                '4c1'),
-                                                                                'relevant_delta_energies_4c1')
-
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_forward_gibbs',
-                                                                                '4c1'),
-                                                                                'relevant_forward_energies_4c1')
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_reverse_gibbs',
-                                                                                '4c1'),
-                                                                                'relevant_reverse_energies_4c1')
-
-
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                '1c4'),
-                                                                                'relevant_forward_weightings_1c4')
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_delta_gibbs',
-                                                                                '1c4'),
-                                                                                'relevant_delta_energies_1c4')
-
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_forward_gibbs',
-                                                                                '1c4'),
-                                                                                'relevant_forward_energies_1c4')
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_reverse_gibbs',
-                                                                                '1c4'),
-                                                                                'relevant_reverse_energies_1c4')
-
+        #TODO: write csv for highest weighted pathway for each method showing its energy
 
         self.write_dict_to_csv(self.format_pathway_dict_for_csv(TS_tsl), 'pathways')
         self.write_dict_to_csv(self.format_norm_pathway_dict_for_csv(TS_tsl), 'norm_pathways')
@@ -3868,22 +3709,6 @@ class Compare_Methods():
                                                                                 'weighted_forward_gibbs',
                                                                                 '4c1', tolerance=0),
                                                                                 'forward_energies_4c1')
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_reverse_gibbs',
-                                                                                '4c1', tolerance=0),
-                                                                                'reverse_energies_4c1')
-
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_forward_gibbs',
-                                                                                '1c4', tolerance=0),
-                                                                                'forward_energies_1c4')
-        self.write_dict_to_csv(self.format_relevant_pathway_metric_dict_for_csv('pathway_groupings',
-                                                                                'weighted_forward_gibbs_weighting',
-                                                                                'weighted_reverse_gibbs',
-                                                                                '1c4', tolerance=0),
-                                                                                'reverse_energies_1c4')
     #endregion
 
     pass
