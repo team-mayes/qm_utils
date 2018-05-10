@@ -2863,20 +2863,11 @@ class Compare_Methods():
                                          marker=marker,
                                          s=LM_size, zorder=10)
 
-    def save_raw_data_norm_LM(self, method='ALL', connect_to_skm=False, plot_criteria=False):
+    def save_raw_data_norm_LM(self, method='ALL'):
         filename = self.molecule + '-' + method + '-raw_data_norm_LM'
-        if not connect_to_skm:
-            filename += '-unconnected'
 
         dir1 = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'raw_data_norm'))
         dir = make_dir(os.path.join(dir1, 'LM'))
-
-        if plot_criteria:
-            dir = make_dir(os.path.join(dir, 'plot_criteria'))
-        elif not connect_to_skm:
-            dir = make_dir(os.path.join(dir, 'unconnected'))
-        else:
-            dir = make_dir(os.path.join(dir, 'connect_to_skm'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
@@ -2889,69 +2880,32 @@ class Compare_Methods():
             artist_list = []
             label_list = []
 
-            if plot_criteria:
-                color_list = ['red']
+            color_list = ['red']
 
-                for i in range(len(color_list)):
-                    artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=30, c='', marker=self.met_ts_markers_dict[method],
-                                                    edgecolor=color_list[i]))
-                    label_list.append('Distance Criterion')
+            for i in range(len(color_list)):
+                artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=30, c='', marker=self.met_ts_markers_dict[method],
+                                                edgecolor=color_list[i]))
+                label_list.append('Distance Criterion')
 
-            if method == 'ALL':
-                for method in self.Method_Pathways_dict:
-                    self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm,
-                                            plot_criteria=plot_criteria, tessellation=self.reference_landscape.LM_Tessellation)
+            self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=True,
+                                    plot_criteria=True, tessellation=self.reference_landscape.LM_Tessellation)
 
-                    ts_artist, lm_artist = self.get_artist(method)
+            ts_artist, lm_artist = self.get_artist(method)
 
-                    artist_list.append(lm_artist)
-                    label_list.append('LM ' + method)
+            artist_list.append(lm_artist)
+            artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=10, c='black', marker=self.met_lm_markers_dict[method],
+                            edgecolor='black'))
 
-                    plot.ax_rect.legend(artist_list,
-                                        label_list,
-                                        scatterpoints=1, fontsize=8, frameon=True,
-                                        framealpha=0.75,
-                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                        ncol=1).set_zorder(100)
+            label_list.append('LM ' + method)
+            label_list.append('IRC ' + method)
 
-            elif method == 'DFT':
-                DFT_list = ['B3LYP', 'REF', 'M06L', 'PBEPBE', 'APFD', 'BMK']
-                for method in self.Method_Pathways_dict:
-                    if method in DFT_list:
-                        self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm,
-                                                plot_criteria=plot_criteria, tessellation=self.reference_landscape.LM_Tessellation)
-
-                        ts_artist, lm_artist = self.get_artist(method)
-
-                        artist_list.append(lm_artist)
-                        label_list.append('LM ' + method)
-
-                        plot.ax_rect.legend(artist_list,
-                                            label_list,
-                                            scatterpoints=1, fontsize=8, frameon=True,
-                                            framealpha=0.75,
-                                            bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                            ncol=1).set_zorder(100)
-            else:
-                self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm,
-                                        plot_criteria=plot_criteria, tessellation=self.reference_landscape.LM_Tessellation)
-
-                ts_artist, lm_artist = self.get_artist(method)
-
-                artist_list.append(lm_artist)
-                artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=10, c='black', marker=self.met_lm_markers_dict[method],
-                                edgecolor='black'))
-
-                label_list.append('LM ' + method)
-                label_list.append('IRC ' + method)
-
-                plot.ax_rect.legend(artist_list,
-                                    label_list,
-                                    scatterpoints=1, fontsize=8, frameon=False,
-                                    framealpha=0.75,
-                                    bbox_to_anchor=(0.5, -0.2), loc='lower center',
-                                    borderaxespad=0,
-                                    ncol=3).set_zorder(100)
+            plot.ax_rect.legend(artist_list,
+                                label_list,
+                                scatterpoints=1, fontsize=8, frameon=False,
+                                framealpha=0.75,
+                                bbox_to_anchor=(0.5, -0.2), loc='lower center',
+                                borderaxespad=0,
+                                ncol=3).set_zorder(100)
 
             plot.ax_rect.set_ylim(185, -5)
             plot.ax_rect.set_xlim(-5, 365)
@@ -2961,21 +2915,11 @@ class Compare_Methods():
 
             plot.save(dir_=dir, filename=filename)
 
-    def save_raw_data_norm_TS(self, method='ALL', connect_to_skm=False, plot_criteria=False):
+    def save_raw_data_norm_TS(self, method='ALL'):
         filename = self.molecule + '-' + method + '-raw_data_norm_TS'
-        if not connect_to_skm:
-            filename += '-unconnected'
 
         dir1 = make_dir(os.path.join(os.path.join(self.MOL_SAVE_DIR, 'plots'), 'raw_data_norm'))
         dir = make_dir(os.path.join(dir1, 'TS'))
-
-        if plot_criteria:
-            dir = make_dir(os.path.join(dir, 'plot_criteria'))
-
-        if not connect_to_skm:
-            dir = make_dir(os.path.join(dir, 'unconnected'))
-        elif not plot_criteria:
-            dir = make_dir(os.path.join(dir, 'connect_to_skm'))
 
         if not os.path.exists(os.path.join(dir, filename + '.png')):
             plot = Plots(rect_arg=True)
@@ -2987,62 +2931,27 @@ class Compare_Methods():
             artist_list = []
             label_list = []
 
-            if plot_criteria:
-                color_list = ['red']
+            color_list = ['red']
 
-                for i in range(len(color_list)):
-                    artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=30, c='', marker=self.met_ts_markers_dict[method],
-                                                    edgecolor=color_list[i]))
-                    label_list.append('Distance Criterion')
+            for i in range(len(color_list)):
+                artist_list.append(plt.scatter((5000, 5000), (4999, 4999), s=30, c='', marker=self.met_ts_markers_dict[method],
+                                                edgecolor=color_list[i]))
+                label_list.append('Distance Criterion')
 
-            if method == 'ALL':
-                for method in self.Method_Pathways_dict:
-                    self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm, plot_criteria=plot_criteria, tessellation=self.reference_landscape.TS_Tessellation)
+            self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=True,
+                                    plot_criteria=True, tessellation=self.reference_landscape.TS_Tessellation)
 
-                    ts_artist, lm_artist = self.get_artist(method)
+            ts_artist, lm_artist = self.get_artist(method)
 
-                    artist_list.append(ts_artist)
-                    label_list.append('TS ' + method)
+            artist_list.append(ts_artist)
+            label_list.append('TS ' + method)
 
-                    plot.ax_rect.legend(artist_list,
-                                        label_list,
-                                        scatterpoints=1, fontsize=8, frameon=True,
-                                        framealpha=0.75,
-                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                        ncol=1).set_zorder(100)
-            elif method == 'DFT':
-                DFT_list = ['B3LYP', 'REF', 'M06L', 'PBEPBE', 'APFD', 'BMK']
-                for method in self.Method_Pathways_dict:
-                    if method in DFT_list:
-                        self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm,
-                                                plot_criteria=plot_criteria, tessellation=self.reference_landscape.TS_Tessellation)
-
-                        ts_artist, lm_artist = self.get_artist(method)
-
-                        artist_list.append(ts_artist)
-                        label_list.append('TS ' + method)
-
-                        plot.ax_rect.legend(artist_list,
-                                            label_list,
-                                            scatterpoints=1, fontsize=8, frameon=True,
-                                            framealpha=0.75,
-                                            bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                            ncol=1).set_zorder(100)
-            else:
-                self.plot_raw_data_norm(plot=plot, method=method, connect_to_skm=connect_to_skm,
-                                        plot_criteria=plot_criteria, tessellation=self.reference_landscape.TS_Tessellation)
-
-                ts_artist, lm_artist = self.get_artist(method)
-
-                artist_list.append(ts_artist)
-                label_list.append('TS ' + method)
-
-                plot.ax_rect.legend(artist_list,
-                                    label_list,
-                                    scatterpoints=1, fontsize=8, frameon=False,
-                                    framealpha=0.75,
-                                    borderaxespad=0,
-                                    ncol=len(self.met_colors_dict)).set_zorder(100)
+            plot.ax_rect.legend(artist_list,
+                                label_list,
+                                scatterpoints=1, fontsize=8, frameon=False,
+                                framealpha=0.75,
+                                borderaxespad=0,
+                                ncol=len(self.met_colors_dict)).set_zorder(100)
 
             plot.ax_rect.set_ylim(185, -5)
             plot.ax_rect.set_xlim(-5, 365)
@@ -3165,84 +3074,35 @@ class Compare_Methods():
 
             tessellation = self.reference_landscape.TS_Tessellation
 
-            if method == 'ALL':
-                for method in self.Method_Pathways_dict:
-                    if type == 'raw':
-                        self.plot_connectivity(plot=plot, method=method, tessellation=tessellation)
-                    elif type == 'skm':
-                        self.plot_skm_connectivity(plot=plot, method=method, tessellation=tessellation)
-                    elif type == 'energy':
-                        self.plot_energy_connectivity(plot=plot, method=method, tessellation=tessellation)
+            if type == 'raw':
+                self.plot_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
+                self.plot_connectivity(plot=plot, method=method, tessellation=tessellation)
+            elif type == 'skm':
+                self.plot_skm_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
+                self.plot_skm_connectivity(plot=plot, method=method, tessellation=tessellation)
+            elif type == 'energy':
+                self.plot_skm_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
+                self.plot_energy_connectivity(plot=plot, method=method, tessellation=tessellation)
 
-                    ts_artist, lm_artist = self.get_artist(method)
+            ts_artist, lm_artist = self.get_artist(method)
+            ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
 
-                    artist_list.append(ts_artist)
-                    artist_list.append(lm_artist)
+            artist_list.append(ts_artist)
+            artist_list.append(lm_artist)
+            artist_list.append(ref_ts_artist)
+            artist_list.append(ref_lm_artist)
 
-                    label_list.append('TS ' + method)
-                    label_list.append('LM ' + method)
+            label_list.append('TS ' + method)
+            label_list.append('LM ' + method)
+            label_list.append('TS ' + REFERENCE)
+            label_list.append('LM ' + REFERENCE)
 
-                    plot.ax_rect.legend(artist_list,
-                                        label_list,
-                                        scatterpoints=1, fontsize=8, frameon=True,
-                                        framealpha=0.75,
-                                        bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                        ncol=1).set_zorder(100)
-            elif method == 'DFT':
-                DFT_list = ['B3LYP', 'REF', 'M06L', 'PBEPBE', 'APFD', 'BMK']
-                for method in self.Method_Pathways_dict:
-                    if method in DFT_list:
-                        if type == 'raw':
-                            self.plot_connectivity(plot=plot, method=method, tessellation=tessellation)
-                        elif type == 'skm':
-                            self.plot_skm_connectivity(plot=plot, method=method, tessellation=tessellation)
-                        elif type == 'energy':
-                            self.plot_energy_connectivity(plot=plot, method=method, tessellation=tessellation)
-
-                        ts_artist, lm_artist = self.get_artist(method)
-
-                        artist_list.append(ts_artist)
-                        artist_list.append(lm_artist)
-
-                        label_list.append('TS ' + method)
-                        label_list.append('LM ' + method)
-
-                        plot.ax_rect.legend(artist_list,
-                                            label_list,
-                                            scatterpoints=1, fontsize=8, frameon=True,
-                                            framealpha=0.75,
-                                            bbox_to_anchor=(1.2, 0.5), loc='right', borderaxespad=0,
-                                            ncol=1).set_zorder(100)
-            else:
-                if type == 'raw':
-                    self.plot_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
-                    self.plot_connectivity(plot=plot, method=method, tessellation=tessellation)
-                elif type == 'skm':
-                    self.plot_skm_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
-                    self.plot_skm_connectivity(plot=plot, method=method, tessellation=tessellation)
-                elif type == 'energy':
-                    self.plot_skm_connectivity(plot=plot, method=REFERENCE, tessellation=tessellation)
-                    self.plot_energy_connectivity(plot=plot, method=method, tessellation=tessellation)
-
-                ts_artist, lm_artist = self.get_artist(method)
-                ref_ts_artist, ref_lm_artist = self.get_artist(REFERENCE)
-
-                artist_list.append(ts_artist)
-                artist_list.append(lm_artist)
-                artist_list.append(ref_ts_artist)
-                artist_list.append(ref_lm_artist)
-
-                label_list.append('TS ' + method)
-                label_list.append('TS ' + method)
-                label_list.append('TS ' + REFERENCE)
-                label_list.append('TS ' + REFERENCE)
-
-                plot.ax_rect.legend(artist_list,
-                                    label_list,
-                                    scatterpoints=1, fontsize=8, frameon=False,
-                                    framealpha=0.75,
-                                    bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
-                                    ncol=len(self.met_colors_dict)).set_zorder(100)
+            plot.ax_rect.legend(artist_list,
+                                label_list,
+                                scatterpoints=1, fontsize=8, frameon=False,
+                                framealpha=0.75,
+                                bbox_to_anchor=(0.5, -0.15), loc=9, borderaxespad=0,
+                                ncol=len(self.met_colors_dict)).set_zorder(100)
 
             plot.ax_rect.set_xlim(-5, 365)
             plot.ax_rect.set_ylim(185, -5)

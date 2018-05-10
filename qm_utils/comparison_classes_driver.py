@@ -68,7 +68,7 @@ def do_main():
         met_ts_markers_dict[method] = ts_marker
         met_lm_markers_dict[method] = lm_marker
 
-    mol_list = ['bxyl', 'oxane', 'bglc']
+    mol_list = ['oxane', 'bxyl', 'bglc']
 
     energy_format = 'H298 (Hartrees)'
 
@@ -91,8 +91,8 @@ def do_main():
             comp_met.save_circ_paths(method)
 
         for method in comp_met.Method_Pathways_dict:
-            comp_met.save_raw_data_norm_LM(method, connect_to_skm=True, plot_criteria=True)
-            comp_met.save_raw_data_norm_TS(method, connect_to_skm=True, plot_criteria=True)
+            comp_met.save_raw_data_norm_LM(method)
+            comp_met.save_raw_data_norm_TS(method)
 
         for method in comp_met.Method_Pathways_dict:
             comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
@@ -101,9 +101,6 @@ def do_main():
             comp_met.save_connectivity(tessellation=comp_met.reference_landscape.TS_Tessellation,
                                        method=method,
                                        type='skm')
-
-            comp_met.save_raw_data_norm_LM(method, connect_to_skm=False)
-            comp_met.save_raw_data_norm_TS(method, connect_to_skm=False)
 
         #dehyd_filename = 'C:/Users/justi/Desktop/Winter 2018/Research/codes/python/qm_utils/pucker_prog_data/spherical_kmeans_voronoi/molecules/bglc/z_dataset-dehy.csv'
         #comp_met.save_dehyd(dehyd_filename=dehyd_filename)
